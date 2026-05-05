@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Loader2, Printer, Save } from 'lucide-react'
 import { useParams } from 'react-router-dom'
@@ -52,7 +52,7 @@ const roleCapabilityMatrix: Record<
   },
 }
 
-function formatSla(rawSlaDueAt: string): string {
+function formatSla(rawSlaDueAt: string | undefined): string {
   if (!rawSlaDueAt) {
     return 'No SLA'
   }
@@ -185,12 +185,12 @@ export function TicketDetailsPage() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async () => {
-      if (!ticketId || !nextStatus) {
+      if (!ticketId || !effectiveNextStatus) {
         throw new Error('Select a status first.')
       }
       return ticketsService.updateStatus({
         ticketId,
-        status: nextStatus,
+        status: effectiveNextStatus,
         note: statusNote,
       })
     },
@@ -209,10 +209,10 @@ export function TicketDetailsPage() {
 
   const assignTicketMutation = useMutation({
     mutationFn: async () => {
-      if (!ticketId || !assignToId) {
+      if (!ticketId || !effectiveAssignToId) {
         throw new Error('Select a user to assign.')
       }
-      return ticketsService.assign({ ticketId, assignedToId: assignToId, note: assignNote })
+      return ticketsService.assign({ ticketId, assignedToId: effectiveAssignToId, note: assignNote })
     },
     onSuccess: () => {
       setAssignToId('')
@@ -244,26 +244,18 @@ export function TicketDetailsPage() {
     },
   })
 
-  useEffect(() => {
+  const defaultNextStatus = useMemo<UpdatableStatus | ''>(() => {
     if (!ticket) {
-      return
+      return ''
     }
-
     if (isUpdatableStatus(ticket.status) && capabilities.allowedStatuses.includes(ticket.status)) {
-      setNextStatus(ticket.status)
-      return
+      return ticket.status
     }
-
-    setNextStatus('')
+    return ''
   }, [ticket, capabilities.allowedStatuses])
 
-  useEffect(() => {
-    if (!canAssign) {
-      return
-    }
-
-    setAssignToId(ticket?.assignedToUserId ?? '')
-  }, [ticket?.assignedToUserId, canAssign])
+  const effectiveNextStatus = nextStatus || defaultNextStatus
+  const effectiveAssignToId = assignToId || ticket?.assignedToUserId || ''
 
   if (!ticketId) {
     return (
@@ -285,7 +277,7 @@ export function TicketDetailsPage() {
     )
   }
 
-  const hasAssignmentChanged = Boolean(assignToId) && assignToId !== (ticket.assignedToUserId ?? '')
+  const hasAssignmentChanged = Boolean(effectiveAssignToId) && effectiveAssignToId !== (ticket.assignedToUserId ?? '')
 
   const handlePrintTicket = () => {
     setPrintGeneratedAt(formatDateTime(new Date().toISOString()))
@@ -394,7 +386,7 @@ export function TicketDetailsPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild disabled={!canUpdateStatus || updateStatusMutation.isPending}>
                   <Button variant="outline" className="h-9 w-full justify-between px-3 font-normal">
-                    <span>{nextStatus ? formatWord(nextStatus) : 'Select status'}</span>
+                    <span>{effectiveNextStatus ? formatWord(effectiveNextStatus) : 'Select status'}</span>
                     <span className="text-xs text-muted-foreground">Change</span>
                   </Button>
                 </DropdownMenuTrigger>
@@ -440,7 +432,7 @@ export function TicketDetailsPage() {
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
-              disabled={!canUpdateStatus || !nextStatus || updateStatusMutation.isPending}
+              disabled={!canUpdateStatus || !effectiveNextStatus || updateStatusMutation.isPending}
               onClick={() => updateStatusMutation.mutate()}
             >
               {updateStatusMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -459,8 +451,8 @@ export function TicketDetailsPage() {
                   <DropdownMenuTrigger asChild disabled={assignTicketMutation.isPending}>
                     <Button variant="outline" className="h-9 justify-between px-3 font-normal">
                       <span>
-                        {assignToId
-                          ? (assignableUsers.find((user) => user.id === assignToId)?.displayName ??
+                        {effectiveAssignToId
+                          ? (assignableUsers.find((user) => user.id === effectiveAssignToId)?.displayName ??
                             ticket.assignedToName ??
                             ticket.assignedToUserId ??
                             'Selected')

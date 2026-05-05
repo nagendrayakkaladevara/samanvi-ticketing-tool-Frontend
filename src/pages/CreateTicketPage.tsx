@@ -25,23 +25,6 @@ function RequiredBadge() {
 }
 
 function FieldError({ message }: { message?: string }) {
-  // #region agent log
-  if (message) {
-    fetch('http://127.0.0.1:7927/ingest/54f1c9c3-dd97-451a-9825-8fa76e413742', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '016c02' },
-      body: JSON.stringify({
-        sessionId: '016c02',
-        runId: 'pre-fix',
-        hypothesisId: 'H3',
-        location: 'CreateTicketPage.tsx:FieldError',
-        message: 'FieldError rendered with message',
-        data: { hasMessage: true, messageText: message },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
-  }
-  // #endregion
   if (!message) return null
   return <p className="text-xs font-medium !text-red-600">{message}</p>
 }
