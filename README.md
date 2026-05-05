@@ -1,73 +1,80 @@
-# React + TypeScript + Vite
+# Samanvi Issue Report Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend application for issue/ticket management in the Samanvi workflow.  
+Built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Authentication flow with protected and public-only routes
+- Role-aware navigation and page access (`ADMIN`, `SUPERVISOR`, `WORKER`, `VIEWER`)
+- Ticket list, ticket details, and timeline activity view
+- Ticket creation flow with category and assignment support
+- Admin-focused pages for dashboard, board, and user management
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19 + TypeScript
+- Vite 8
+- React Router 7
+- TanStack Query
+- Zustand
+- Axios
+- Tailwind CSS + shadcn/ui + Radix UI
 
-## Expanding the ESLint configuration
+## Routes Overview
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- `/login` - Sign in
+- `/tickets` - Ticket listing (authenticated users)
+- `/tickets/create` - Create ticket (`ADMIN`, `SUPERVISOR`)
+- `/tickets/:ticketId` - Ticket details
+- `/dashboard` - Dashboard (`ADMIN`)
+- `/board` - Board (`ADMIN`)
+- `/users` - User management (`ADMIN`)
+- `/buses` - Buses (`ADMIN`, `SUPERVISOR`)
+- `/settings` - User settings
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Prerequisites
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Node.js 20+ (recommended)
+- npm 10+ (recommended)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+VITE_API_BASE_URL=http://localhost:3000
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+`VITE_API_BASE_URL` is required. The app will fail at startup if it is missing.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Getting Started
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
+```
+
+By default, Vite starts with `--host`, so it is accessible on your local network.
+
+## Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Type-check and build for production
+- `npm run preview` - Preview production build locally
+- `npm run lint` - Run ESLint
+
+## Project Structure
+
+```text
+src/
+  app/          # app root, providers, router
+  components/   # shared UI and layout components
+  config/       # runtime config and env handling
+  features/     # domain modules (auth, tickets, users)
+  hooks/        # shared hooks
+  lib/          # API client, helpers, query client
+  pages/        # route-level pages
+  store/        # zustand stores
+  styles/       # global and feature styles
 ```
