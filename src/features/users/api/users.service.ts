@@ -4,13 +4,30 @@ import type { AppUser, AppUserRole, CreateUserInput, UpdateUserInput } from '@/f
 const endpoint = '/users'
 
 function normalizeRole(rawRole: unknown): AppUserRole {
-  if (typeof rawRole !== 'string') {
-    return 'WORKER'
+  const normalizeRoleValue = (value: unknown): AppUserRole | null => {
+    if (typeof value !== 'string') {
+      return null
+    }
+
+    const normalized = value.trim().toUpperCase()
+    if (normalized === 'ADMIN' || normalized === 'SUPERVISOR' || normalized === 'WORKER') {
+      return normalized
+    }
+
+    return null
   }
 
-  const normalized = rawRole.trim().toUpperCase()
-  if (normalized === 'ADMIN' || normalized === 'SUPERVISOR' || normalized === 'WORKER') {
-    return normalized
+  const direct = normalizeRoleValue(rawRole)
+  if (direct) {
+    return direct
+  }
+
+  if (rawRole && typeof rawRole === 'object') {
+    const record = rawRole as Record<string, unknown>
+    const nested = normalizeRoleValue(record.code) ?? normalizeRoleValue(record.label) ?? normalizeRoleValue(record.name)
+    if (nested) {
+      return nested
+    }
   }
 
   return 'WORKER'

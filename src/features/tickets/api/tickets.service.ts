@@ -365,6 +365,17 @@ export const ticketsService = {
     return normalizeTicket(payload) ?? (payload as Ticket)
   },
 
+  async searchByTicketNumber(ticketNumber: string): Promise<Ticket> {
+    const { data } = await apiClient.get<unknown>(`${endpoint}/search`, {
+      params: { ticketNumber },
+    })
+    const payload =
+      data && typeof data === 'object' && 'data' in (data as Record<string, unknown>)
+        ? (data as Record<string, unknown>).data
+        : data
+    return normalizeTicket(payload) ?? (payload as Ticket)
+  },
+
   async updateStatus({ ticketId, status, note }: UpdateTicketStatusInput): Promise<Ticket> {
     const { data } = await apiClient.patch<unknown>(`${endpoint}/${ticketId}/status`, {
       status: toApiStatus(status),

@@ -7,7 +7,7 @@ import {
   type ColDef,
   type ICellRendererParams,
 } from 'ag-grid-community'
-import { AlertTriangle, ArrowRight, Calendar, Clock, Inbox, Trash2, User } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Calendar, Clock, Inbox, Loader2, Search, Trash2, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '@/lib/toast'
 
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ticketsService } from '@/features/tickets/api/tickets.service'
@@ -217,6 +218,7 @@ export function TicketsPage() {
   const canCreateTicket = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR'
   const canDeleteTicket = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR'
   const [deleteTarget, setDeleteTarget] = useState<TicketGridRow | null>(null)
+  const [ticketNumberQuery, setTicketNumberQuery] = useState('')
 
   const rowData = useMemo(() => tickets.map(toTicketGridRow), [tickets])
 
@@ -232,6 +234,16 @@ export function TicketsPage() {
     },
   })
 
+  const searchTicketMutation = useMutation({
+    mutationFn: async (ticketNumber: string) => ticketsService.searchByTicketNumber(ticketNumber),
+    onSuccess: (ticket) => {
+      navigate(getTicketDetailsPath(ticket.id))
+    },
+    onError: (mutationError) => {
+      toast.error(mutationError instanceof Error ? mutationError.message : 'Unable to find ticket.')
+    },
+  })
+
   function openDeleteDialog(ticket: TicketGridRow, event: MouseEvent<HTMLButtonElement>) {
     event.stopPropagation()
     setDeleteTarget(ticket)
@@ -240,6 +252,16 @@ export function TicketsPage() {
   function confirmDelete() {
     if (!deleteTarget) return
     deleteMutation.mutate(deleteTarget.id)
+  }
+
+  function handleTicketSearch() {
+    const trimmedTicketNumber = ticketNumberQuery.trim()
+    if (!/^\d{4}$/.test(trimmedTicketNumber)) {
+      toast.error('Enter a valid 4-digit ticket number.')
+      return
+    }
+
+    searchTicketMutation.mutate(trimmedTicketNumber)
   }
 
   const columnDefs = useMemo<Array<ColDef<TicketGridRow>>>(
@@ -351,6 +373,37 @@ export function TicketsPage() {
           </p>
         </div>
         <div className="ticket-page__header-actions">
+          <div className="flex w-full max-w-sm items-center gap-2">
+            <Input
+              value={ticketNumberQuery}
+              onChange={(event) => setTicketNumberQuery(event.target.value.replace(/\D/g, '').slice(0, 4))}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  handleTicketSearch()
+                }
+              }}
+              inputMode="numeric"
+              pattern="[0-9]{4}"
+              maxLength={4}
+              placeholder="Search ticket # (4 digits)"
+              aria-label="Search ticket by number"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleTicketSearch}
+              disabled={searchTicketMutation.isPending}
+              className="gap-2"
+            >
+              {searchTicketMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+              Search
+            </Button>
+          </div>
           {canCreateTicket ? (
             <Button className="ticket-page__create-btn" onClick={() => navigate(getCreateTicketPath())}>
               Create Ticket
