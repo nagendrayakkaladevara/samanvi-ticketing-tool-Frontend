@@ -2,7 +2,7 @@ import { useMemo, useState, type MouseEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 import {
   AlertDialog,

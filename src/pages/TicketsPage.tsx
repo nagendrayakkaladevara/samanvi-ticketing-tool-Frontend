@@ -1,4 +1,5 @@
-import { useMemo, type CSSProperties } from 'react'
+import { useMemo, useState, type CSSProperties, type MouseEvent } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { AgGridReact } from 'ag-grid-react'
 import {
   AllCommunityModule,
@@ -6,17 +7,30 @@ import {
   type ColDef,
   type ICellRendererParams,
 } from 'ag-grid-community'
-import { AlertTriangle, ArrowRight, Calendar, Clock, Inbox, User } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Calendar, Clock, Inbox, Trash2, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from '@/lib/toast'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { ticketsService } from '@/features/tickets/api/tickets.service'
 import { useTicketsQuery } from '@/features/tickets/hooks/use-tickets-query'
 import type { Ticket } from '@/features/tickets/types/ticket'
 import { getCreateTicketPath, getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { queryClient } from '@/lib/query/query-client'
 
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
@@ -144,7 +158,14 @@ function ViewTicketButtonCell({ data }: ICellRendererParams<TicketGridRow>) {
   }
 
   return (
-    <Button size="sm" className="ticket-grid__action-btn" onClick={() => navigate(getTicketDetailsPath(data.id))}>
+    <Button
+      size="sm"
+      className="ticket-grid__action-btn"
+      onClick={(event) => {
+        event.stopPropagation()
+        navigate(getTicketDetailsPath(data.id))
+      }}
+    >
       <span>View</span>
       <ArrowRight className="ticket-grid__action-icon" />
     </Button>
@@ -194,8 +215,32 @@ export function TicketsPage() {
   const navigate = useNavigate()
   const currentUser = useCurrentUser()
   const canCreateTicket = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR'
+  const canDeleteTicket = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR'
+  const [deleteTarget, setDeleteTarget] = useState<TicketGridRow | null>(null)
 
   const rowData = useMemo(() => tickets.map(toTicketGridRow), [tickets])
+
+  const deleteMutation = useMutation({
+    mutationFn: (ticketId: string) => ticketsService.remove(ticketId),
+    onSuccess: () => {
+      toast.success('Ticket deleted successfully.')
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      setDeleteTarget(null)
+    },
+    onError: (mutationError) => {
+      toast.error(mutationError instanceof Error ? mutationError.message : 'Failed to delete ticket.')
+    },
+  })
+
+  function openDeleteDialog(ticket: TicketGridRow, event: MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation()
+    setDeleteTarget(ticket)
+  }
+
+  function confirmDelete() {
+    if (!deleteTarget) return
+    deleteMutation.mutate(deleteTarget.id)
+  }
 
   const columnDefs = useMemo<Array<ColDef<TicketGridRow>>>(
     () => [
@@ -267,14 +312,29 @@ export function TicketsPage() {
         field: 'id',
         headerClass: 'ticket-grid__header-cell ticket-grid__header-cell--actions',
         cellClass: 'ticket-grid__actions-cell',
-        minWidth: 110,
-        maxWidth: 120,
+        minWidth: canDeleteTicket ? 190 : 110,
+        maxWidth: canDeleteTicket ? 220 : 120,
         sortable: false,
         filter: false,
-        cellRenderer: ViewTicketButtonCell,
+        cellRenderer: (params: ICellRendererParams<TicketGridRow>) => (
+          <div className="flex items-center justify-end gap-2">
+            <ViewTicketButtonCell {...params} />
+            {canDeleteTicket && params.data?.id ? (
+              <Button
+                size="sm"
+                variant="destructive"
+                className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                onClick={(event) => openDeleteDialog(params.data as TicketGridRow, event)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </Button>
+            ) : null}
+          </div>
+        ),
       },
     ],
-    [],
+    [canDeleteTicket],
   )
 
   const gridStyle: CSSProperties = {
@@ -338,6 +398,10 @@ export function TicketsPage() {
               rowHeight={50}
               getRowClass={(params) => (params.data?.isOverdue ? 'ticket-grid__row--overdue' : '')}
               onRowClicked={(event) => {
+                const clickTarget = event.event?.target as HTMLElement | null
+                if (clickTarget?.closest('button')) {
+                  return
+                }
                 if (event.data?.id) {
                   navigate(getTicketDetailsPath(event.data.id))
                 }
@@ -346,6 +410,29 @@ export function TicketsPage() {
           </div>
         </Card>
       ) : null}
+
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete ticket?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? `This will permanently remove "${deleteTarget.title}". This action cannot be undone.`
+                : 'This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   )
 }

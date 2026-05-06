@@ -2,7 +2,7 @@ import { useEffect, type FormEventHandler } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Loader2, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'

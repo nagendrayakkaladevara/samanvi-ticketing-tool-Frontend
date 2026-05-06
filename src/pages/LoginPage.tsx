@@ -1,7 +1,7 @@
 import { type FormEvent, useMemo, useState } from 'react'
 import { GalleryVerticalEnd } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { z } from 'zod'
 
 import { login } from '@/features/auth/api/auth.service'

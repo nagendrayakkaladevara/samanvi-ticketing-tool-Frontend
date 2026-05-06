@@ -422,4 +422,8 @@ export const ticketsService = {
         : data
     return normalizeTicket(payload) ?? (payload as Ticket)
   },
+
+  async remove(ticketId: string): Promise<void> {
+    await apiClient.delete(`${endpoint}/${ticketId}`)
+  },
 }

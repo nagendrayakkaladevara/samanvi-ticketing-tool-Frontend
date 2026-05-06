@@ -64,14 +64,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg">
-              <Link to="/" onClick={handleMobileItemClick}>
+              <Link to="/" onClick={handleMobileItemClick} className="flex items-center gap-2">
                 <div className="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   ST
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Samanvi</span>
-                  <span className="truncate text-xs">Ticketing Tool</span>
-                </div>
+                <img
+                  src="https://gst-contracts.s3.ap-southeast-1.amazonaws.com/uploads/bcc/cms/asset/avatar/613944/samv_logo.png"
+                  alt="Samanvi"
+                  className="h-8 w-auto object-contain"
+                />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -98,8 +99,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarFooter>
         <div className="px-2 pb-2 text-xs text-muted-foreground group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:text-center">
-          <span className="group-data-[collapsible=icon]:hidden">Version 1.0</span>
-          <span className="hidden group-data-[collapsible=icon]:inline">v1.0</span>
+          <span className="group-data-[collapsible=icon]:hidden">Version 1.3.0</span>
+          <span className="hidden group-data-[collapsible=icon]:inline">v1.3.0</span>
         </div>
         <SidebarMenu>
           <SidebarMenuItem>
