@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react'
 import { Check, MoonStar, SunMedium, UserRound } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useProfileQuery } from '@/features/profile/hooks/use-profile-query'
 
@@ -37,6 +35,23 @@ function formatDate(dateString: string): string {
   return date.toLocaleString()
 }
 
+function getInitials(displayName: string, fallback: string): string {
+  const parts = displayName
+    .split(' ')
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+  }
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase()
+  }
+
+  return fallback.slice(0, 2).toUpperCase()
+}
+
 export function SettingsPage() {
   const { data: profile, isLoading, isError, error, refetch, isFetching } = useProfileQuery()
   const [theme, setTheme] = useState<ThemeMode>(getInitialTheme)
@@ -51,9 +66,6 @@ export function SettingsPage() {
     <section className="space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Clean profile overview from `GET /profile` and personal appearance preferences.
-        </p>
       </header>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
@@ -91,30 +103,49 @@ export function SettingsPage() {
             ) : null}
 
             {!isLoading && !isError && profile ? (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="profile-username">Username</Label>
-                  <Input id="profile-username" value={profile.username} readOnly />
+              <div className="space-y-4 sm:space-y-5">
+                <div className="relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/15 via-primary/10 to-background p-4 sm:p-5">
+                  <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-primary/20 blur-2xl" />
+                  <div className="pointer-events-none absolute -bottom-12 left-8 h-24 w-24 rounded-full bg-primary/25 blur-2xl" />
+                  <div className="relative flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/40 bg-background/70 text-base font-semibold tracking-wider text-primary shadow-sm backdrop-blur sm:h-14 sm:w-14 sm:text-lg">
+                        {getInitials(profile.displayName, profile.username)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-semibold tracking-tight sm:text-lg">{profile.displayName}</p>
+                        <p className="truncate text-xs text-muted-foreground sm:text-sm">@{profile.username}</p>
+                      </div>
+                    </div>
+                    <span
+                      className={`inline-flex w-fit max-w-full items-center rounded-full border px-3 py-1 text-[11px] font-medium sm:text-xs ${
+                        profile.isActive
+                          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                          : 'border-zinc-500/30 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300'
+                      }`}
+                    >
+                      {profile.isActive ? 'Account active' : 'Account inactive'}
+                    </span>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="profile-display-name">Display name</Label>
-                  <Input id="profile-display-name" value={profile.displayName} readOnly />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="profile-email">Email</Label>
-                  <Input id="profile-email" value={profile.email ?? '-'} readOnly />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="profile-role">Role</Label>
-                  <Input id="profile-role" value={profile.role.label} readOnly />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="profile-status">Status</Label>
-                  <Input id="profile-status" value={profile.isActive ? 'Active' : 'Inactive'} readOnly />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="profile-updated-at">Last updated</Label>
-                  <Input id="profile-updated-at" value={formatDate(profile.updatedAt)} readOnly />
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border bg-muted/20 p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Email</p>
+                    <p className="mt-1 break-all text-sm font-medium leading-snug">{profile.email ?? '-'}</p>
+                  </div>
+                  <div className="rounded-xl border bg-muted/20 p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Role</p>
+                    <p className="mt-1 text-sm font-medium">{profile.role.label}</p>
+                  </div>
+                  <div className="rounded-xl border bg-muted/20 p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Status</p>
+                    <p className="mt-1 text-sm font-medium">{profile.isActive ? 'Active' : 'Inactive'}</p>
+                  </div>
+                  <div className="rounded-xl border bg-muted/20 p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Last updated</p>
+                    <p className="mt-1 break-words text-sm font-medium leading-snug">{formatDate(profile.updatedAt)}</p>
+                  </div>
                 </div>
               </div>
             ) : null}
