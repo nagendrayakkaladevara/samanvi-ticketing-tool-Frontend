@@ -12,6 +12,7 @@ export type AssignableRole = 'WORKER' | 'SUPERVISOR' | 'ADMIN' | 'VIEWER'
 
 export interface Ticket {
   id: string
+  ticketNumber?: string
   busNumber: string
   title: string
   description: string

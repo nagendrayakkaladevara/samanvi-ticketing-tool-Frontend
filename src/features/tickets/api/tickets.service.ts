@@ -119,6 +119,14 @@ function normalizeTicket(raw: unknown): Ticket | null {
 
   return {
     id,
+    ticketNumber:
+      typeof value.ticketNumber === 'string'
+        ? value.ticketNumber
+        : typeof value.ticketNumber === 'number'
+          ? String(value.ticketNumber)
+          : typeof value.ticket_no === 'string'
+            ? value.ticket_no
+            : undefined,
     busNumber:
       typeof value.busNumber === 'string'
         ? value.busNumber

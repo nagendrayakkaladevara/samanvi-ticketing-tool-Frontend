@@ -298,72 +298,66 @@ export function TicketDetailsPage() {
             Print Ticket
           </Button>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-md border bg-muted/20 p-3 print-card">
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Created At</p>
-            <p className="mt-1 text-sm font-semibold">{formatDateTime(ticket.createdAt)}</p>
-          </div>
-          <div className="rounded-md border bg-muted/20 p-3 print-card">
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Updated At</p>
-            <p className="mt-1 text-sm font-semibold">{formatDateTime(ticket.updatedAt)}</p>
-          </div>
-          <div className="rounded-md border bg-muted/20 p-3 print-card">
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Created By</p>
-            <p className="mt-1 text-sm font-semibold">{ticket.createdByName || 'Unknown'}</p>
-          </div>
-          <div className="rounded-md border bg-muted/20 p-3 print-card">
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Assigned To</p>
-            <p className="mt-1 text-sm font-semibold">{ticket.assignedToName || 'Unassigned'}</p>
-          </div>
-        </div>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr] print:block print:space-y-4">
+      <div className="space-y-4 print:space-y-4">
         <Card className="print-card space-y-4 p-4">
-          <div className="grid gap-3 border-b pb-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="space-y-3 border-b pb-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Ticket Details</h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-md border bg-muted/20 p-3 print-card">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Status</p>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Ticket Number</p>
+              <p className="mt-1 text-sm font-semibold">{ticket.ticketNumber || ticket.id}</p>
+            </div>
+            <div className="rounded-md border bg-muted/20 p-3 print-card">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Status</p>
               <p className="mt-1 text-sm font-semibold">{formatWord(ticket.status)}</p>
             </div>
             <div className="rounded-md border bg-muted/20 p-3 print-card">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Priority</p>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Created At</p>
+              <p className="mt-1 text-sm font-semibold">{formatDateTime(ticket.createdAt)}</p>
+            </div>
+            <div className="rounded-md border bg-muted/20 p-3 print-card">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Updated At</p>
+              <p className="mt-1 text-sm font-semibold">{formatDateTime(ticket.updatedAt)}</p>
+            </div>
+            <div className="rounded-md border bg-muted/20 p-3 print-card">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Priority</p>
               <p className="mt-1 text-sm font-semibold">{ticket.priority}</p>
             </div>
             <div className="rounded-md border bg-muted/20 p-3 print-card">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Severity</p>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Severity</p>
               <p className="mt-1 text-sm font-semibold">{ticket.severity}</p>
             </div>
             <div className="rounded-md border bg-muted/20 p-3 print-card">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Category</p>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Category</p>
               <p className="mt-1 text-sm font-semibold">{ticket.category || 'General'}</p>
             </div>
             <div className="rounded-md border bg-muted/20 p-3 print-card">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Bus Number</p>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Bus Number</p>
               <p className="mt-1 text-sm font-semibold">{ticket.busNumber || 'N/A'}</p>
             </div>
             <div className="rounded-md border bg-muted/20 p-3 print-card">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">SLA Due</p>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">SLA Due</p>
               <p className="mt-1 text-sm font-semibold">{formatSla(ticket.slaDueAt)}</p>
             </div>
             <div className="rounded-md border bg-muted/20 p-3 print-card">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Assigned To</p>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Assigned To</p>
               <p className="mt-1 text-sm font-semibold">{ticket.assignedToName || 'Unassigned'}</p>
             </div>
             <div className="rounded-md border bg-muted/20 p-3 print-card">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Created By</p>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Created By</p>
               <p className="mt-1 text-sm font-semibold">{ticket.createdByName || 'Unknown'}</p>
             </div>
             <div className="rounded-md border bg-muted/20 p-3 print-card">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Assignee User ID</p>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Assignee User ID</p>
               <p className="mt-1 break-all text-sm font-medium">{ticket.assignedToUserId || 'N/A'}</p>
             </div>
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Description</p>
-            <p className="rounded-md border bg-background p-3 text-sm leading-6">
-              {ticket.description || 'No description'}
-            </p>
+            <div className="rounded-md border bg-background p-3 lg:col-span-4 print-card">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Description</p>
+              <p className="mt-1 text-sm leading-6">{ticket.description || 'No description'}</p>
+            </div>
+            </div>
           </div>
         </Card>
 
