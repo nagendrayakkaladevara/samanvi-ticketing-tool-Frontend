@@ -49,9 +49,15 @@ export function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const redirectTo = useMemo(() => {
-    const from = location.state?.from
-    return typeof from === 'string' && from.startsWith('/') ? from : '/'
-  }, [location.state])
+    const redirectParam = new URLSearchParams(location.search).get('redirect')
+    const fromState = location.state?.from
+    const requestedPath = typeof redirectParam === 'string' && redirectParam.startsWith('/')
+      ? redirectParam
+      : typeof fromState === 'string' && fromState.startsWith('/')
+        ? fromState
+        : '/'
+    return requestedPath
+  }, [location.search, location.state])
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

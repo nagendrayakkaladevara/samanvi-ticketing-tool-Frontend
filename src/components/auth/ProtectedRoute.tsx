@@ -13,7 +13,9 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   const currentUser = useCurrentUser()
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+    const requestedPath = `${location.pathname}${location.search}${location.hash}`
+    const loginPath = `/login?redirect=${encodeURIComponent(requestedPath)}`
+    return <Navigate to={loginPath} replace state={{ from: requestedPath }} />
   }
 
   if (allowedRoles && (!currentUser || !allowedRoles.includes(currentUser.role))) {

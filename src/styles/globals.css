@@ -152,10 +152,10 @@
 
 @keyframes rainbow-border-shift {
   0% {
-    background-position: 0% 50%;
+    background-position: 0 0, 0px 50%;
   }
   100% {
-    background-position: 200% 50%;
+    background-position: 0 0, -240px 50%;
   }
 }
 
@@ -167,6 +167,7 @@
   background-origin: border-box;
   background-clip: padding-box, border-box;
   background-size: 100% 100%, 220% 100%;
+  background-position: 0 0, 0px 50%;
   animation: rainbow-border-shift 3.5s linear infinite;
 }
 
