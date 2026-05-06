@@ -129,10 +129,6 @@ function getActivityTone(action: string | undefined): string {
   return 'border-slate-200 bg-slate-100 text-slate-700'
 }
 
-function isUpdatableStatus(status: string): status is UpdatableStatus {
-  return status === 'ASSIGNED' || status === 'IN_PROGRESS' || status === 'RESOLVED' || status === 'CLOSED'
-}
-
 export function TicketDetailsPage() {
   const { ticketId } = useParams<{ ticketId: string }>()
   const currentUser = useCurrentUser()
@@ -185,7 +181,7 @@ export function TicketDetailsPage() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async () => {
-      if (!ticketId || !nextStatus) {
+      if (!ticketId || !nextStatus || !ticket) {
         throw new Error('Select a status first.')
       }
       if (nextStatus === ticket.status) {
