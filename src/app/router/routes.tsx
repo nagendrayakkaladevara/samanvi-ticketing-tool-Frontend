@@ -50,7 +50,7 @@ export const appRouter = createBrowserRouter([
       {
         path: '/',
         element: <AppShell />,
-        errorElement: <NotFoundPage />,
+        errorElement: <NotFoundPage embedded />,
         children: [
           { index: true, element: <RoleHomeRedirect /> },
           { path: 'tickets', element: <TicketsPage /> },
