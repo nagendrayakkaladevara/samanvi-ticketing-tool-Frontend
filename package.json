@@ -1,7 +1,7 @@
 {
   "name": "samanviissuereport",
   "private": true,
-  "version": "1.5.0",
+  "version": "1.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
@@ -26,6 +26,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.14.0",
+    "qrcode.react": "^4.2.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2",

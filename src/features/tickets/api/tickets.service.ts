@@ -20,6 +20,13 @@ type AddTicketCommentInput = {
   note: string
 }
 
+type EnhanceTicketDescriptionResponse = {
+  success?: boolean
+  data?: {
+    enhancedText?: string
+  }
+}
+
 export type CreateTicketInput = {
   title: string
   description: string
@@ -440,6 +447,19 @@ export const ticketsService = {
         ? (data as Record<string, unknown>).data
         : data
     return normalizeTicket(payload) ?? (payload as Ticket)
+  },
+
+  async enhanceDescription(description: string): Promise<string> {
+    const { data } = await apiClient.post<EnhanceTicketDescriptionResponse>('/ai/enhance-ticket-description', {
+      description: description.trim(),
+    })
+
+    const enhancedText = data?.data?.enhancedText
+    if (!enhancedText || !enhancedText.trim()) {
+      throw new Error('AI enhancement returned empty text.')
+    }
+
+    return enhancedText
   },
 
   async remove(ticketId: string): Promise<void> {

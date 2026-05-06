@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Loader2, Printer, Save } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import { useParams } from 'react-router-dom'
 import { toast } from '@/lib/toast'
 
@@ -268,6 +269,7 @@ export function TicketDetailsPage() {
   const hasAssignmentChanged = Boolean(effectiveAssignToId) && effectiveAssignToId !== (ticket.assignedToUserId ?? '')
   const hasStatusSelection = nextStatus !== ''
   const hasStatusChanged = hasStatusSelection && nextStatus !== ticket.status
+  const ticketRouteUrl = `${window.location.origin}/tickets/${ticket.id}`
 
   const handlePrintTicket = () => {
     setPrintGeneratedAt(formatDateTime(new Date().toISOString()))
@@ -352,6 +354,15 @@ export function TicketDetailsPage() {
             <div className="rounded-md border bg-muted/20 p-3 print-card">
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Assignee User ID</p>
               <p className="mt-1 break-all text-sm font-medium">{ticket.assignedToUserId || 'N/A'}</p>
+            </div>
+            <div className="rounded-md border bg-background p-3 print-card">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Ticket QR</p>
+              <div className="mt-2 flex items-start gap-3">
+                <div className="rounded-md border bg-white p-2">
+                  <QRCodeSVG value={ticketRouteUrl} size={76} />
+                </div>
+                <p className="break-all text-xs text-muted-foreground">{ticketRouteUrl}</p>
+              </div>
             </div>
             <div className="rounded-md border bg-background p-3 lg:col-span-4 print-card">
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Description</p>

@@ -16,6 +16,8 @@ import { useCurrentUser } from '@/hooks/use-current-user'
 import { queryClient } from '@/lib/query/query-client'
 import { cn } from '@/lib/utils'
 
+const MIN_DESCRIPTION_WORDS_FOR_AI = 4
+
 function RequiredBadge() {
   return (
     <span className="ml-2 inline-flex items-center rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700">
@@ -62,6 +64,17 @@ export function CreateTicketPage() {
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Failed to create ticket.')
+    },
+  })
+
+  const enhanceDescriptionMutation = useMutation({
+    mutationFn: async (description: string) => ticketsService.enhanceDescription(description),
+    onSuccess: (enhancedText) => {
+      form.setField('description', enhancedText)
+      toast.success('Description enhanced with AI.')
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to enhance description.')
     },
   })
 
@@ -134,6 +147,18 @@ export function CreateTicketPage() {
     // #endregion
   }, [form.errors])
 
+  const handleEnhanceDescription = () => {
+    const description = form.values.description.trim()
+    const wordCount = description.split(/\s+/).filter(Boolean).length
+
+    if (wordCount < MIN_DESCRIPTION_WORDS_FOR_AI) {
+      toast.error(`Please enter at least ${MIN_DESCRIPTION_WORDS_FOR_AI} words in description to enhance with AI.`)
+      return
+    }
+
+    enhanceDescriptionMutation.mutate(description)
+  }
+
   return (
     <section className="mx-auto w-full max-w-3xl space-y-5">
       <header className="space-y-2">
@@ -167,10 +192,23 @@ export function CreateTicketPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">
-              Description
-              <RequiredBadge />
-            </Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Label htmlFor="description">
+                Description
+                <RequiredBadge />
+              </Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-[11px]"
+                onClick={handleEnhanceDescription}
+                disabled={createTicketMutation.isPending || enhanceDescriptionMutation.isPending}
+              >
+                {enhanceDescriptionMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                Enhace with AI
+              </Button>
+            </div>
             <Textarea
               id="description"
               placeholder="Briefly describe what happened and any observed impact."
@@ -178,7 +216,7 @@ export function CreateTicketPage() {
               value={form.values.description}
               onChange={(event) => form.setField('description', event.target.value)}
               aria-invalid={Boolean(form.errors.description)}
-              disabled={createTicketMutation.isPending}
+              disabled={createTicketMutation.isPending || enhanceDescriptionMutation.isPending}
             />
             <FieldError message={form.errors.description} />
           </div>
