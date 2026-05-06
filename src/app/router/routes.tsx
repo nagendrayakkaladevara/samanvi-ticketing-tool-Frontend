@@ -12,6 +12,7 @@ import { TicketsPage } from '@/pages/TicketsPage'
 import { TicketDetailsPage } from '@/pages/TicketDetailsPage'
 import { CreateTicketPage } from '@/pages/CreateTicketPage'
 import { BusesPage } from '@/pages/BusesPage'
+import { BusTicketHistoryPage } from '@/pages/BusTicketHistoryPage'
 import { BoardPage } from '@/pages/BoardPage'
 import { UsersPage } from '@/pages/UsersPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -92,6 +93,14 @@ export const appRouter = createBrowserRouter([
             element: (
               <RoleGuard allowedRoles={['ADMIN', 'SUPERVISOR']}>
                 <BusesPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'buses/:busId/tickets',
+            element: (
+              <RoleGuard allowedRoles={['ADMIN', 'SUPERVISOR']}>
+                <BusTicketHistoryPage />
               </RoleGuard>
             ),
           },
