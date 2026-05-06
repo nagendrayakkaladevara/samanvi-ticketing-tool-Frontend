@@ -40,11 +40,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const currentUser = useCurrentUser()
   const { isMobile, setOpenMobile } = useSidebar()
   const logout = useAuthStore((state) => state.logout)
+  const isMobileRef = React.useRef(isMobile)
+  React.useEffect(() => {
+    isMobileRef.current = isMobile
+  }, [isMobile])
+
   const handleMobileItemClick = React.useCallback(() => {
-    if (isMobile) {
+    if (isMobileRef.current) {
       setOpenMobile(false)
     }
-  }, [isMobile, setOpenMobile])
+  }, [setOpenMobile])
   const filteredNavItems = navItems.filter((item) => {
     if (!('roles' in item) || !item.roles) {
       return true
