@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, ArrowRight, CircleCheckBig, Clock3, FolderOpen, Ticket, Wrench } from 'lucide-react'
+import { AlertTriangle, ArrowRight, CircleCheckBig, Clock3, FolderOpen, Ticket, TrendingDown, TrendingUp, Wrench } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,13 +24,23 @@ function SummaryCard({
   icon: Icon,
   toneClass,
   helper,
+  trendPercent,
+  lowerIsBetter,
 }: {
   title: string
   value: number
   icon: React.ComponentType<{ className?: string }>
   toneClass: string
   helper: string
+  trendPercent?: number
+  lowerIsBetter?: boolean
 }) {
+  const hasTrend = typeof trendPercent === 'number' && Number.isFinite(trendPercent)
+  const isPositive = (trendPercent ?? 0) >= 0
+  const trendIsGood = hasTrend ? (lowerIsBetter ? !isPositive : isPositive) : true
+  const trendTextColor = trendIsGood ? 'text-emerald-700' : 'text-rose-700'
+  const TrendIcon = isPositive ? TrendingUp : TrendingDown
+
   return (
     <Card className="relative overflow-hidden border-border/80 bg-card/95 shadow-sm">
       <div className={`absolute inset-x-0 top-0 h-1 ${toneClass}`} />
@@ -40,7 +50,15 @@ function SummaryCard({
       </CardHeader>
       <CardContent>
         <div className="text-3xl font-semibold leading-tight">{formatNumber(value)}</div>
-        <p className="mt-1 text-xs text-muted-foreground">{helper}</p>
+        <div className="mt-1 flex min-h-4 items-center gap-2">
+          <p className="text-xs text-muted-foreground">{helper}</p>
+          {hasTrend ? (
+            <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${trendTextColor}`}>
+              <TrendIcon className="h-3 w-3" />
+              {Math.abs(trendPercent ?? 0).toFixed(1)}%
+            </span>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   )
@@ -207,6 +225,7 @@ export function DashboardPage() {
           icon={Ticket}
           toneClass="bg-slate-500/70"
           helper="Overall workload"
+          trendPercent={summary.trends?.totalTicketsPct}
         />
         <SummaryCard
           title="Open Tickets"
@@ -214,6 +233,7 @@ export function DashboardPage() {
           icon={FolderOpen}
           toneClass="bg-sky-500/80"
           helper="Awaiting assignment or work"
+          trendPercent={summary.trends?.openTicketsPct}
         />
         <SummaryCard
           title="In Progress"
@@ -221,6 +241,7 @@ export function DashboardPage() {
           icon={Wrench}
           toneClass="bg-amber-500/90"
           helper="Actively being resolved"
+          trendPercent={summary.trends?.inProgressTicketsPct}
         />
         <SummaryCard
           title="Closed / Resolved"
@@ -228,6 +249,7 @@ export function DashboardPage() {
           icon={CircleCheckBig}
           toneClass="bg-emerald-500/90"
           helper="Healthy completion trend"
+          trendPercent={summary.trends?.closedResolvedTicketsPct}
         />
         <SummaryCard
           title="Overdue"
@@ -235,6 +257,8 @@ export function DashboardPage() {
           icon={Clock3}
           toneClass="bg-rose-500/90"
           helper="Needs immediate action"
+          trendPercent={summary.trends?.overdueTicketsPct}
+          lowerIsBetter
         />
       </div>
 
