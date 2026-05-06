@@ -255,6 +255,10 @@ export function TicketsPage() {
   }
 
   function handleTicketSearch() {
+    if (searchTicketMutation.isPending) {
+      return
+    }
+
     const trimmedTicketNumber = ticketNumberQuery.trim()
     if (!/^\d{4}$/.test(trimmedTicketNumber)) {
       toast.error('Enter a valid 4-digit ticket number.')
