@@ -14,6 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import { useCurrentUser, type CurrentUser } from '@/hooks/use-current-user'
 import { useAuthStore } from '@/store/auth-store'
@@ -37,7 +38,13 @@ const navItems: NavItem[] = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const currentUser = useCurrentUser()
+  const { isMobile, setOpenMobile } = useSidebar()
   const logout = useAuthStore((state) => state.logout)
+  const handleMobileItemClick = React.useCallback(() => {
+    if (isMobile) {
+      setOpenMobile(false)
+    }
+  }, [isMobile, setOpenMobile])
   const filteredNavItems = navItems.filter((item) => {
     if (!('roles' in item) || !item.roles) {
       return true
@@ -52,7 +59,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg">
-              <Link to="/">
+              <Link to="/" onClick={handleMobileItemClick}>
                 <div className="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   ST
                 </div>
@@ -73,7 +80,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {filteredNavItems.map((item) => (
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton asChild tooltip={item.label}>
-                    <NavLink to={item.to} end={item.end}>
+                    <NavLink to={item.to} end={item.end} onClick={handleMobileItemClick}>
                       <item.icon />
                       <span>{item.label}</span>
                     </NavLink>
