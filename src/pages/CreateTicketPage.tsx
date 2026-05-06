@@ -201,23 +201,31 @@ export function CreateTicketPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-7 px-2 text-[11px]"
+                className="rainbow-glow-button ml-auto h-7 px-2 text-[11px]"
                 onClick={handleEnhanceDescription}
                 disabled={createTicketMutation.isPending || enhanceDescriptionMutation.isPending}
               >
                 {enhanceDescriptionMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                Enhace with AI
+                Enhance with AI
               </Button>
             </div>
-            <Textarea
-              id="description"
-              placeholder="Briefly describe what happened and any observed impact."
-              className={cn('min-h-28', form.errors.description && '!border-red-600 !ring-1 !ring-red-500/30')}
-              value={form.values.description}
-              onChange={(event) => form.setField('description', event.target.value)}
-              aria-invalid={Boolean(form.errors.description)}
-              disabled={createTicketMutation.isPending || enhanceDescriptionMutation.isPending}
-            />
+            <div className="relative">
+              <Textarea
+                id="description"
+                placeholder="Briefly describe what happened and any observed impact."
+                className={cn(
+                  'min-h-28 pr-10',
+                  form.errors.description && '!border-red-600 !ring-1 !ring-red-500/30',
+                )}
+                value={form.values.description}
+                onChange={(event) => form.setField('description', event.target.value)}
+                aria-invalid={Boolean(form.errors.description)}
+                disabled={createTicketMutation.isPending || enhanceDescriptionMutation.isPending}
+              />
+              {enhanceDescriptionMutation.isPending ? (
+                <Sparkles className="pointer-events-none absolute right-3 top-3 h-4 w-4 animate-pulse text-muted-foreground" />
+              ) : null}
+            </div>
             <FieldError message={form.errors.description} />
           </div>
 

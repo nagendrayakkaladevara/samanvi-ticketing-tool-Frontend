@@ -150,3 +150,30 @@
   display: none;
 }
 
+@keyframes rainbow-border-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.rainbow-glow-button {
+  border: 1px solid transparent !important;
+  background-image:
+    linear-gradient(hsl(var(--background)), hsl(var(--background))),
+    linear-gradient(90deg, #ff005c, #ff8a00, #ffe500, #00d084, #00b8ff, #7b61ff, #ff005c);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-size: 100% 100%, 220% 100%;
+  animation: rainbow-border-shift 3.5s linear infinite;
+}
+
+.rainbow-glow-button:hover:not(:disabled) {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 0 16px rgba(255, 0, 92, 0.34),
+    0 0 26px rgba(0, 184, 255, 0.24);
+}
+
