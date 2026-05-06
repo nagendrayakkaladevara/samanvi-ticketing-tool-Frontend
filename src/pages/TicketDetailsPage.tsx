@@ -185,12 +185,15 @@ export function TicketDetailsPage() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async () => {
-      if (!ticketId || !effectiveNextStatus) {
+      if (!ticketId || !nextStatus) {
         throw new Error('Select a status first.')
+      }
+      if (nextStatus === ticket.status) {
+        throw new Error('Please select a different status.')
       }
       return ticketsService.updateStatus({
         ticketId,
-        status: effectiveNextStatus,
+        status: nextStatus,
         note: statusNote,
       })
     },
@@ -244,17 +247,6 @@ export function TicketDetailsPage() {
     },
   })
 
-  const defaultNextStatus = useMemo<UpdatableStatus | ''>(() => {
-    if (!ticket) {
-      return ''
-    }
-    if (isUpdatableStatus(ticket.status) && capabilities.allowedStatuses.includes(ticket.status)) {
-      return ticket.status
-    }
-    return ''
-  }, [ticket, capabilities.allowedStatuses])
-
-  const effectiveNextStatus = nextStatus || defaultNextStatus
   const effectiveAssignToId = assignToId || ticket?.assignedToUserId || ''
 
   if (!ticketId) {
@@ -278,6 +270,8 @@ export function TicketDetailsPage() {
   }
 
   const hasAssignmentChanged = Boolean(effectiveAssignToId) && effectiveAssignToId !== (ticket.assignedToUserId ?? '')
+  const hasStatusSelection = nextStatus !== ''
+  const hasStatusChanged = hasStatusSelection && nextStatus !== ticket.status
 
   const handlePrintTicket = () => {
     setPrintGeneratedAt(formatDateTime(new Date().toISOString()))
@@ -386,7 +380,7 @@ export function TicketDetailsPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild disabled={!canUpdateStatus || updateStatusMutation.isPending}>
                   <Button variant="outline" className="h-9 w-full justify-between px-3 font-normal">
-                    <span>{effectiveNextStatus ? formatWord(effectiveNextStatus) : 'Select status'}</span>
+                    <span>{nextStatus ? formatWord(nextStatus) : 'Select status'}</span>
                     <span className="text-xs text-muted-foreground">Change</span>
                   </Button>
                 </DropdownMenuTrigger>
@@ -432,7 +426,7 @@ export function TicketDetailsPage() {
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
-              disabled={!canUpdateStatus || !effectiveNextStatus || updateStatusMutation.isPending}
+              disabled={!canUpdateStatus || !hasStatusChanged || updateStatusMutation.isPending}
               onClick={() => updateStatusMutation.mutate()}
             >
               {updateStatusMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

@@ -215,9 +215,9 @@ export function UsersPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
           <p className="text-sm text-muted-foreground">Create, update, and manage user access in one place.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-stretch gap-2 sm:w-auto sm:items-center">
           {isFetching && !isLoading ? <span className="text-xs text-muted-foreground">Refreshing...</span> : null}
-          <Button onClick={openCreateForm}>
+          <Button onClick={openCreateForm} className="w-full sm:w-auto">
             <UserPlus className="h-4 w-4" />
             Create User
           </Button>

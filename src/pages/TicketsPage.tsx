@@ -337,6 +337,11 @@ export function TicketsPage() {
               domLayout="autoHeight"
               rowHeight={50}
               getRowClass={(params) => (params.data?.isOverdue ? 'ticket-grid__row--overdue' : '')}
+              onRowClicked={(event) => {
+                if (event.data?.id) {
+                  navigate(getTicketDetailsPath(event.data.id))
+                }
+              }}
             />
           </div>
         </Card>
