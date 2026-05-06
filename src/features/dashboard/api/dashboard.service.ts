@@ -1,5 +1,13 @@
 import { apiClient } from '@/lib/api/client'
 
+export type DashboardLeaderboardAgent = {
+  userId: string
+  username: string
+  displayName: string
+  openAssignedCount: number
+  resolvedInWindow: number
+}
+
 export type DashboardSummary = {
   totalTickets: number
   openTickets: number
@@ -18,6 +26,40 @@ export type DashboardSummary = {
     closedResolvedTicketsPct?: number
     overdueTicketsPct?: number
   }
+  meta: {
+    scope: string
+    generatedAt?: string
+    windowDays?: number
+    windowFrom?: string
+    windowTo?: string
+  }
+  snapshot: {
+    newTicketsInWindow: number
+    resolvedTicketsInWindow: number
+    unassignedOpenTickets: number
+    oldestOpenTicketAgeHours: number
+    oldestOpenTicket?: {
+      id: string
+      ticketNumber: string
+      priority: string
+      status: string
+    }
+  }
+  queue: {
+    openByStatus: Record<string, number>
+    openBySeverity: Record<string, number>
+  }
+  sla: {
+    overdueOpenCount: number
+    atRiskOpenCount: number
+    resolvedWithinSlaCount: number
+    resolvedInWindowCount: number
+    slaCompliancePercent: number
+  }
+  speed: {
+    averageResolutionTimeHours: number
+  }
+  leaderboard: DashboardLeaderboardAgent[]
 }
 
 function getRecord(value: unknown): Record<string, unknown> | null {
@@ -74,6 +116,20 @@ function pickTrendPercent(record: Record<string, unknown> | null, metricKeys: st
   return pickSignedNumber(record, metricKeys)
 }
 
+function extractCountMap(record: Record<string, unknown> | null): Record<string, number> {
+  if (!record) {
+    return {}
+  }
+
+  const normalized: Record<string, number> = {}
+  for (const [key, value] of Object.entries(record)) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      normalized[key] = Math.max(0, value)
+    }
+  }
+  return normalized
+}
+
 function extractPayload(raw: unknown): Record<string, unknown> {
   const root = getRecord(raw)
   if (!root) {
@@ -95,7 +151,11 @@ function normalizeSummary(raw: unknown): DashboardSummary {
   const byPriority = getRecord(payload.ticketsByPriority)
   const openByPriority = getRecord(queue?.openByPriority)
   const openByStatus = getRecord(queue?.openByStatus)
+  const openBySeverity = getRecord(queue?.openBySeverity)
   const speed = getRecord(payload.speed)
+  const window = getRecord(payload.window)
+  const oldestOpenTicketRaw = getRecord(snapshot?.oldestOpenTicket)
+  const leaderboardRaw = Array.isArray(payload.agentLeaderboard) ? payload.agentLeaderboard : []
   const snapshotOpen = pickNumber(snapshot, ['openTickets'])
   const snapshotClosed = pickNumber(snapshot, ['closedTickets'])
   const totalFromSnapshot =
@@ -186,6 +246,28 @@ function normalizeSummary(raw: unknown): DashboardSummary {
       pickTrendPercent(payload, ['overdueTicketsChangePercent']),
   }
 
+  const leaderboard: DashboardLeaderboardAgent[] = leaderboardRaw
+    .map((entry) => {
+      const item = getRecord(entry)
+      if (!item) {
+        return null
+      }
+
+      const userId = typeof item.userId === 'string' ? item.userId : ''
+      if (!userId) {
+        return null
+      }
+
+      return {
+        userId,
+        username: typeof item.username === 'string' ? item.username : '-',
+        displayName: typeof item.displayName === 'string' ? item.displayName : 'Unknown',
+        openAssignedCount: pickNumber(item, ['openAssignedCount']) ?? 0,
+        resolvedInWindow: pickNumber(item, ['resolvedInWindow']) ?? 0,
+      }
+    })
+    .filter((entry): entry is DashboardLeaderboardAgent => Boolean(entry))
+
   return {
     totalTickets,
     openTickets,
@@ -198,6 +280,48 @@ function normalizeSummary(raw: unknown): DashboardSummary {
       low,
     },
     trends,
+    meta: {
+      scope: typeof payload.scope === 'string' ? payload.scope : 'unknown',
+      generatedAt: typeof payload.generatedAt === 'string' ? payload.generatedAt : undefined,
+      windowDays: pickNumber(window, ['days']),
+      windowFrom: typeof window?.fromInclusive === 'string' ? window.fromInclusive : undefined,
+      windowTo: typeof window?.toInclusive === 'string' ? window.toInclusive : undefined,
+    },
+    snapshot: {
+      newTicketsInWindow: pickNumber(snapshot, ['newTicketsInWindow']) ?? 0,
+      resolvedTicketsInWindow: pickNumber(snapshot, ['resolvedTicketsInWindow']) ?? 0,
+      unassignedOpenTickets: pickNumber(snapshot, ['unassignedOpenTickets']) ?? 0,
+      oldestOpenTicketAgeHours: pickNumber(snapshot, ['oldestOpenTicketAgeHours']) ?? 0,
+      oldestOpenTicket:
+        oldestOpenTicketRaw && typeof oldestOpenTicketRaw.id === 'string'
+          ? {
+              id: oldestOpenTicketRaw.id,
+              ticketNumber:
+                typeof oldestOpenTicketRaw.ticketNumber === 'number'
+                  ? String(oldestOpenTicketRaw.ticketNumber)
+                  : typeof oldestOpenTicketRaw.ticketNumber === 'string'
+                    ? oldestOpenTicketRaw.ticketNumber
+                    : '-',
+              priority: typeof oldestOpenTicketRaw.priority === 'string' ? oldestOpenTicketRaw.priority : '-',
+              status: typeof oldestOpenTicketRaw.status === 'string' ? oldestOpenTicketRaw.status : '-',
+            }
+          : undefined,
+    },
+    queue: {
+      openByStatus: extractCountMap(openByStatus),
+      openBySeverity: extractCountMap(openBySeverity),
+    },
+    sla: {
+      overdueOpenCount: pickNumber(sla, ['overdueOpenCount', 'overdueTickets', 'overdueCount']) ?? 0,
+      atRiskOpenCount: pickNumber(sla, ['atRiskOpenCount']) ?? 0,
+      resolvedWithinSlaCount: pickNumber(sla, ['resolvedWithinSlaCount']) ?? 0,
+      resolvedInWindowCount: pickNumber(sla, ['resolvedInWindowCount']) ?? 0,
+      slaCompliancePercent: pickNumber(sla, ['slaCompliancePercent']) ?? 0,
+    },
+    speed: {
+      averageResolutionTimeHours: pickNumber(speed, ['averageResolutionTimeHours']) ?? 0,
+    },
+    leaderboard,
   }
 }
 

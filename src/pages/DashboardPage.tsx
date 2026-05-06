@@ -1,6 +1,20 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, ArrowRight, CircleCheckBig, Clock3, FolderOpen, Ticket, TrendingDown, TrendingUp, Wrench } from 'lucide-react'
+import {
+  AlertTriangle,
+  ArrowRight,
+  CircleCheckBig,
+  Clock3,
+  FolderOpen,
+  Gauge,
+  ShieldCheck,
+  Siren,
+  Ticket,
+  TrendingDown,
+  TrendingUp,
+  UserX,
+  Wrench,
+} from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,6 +30,20 @@ type RingSegment = {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-IN').format(value)
+}
+
+function formatDateTime(iso?: string) {
+  if (!iso) {
+    return '-'
+  }
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) {
+    return '-'
+  }
+  return new Intl.DateTimeFormat('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
 }
 
 function SummaryCard({
@@ -118,6 +146,31 @@ export function DashboardPage() {
     closedResolvedTickets: 0,
     overdueTickets: 0,
     priority: { high: 0, medium: 0, low: 0 },
+    meta: {
+      scope: 'unknown',
+    },
+    snapshot: {
+      newTicketsInWindow: 0,
+      resolvedTicketsInWindow: 0,
+      unassignedOpenTickets: 0,
+      oldestOpenTicketAgeHours: 0,
+      oldestOpenTicket: undefined,
+    },
+    queue: {
+      openByStatus: {},
+      openBySeverity: {},
+    },
+    sla: {
+      overdueOpenCount: 0,
+      atRiskOpenCount: 0,
+      resolvedWithinSlaCount: 0,
+      resolvedInWindowCount: 0,
+      slaCompliancePercent: 0,
+    },
+    speed: {
+      averageResolutionTimeHours: 0,
+    },
+    leaderboard: [],
   }
 
   const statusSegments = useMemo<RingSegment[]>(() => {
@@ -160,6 +213,16 @@ export function DashboardPage() {
 
   const totalStatus = statusSegments.reduce((acc, item) => acc + item.value, 0)
   const priorityPeak = Math.max(...priorityRows.map((item) => item.value), 1)
+  const statusRows = Object.entries(summary.queue.openByStatus).map(([label, value]) => ({
+    label: label.replaceAll('_', ' '),
+    value,
+  }))
+  const severityRows = Object.entries(summary.queue.openBySeverity).map(([label, value]) => ({
+    label,
+    value,
+  }))
+  const statusPeak = Math.max(...statusRows.map((row) => row.value), 1)
+  const severityPeak = Math.max(...severityRows.map((row) => row.value), 1)
 
   if (isLoading) {
     return <DashboardSkeleton />
@@ -216,6 +279,15 @@ export function DashboardPage() {
           </div>
         </div>
         {isFetching ? <p className="mt-3 text-xs text-muted-foreground">Refreshing latest metrics...</p> : null}
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="rounded-full border bg-background px-2 py-1">Scope: {summary.meta.scope}</span>
+          <span className="rounded-full border bg-background px-2 py-1">
+            Window: last {summary.meta.windowDays ?? 14} days
+          </span>
+          <span className="rounded-full border bg-background px-2 py-1">
+            Generated: {formatDateTime(summary.meta.generatedAt)}
+          </span>
+        </div>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -338,6 +410,168 @@ export function DashboardPage() {
                 </div>
               </div>
             ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-emerald-600" />
+              SLA Health
+            </CardTitle>
+            <CardDescription>Compliance and risk indicators</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
+              <span className="text-muted-foreground">SLA Compliance</span>
+              <span className="font-semibold">{summary.sla.slaCompliancePercent.toFixed(1)}%</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
+              <span className="inline-flex items-center gap-1 text-muted-foreground">
+                <Siren className="h-3.5 w-3.5 text-rose-600" />
+                Overdue Open
+              </span>
+              <span className="font-semibold">{formatNumber(summary.sla.overdueOpenCount)}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
+              <span className="text-muted-foreground">At Risk Open</span>
+              <span className="font-semibold">{formatNumber(summary.sla.atRiskOpenCount)}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-sky-600" />
+              Throughput Snapshot
+            </CardTitle>
+            <CardDescription>Window and speed details</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
+              <span className="text-muted-foreground">New in Window</span>
+              <span className="font-semibold">{formatNumber(summary.snapshot.newTicketsInWindow)}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
+              <span className="text-muted-foreground">Resolved in Window</span>
+              <span className="font-semibold">{formatNumber(summary.snapshot.resolvedTicketsInWindow)}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
+              <span className="text-muted-foreground">Avg Resolution Time</span>
+              <span className="font-semibold">{summary.speed.averageResolutionTimeHours.toFixed(1)}h</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserX className="h-4 w-4 text-amber-600" />
+              Queue Watch
+            </CardTitle>
+            <CardDescription>Open queue pressure points</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
+              <span className="text-muted-foreground">Unassigned Open</span>
+              <span className="font-semibold">{formatNumber(summary.snapshot.unassignedOpenTickets)}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
+              <span className="text-muted-foreground">Oldest Open Age</span>
+              <span className="font-semibold">{summary.snapshot.oldestOpenTicketAgeHours.toFixed(1)}h</span>
+            </div>
+            <div className="rounded-lg border bg-background px-3 py-2">
+              <p className="text-xs text-muted-foreground">Oldest Ticket</p>
+              <p className="text-sm font-medium">
+                #{summary.snapshot.oldestOpenTicket?.ticketNumber ?? '-'} ·{' '}
+                {(summary.snapshot.oldestOpenTicket?.priority ?? '-').toUpperCase()} ·{' '}
+                {(summary.snapshot.oldestOpenTicket?.status ?? '-').replaceAll('_', ' ')}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-5">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Open Queue by Status</CardTitle>
+            <CardDescription>Distribution of active ticket states</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {statusRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No status data available.</p>
+            ) : (
+              statusRows.map((row) => (
+                <div key={row.label} className="rounded border px-3 py-2">
+                  <div className="mb-1.5 flex items-center justify-between text-sm">
+                    <span className="capitalize">{row.label}</span>
+                    <span className="font-semibold">{formatNumber(row.value)}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-sky-100">
+                    <div
+                      className="h-full rounded-full bg-sky-500/85 transition-[width] duration-500"
+                      style={{ width: `${(row.value / statusPeak) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle>By Severity</CardTitle>
+            <CardDescription>Open issues by severity level</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {severityRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No severity data.</p>
+            ) : (
+              severityRows.map((row) => (
+                <div key={row.label} className="rounded border px-3 py-2">
+                  <div className="mb-1.5 flex items-center justify-between text-sm">
+                    <span className="capitalize">{row.label}</span>
+                    <span className="font-semibold">{formatNumber(row.value)}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-amber-100">
+                    <div
+                      className="h-full rounded-full bg-amber-500/85 transition-[width] duration-500"
+                      style={{ width: `${(row.value / severityPeak) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Agent Leaderboard</CardTitle>
+            <CardDescription>Open assigned vs resolved in window</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {summary.leaderboard.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No leaderboard data available.</p>
+            ) : (
+              summary.leaderboard.slice(0, 6).map((agent) => (
+                <div key={agent.userId} className="flex items-center justify-between rounded border px-3 py-2 text-sm">
+                  <div>
+                    <p className="font-medium">{agent.displayName}</p>
+                    <p className="text-xs text-muted-foreground">@{agent.username}</p>
+                  </div>
+                  <div className="text-right">
+                    <p>Open: {formatNumber(agent.openAssignedCount)}</p>
+                    <p className="text-xs text-muted-foreground">Resolved: {formatNumber(agent.resolvedInWindow)}</p>
+                  </div>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
