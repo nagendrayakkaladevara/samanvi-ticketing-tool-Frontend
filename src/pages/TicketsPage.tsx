@@ -7,7 +7,7 @@ import {
   type ColDef,
   type ICellRendererParams,
 } from 'ag-grid-community'
-import { AlertTriangle, ArrowRight, Calendar, Clock, Inbox, Loader2, Search, Trash2, User } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Calendar, Clock, Inbox, Loader2, RefreshCw, Search, Trash2, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '@/lib/toast'
 
@@ -29,9 +29,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ticketsService } from '@/features/tickets/api/tickets.service'
 import { useTicketsQuery } from '@/features/tickets/hooks/use-tickets-query'
 import type { Ticket } from '@/features/tickets/types/ticket'
+import { ShareTicketButton } from '@/features/tickets/components/share-ticket-button'
 import { getCreateTicketPath, getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { useDarkMode } from '@/hooks/use-dark-mode'
 import { queryClient } from '@/lib/query/query-client'
+import { cn } from '@/lib/utils'
 
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
@@ -39,8 +42,27 @@ import '@/features/tickets/styles/tickets-grid.css'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
+const TICKETS_AUTO_REFRESH_KEY = 'tickets-auto-refresh'
+
+function readAutoRefreshPreference(): boolean {
+  try {
+    return window.localStorage.getItem(TICKETS_AUTO_REFRESH_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function persistAutoRefreshPreference(enabled: boolean) {
+  try {
+    window.localStorage.setItem(TICKETS_AUTO_REFRESH_KEY, String(enabled))
+  } catch {
+    // Ignore storage errors (private mode, quota, etc.)
+  }
+}
+
 type TicketGridRow = {
   id: string
+  ticketNumber: string
   title: string
   busNumber: string
   createdBy: string
@@ -95,6 +117,7 @@ function isSlaOverdue(rawSlaDueAt: string): boolean {
 function toTicketGridRow(ticket: Ticket): TicketGridRow {
   return {
     id: ticket.id,
+    ticketNumber: ticket.ticketNumber ?? '—',
     title: ticket.title,
     busNumber: ticket.busNumber || 'N/A',
     createdBy: ticket.createdByName || 'Unknown',
@@ -121,6 +144,10 @@ function TitleCell({ data, value }: ICellRendererParams<TicketGridRow>) {
       </Tooltip>
     </TooltipProvider>
   )
+}
+
+function TicketNumberCell({ value }: ICellRendererParams<TicketGridRow>) {
+  return <span className="ticket-grid__ticket-number">{value}</span>
 }
 
 function BusNumberCell({ value }: ICellRendererParams<TicketGridRow>) {
@@ -188,17 +215,17 @@ function TableSkeleton() {
   return (
     <div className="ticket-grid-skeleton">
       <div className="ticket-grid-skeleton__header">
-        {Array.from({ length: 7 }).map((_, i) => (
+        {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="ticket-grid-skeleton__header-cell" />
         ))}
       </div>
       <div className="ticket-grid-skeleton__body">
         {Array.from({ length: 8 }).map((_, rowIdx) => (
           <div key={rowIdx} className="ticket-grid-skeleton__row" style={{ animationDelay: `${rowIdx * 60}ms` }}>
-            {Array.from({ length: 7 }).map((_, colIdx) => (
+            {Array.from({ length: 8 }).map((_, colIdx) => (
               <Skeleton
                 key={colIdx}
-                className={`ticket-grid-skeleton__cell ${colIdx === 0 ? 'ticket-grid-skeleton__cell--wide' : ''}`}
+                className={`ticket-grid-skeleton__cell ${colIdx === 1 ? 'ticket-grid-skeleton__cell--wide' : ''}`}
               />
             ))}
           </div>
@@ -223,13 +250,23 @@ function EmptyState() {
 }
 
 export function TicketsPage() {
-  const { data: tickets = [], isLoading, isFetching, isError, error } = useTicketsQuery({ poll: true })
+  const isDarkMode = useDarkMode()
+  const [autoRefresh, setAutoRefresh] = useState(readAutoRefreshPreference)
+  const { data: tickets = [], isLoading, isFetching, isError, error } = useTicketsQuery({ poll: autoRefresh })
   const navigate = useNavigate()
   const currentUser = useCurrentUser()
   const canCreateTicket = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR'
   const canDeleteTicket = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR'
   const [deleteTarget, setDeleteTarget] = useState<TicketGridRow | null>(null)
   const [ticketNumberQuery, setTicketNumberQuery] = useState('')
+
+  function toggleAutoRefresh() {
+    setAutoRefresh((current) => {
+      const next = !current
+      persistAutoRefreshPreference(next)
+      return next
+    })
+  }
 
   const rowData = useMemo(
     () => [...tickets].sort(compareTicketsNewestFirst).map(toTicketGridRow),
@@ -294,6 +331,16 @@ export function TicketsPage() {
           const dateB = new Date(valueB).getTime() || 0
           return dateA - dateB
         },
+      },
+      {
+        field: 'ticketNumber',
+        headerName: 'Ticket #',
+        headerClass: 'ticket-grid__header-cell',
+        cellRenderer: TicketNumberCell,
+        minWidth: 100,
+        maxWidth: 120,
+        sortable: true,
+        filter: true,
       },
       {
         field: 'title',
@@ -362,13 +409,22 @@ export function TicketsPage() {
         field: 'id',
         headerClass: 'ticket-grid__header-cell ticket-grid__header-cell--actions',
         cellClass: 'ticket-grid__actions-cell',
-        minWidth: canDeleteTicket ? 190 : 110,
-        maxWidth: canDeleteTicket ? 220 : 120,
+        minWidth: canDeleteTicket ? 280 : 200,
+        maxWidth: canDeleteTicket ? 320 : 240,
         sortable: false,
         filter: false,
+        floatingFilter: false,
         cellRenderer: (params: ICellRendererParams<TicketGridRow>) => (
           <div className="flex items-center justify-end gap-2">
             <ViewTicketButtonCell {...params} />
+            {params.data?.id ? (
+              <ShareTicketButton
+                ticketId={params.data.id}
+                ticketNumber={params.data.ticketNumber !== '—' ? params.data.ticketNumber : undefined}
+                title={params.data.title}
+                className="ticket-grid__share-btn"
+              />
+            ) : null}
             {canDeleteTicket && params.data?.id ? (
               <Button
                 size="sm"
@@ -401,7 +457,32 @@ export function TicketsPage() {
           </p>
         </div>
         <div className="ticket-page__header-actions">
-          <div className="flex w-full max-w-sm items-center gap-2">
+          <div className="ticket-page__auto-refresh">
+            <RefreshCw
+              className={cn(
+                'ticket-page__auto-refresh-icon',
+                autoRefresh && isFetching && !isLoading && 'ticket-page__auto-refresh-icon--spin',
+              )}
+              aria-hidden
+            />
+            <span className="ticket-page__auto-refresh-label" id="tickets-auto-refresh-label">
+              Auto refresh
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={autoRefresh}
+              aria-labelledby="tickets-auto-refresh-label"
+              onClick={toggleAutoRefresh}
+              className={cn(
+                'ticket-page__auto-refresh-switch',
+                autoRefresh && 'ticket-page__auto-refresh-switch--on',
+              )}
+            >
+              <span className="ticket-page__auto-refresh-thumb" />
+            </button>
+          </div>
+          <div className="ticket-page__search-row flex w-full max-w-sm items-center gap-2">
             <Input
               value={ticketNumberQuery}
               onChange={(event) => setTicketNumberQuery(event.target.value.replace(/\D/g, '').slice(0, 4))}
@@ -437,7 +518,7 @@ export function TicketsPage() {
               Create Ticket
             </Button>
           ) : null}
-          {isFetching && !isLoading ? (
+          {autoRefresh && isFetching && !isLoading ? (
             <div className="ticket-page__refresh-indicator">
               <Clock className="ticket-page__refresh-icon" />
               <span>Syncing...</span>
@@ -462,7 +543,10 @@ export function TicketsPage() {
 
       {!isLoading && !isError && rowData.length > 0 ? (
         <Card className="ticket-grid-wrapper">
-          <div className="ag-theme-quartz ticket-grid" style={gridStyle}>
+          <div
+            className={cn(isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'ticket-grid')}
+            style={gridStyle}
+          >
             <AgGridReact<TicketGridRow>
               rowData={rowData}
               columnDefs={columnDefs}
@@ -476,7 +560,9 @@ export function TicketsPage() {
               animateRows
               suppressCellFocus
               domLayout="autoHeight"
-              rowHeight={50}
+              rowHeight={52}
+              headerHeight={44}
+              floatingFiltersHeight={44}
               getRowClass={(params) => (params.data?.isOverdue ? 'ticket-grid__row--overdue' : '')}
               onRowClicked={(event) => {
                 const clickTarget = event.event?.target as HTMLElement | null

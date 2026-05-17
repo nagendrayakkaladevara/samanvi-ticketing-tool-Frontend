@@ -18,6 +18,7 @@ import { Card } from '@/components/ui/card'
 import { ticketsService } from '@/features/tickets/api/tickets.service'
 import type { Ticket, TicketStatus } from '@/features/tickets/types/ticket'
 import { useTicketsQuery } from '@/features/tickets/hooks/use-tickets-query'
+import { ShareTicketButton } from '@/features/tickets/components/share-ticket-button'
 import { getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
 import { cn } from '@/lib/utils'
 import { queryClient } from '@/lib/query/query-client'
@@ -293,6 +294,12 @@ export function BoardPage() {
                             SLA: {formatSlaDueAt(ticket.slaDueAt)}
                           </span>
                         </div>
+                        <ShareTicketButton
+                          ticketId={ticket.id}
+                          ticketNumber={ticket.ticketNumber}
+                          title={ticket.title}
+                          className="w-full"
+                        />
                       </div>
                         )
                       })()}

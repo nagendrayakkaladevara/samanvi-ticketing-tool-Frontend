@@ -9,7 +9,25 @@ export const apiClient = axios.create({
   timeout: 15_000,
 })
 
+function hasAuthorizationHeader(config: { headers?: unknown }): boolean {
+  const headers = config.headers
+  if (!headers) {
+    return false
+  }
+
+  if (typeof headers === 'object' && headers !== null && 'get' in headers && typeof headers.get === 'function') {
+    return Boolean(headers.get('Authorization') ?? headers.get('authorization'))
+  }
+
+  const record = headers as Record<string, unknown>
+  return Boolean(record.Authorization ?? record.authorization)
+}
+
 apiClient.interceptors.request.use((config) => {
+  if (hasAuthorizationHeader(config)) {
+    return config
+  }
+
   const token = getAccessToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`

@@ -30,6 +30,11 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --chart-1: 199 89% 48%;
+    --chart-2: 38 92% 50%;
+    --chart-3: 160 84% 39%;
+    --chart-4: 350 89% 60%;
+    --chart-5: 221.2 83.2% 53.3%;
   }
 
   .dark {
@@ -58,6 +63,11 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --chart-1: 199 89% 48%;
+    --chart-2: 38 92% 50%;
+    --chart-3: 160 84% 39%;
+    --chart-4: 350 89% 60%;
+    --chart-5: 217.2 91.2% 59.8%;
   }
 
   * {
@@ -199,5 +209,12 @@
     0 0 0 1px rgba(255, 255, 255, 0.08) inset,
     0 0 16px rgba(255, 0, 92, 0.34),
     0 0 26px rgba(0, 184, 255, 0.24);
+}
+
+.dark .rainbow-glow-button:hover:not(:disabled) {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+    0 0 18px rgba(255, 0, 92, 0.42),
+    0 0 28px rgba(0, 184, 255, 0.32);
 }
 

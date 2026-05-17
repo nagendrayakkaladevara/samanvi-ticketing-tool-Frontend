@@ -1,5 +1,14 @@
 import * as React from 'react'
-import { Bus, Clipboard, LayoutDashboard, LogOut, Settings, Ticket, Users } from 'lucide-react'
+import {
+  Bus,
+  Clipboard,
+  LayoutDashboard,
+  LogOut,
+  Mic,
+  Settings,
+  Ticket,
+  Users,
+} from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 
 import {
@@ -25,6 +34,7 @@ type NavItem = {
   label: string
   icon: React.ComponentType
   end?: boolean
+  external?: boolean
   roles?: CurrentUser['role'][]
 }
 
@@ -34,6 +44,13 @@ const navItems: NavItem[] = [
   { to: '/tickets', label: 'Tickets', icon: Ticket },
   { to: '/buses', label: 'Buses', icon: Bus, roles: ['ADMIN', 'SUPERVISOR'] },
   { to: '/users', label: 'Users', icon: Users, roles: ['ADMIN'] },
+  {
+    to: 'https://samanvidashboard.netlify.app/voice-app-access',
+    label: 'Voice app access',
+    icon: Mic,
+    external: true,
+    roles: ['ADMIN'],
+  },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -87,10 +104,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {filteredNavItems.map((item) => (
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton asChild tooltip={item.label}>
-                    <NavLink to={item.to} end={item.end} onClick={handleMobileItemClick}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </NavLink>
+                    {item.external ? (
+                      <a
+                        href={item.to}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={handleMobileItemClick}
+                      >
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </a>
+                    ) : (
+                      <NavLink to={item.to} end={item.end} onClick={handleMobileItemClick}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </NavLink>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -100,8 +129,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarFooter>
         <div className="px-2 pb-2 text-xs text-muted-foreground group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:text-center">
-          <span className="group-data-[collapsible=icon]:hidden">Version 1.8.1</span>
-          <span className="hidden group-data-[collapsible=icon]:inline">v1.8.1</span>
+          <span className="group-data-[collapsible=icon]:hidden">Version 2.0.0</span>
+          <span className="hidden group-data-[collapsible=icon]:inline">v2.0.0</span>
         </div>
         <SidebarMenu>
           <SidebarMenuItem>

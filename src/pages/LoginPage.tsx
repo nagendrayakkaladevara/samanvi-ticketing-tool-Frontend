@@ -1,6 +1,5 @@
-import { type FormEvent, useMemo, useState } from 'react'
+import { type FormEvent, useRef, useState } from 'react'
 import { GalleryVerticalEnd } from 'lucide-react'
-import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from '@/lib/toast'
 import { z } from 'zod'
 
@@ -24,43 +23,62 @@ const formSchema = z.object({
 type FormErrors = Partial<Record<'username' | 'password' | 'form', string>>
 
 function extractLoginErrorMessage(error: ApiError): string | undefined {
+  if (error.message.trim().length > 0) {
+    return error.message
+  }
+
   const details = error.details
   if (!details || typeof details !== 'object') {
     return undefined
   }
 
   const detailsRecord = details as Record<string, unknown>
-  const errorPayload = detailsRecord.error
-  if (!errorPayload || typeof errorPayload !== 'object') {
-    return undefined
+  if (typeof detailsRecord.message === 'string' && detailsRecord.message.trim().length > 0) {
+    return detailsRecord.message
   }
 
-  const message = (errorPayload as Record<string, unknown>).message
-  return typeof message === 'string' && message.trim().length > 0 ? message : undefined
+  const errorPayload = detailsRecord.error
+  if (typeof errorPayload === 'string' && errorPayload.trim().length > 0) {
+    return errorPayload
+  }
+
+  if (errorPayload && typeof errorPayload === 'object') {
+    const message = (errorPayload as Record<string, unknown>).message
+    return typeof message === 'string' && message.trim().length > 0 ? message : undefined
+  }
+
+  return undefined
+}
+
+function resolveLoginErrorMessage(error: unknown): string {
+  const fallbackMessage = 'Invalid username or password. Please try again.'
+
+  if (error instanceof ApiError) {
+    return extractLoginErrorMessage(error) ?? fallbackMessage
+  }
+
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message
+  }
+
+  return fallbackMessage
 }
 
 export function LoginPage() {
-  const navigate = useNavigate()
-  const location = useLocation()
   const setSession = useAuthStore((state) => state.setSession)
+  const loginInFlightRef = useRef(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const redirectTo = useMemo(() => {
-    const redirectParam = new URLSearchParams(location.search).get('redirect')
-    const fromState = location.state?.from
-    const requestedPath = typeof redirectParam === 'string' && redirectParam.startsWith('/')
-      ? redirectParam
-      : typeof fromState === 'string' && fromState.startsWith('/')
-        ? fromState
-        : '/'
-    return requestedPath
-  }, [location.search, location.state])
-
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    if (loginInFlightRef.current) {
+      return
+    }
+
     setErrors({})
 
     const parsed = formSchema.safeParse({ username, password })
@@ -73,23 +91,19 @@ export function LoginPage() {
       return
     }
 
+    loginInFlightRef.current = true
     setIsSubmitting(true)
     try {
       const session = await login(parsed.data)
       setSession(session)
-
-      navigate(redirectTo, { replace: true })
     } catch (error) {
-      const fallbackMessage = 'Invalid username or password. Please try again.'
-      if (error instanceof ApiError) {
-        const message = extractLoginErrorMessage(error) ?? error.message ?? fallbackMessage
+      if (!useAuthStore.getState().isAuthenticated) {
+        const message = resolveLoginErrorMessage(error)
         setErrors({ form: message })
         toast.error(message)
-      } else {
-        setErrors({ form: fallbackMessage })
-        toast.error(fallbackMessage)
       }
     } finally {
+      loginInFlightRef.current = false
       setIsSubmitting(false)
     }
   }

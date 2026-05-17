@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useBusTicketHistoryQuery } from '@/features/buses/hooks/use-bus-ticket-history-query'
+import { ShareTicketButton } from '@/features/tickets/components/share-ticket-button'
 
 function formatDateTime(rawDate?: string): string {
   if (!rawDate) return 'Unknown'
@@ -93,10 +94,13 @@ export function BusTicketHistoryPage() {
                   <CalendarDays className="h-3.5 w-3.5" />
                   {formatDateTime(ticket.createdAt)}
                 </div>
-                <Button size="sm" className="w-full" onClick={() => navigate(`/tickets/${ticket.id}`)}>
-                  View Ticket
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex gap-2">
+                  <ShareTicketButton ticketId={ticket.id} title={ticket.title} className="flex-1" />
+                  <Button size="sm" className="flex-1" onClick={() => navigate(`/tickets/${ticket.id}`)}>
+                    View Ticket
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </Card>
             ))}
           </div>
@@ -129,10 +133,13 @@ export function BusTicketHistoryPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button size="sm" onClick={() => navigate(`/tickets/${ticket.id}`)}>
-                        View
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="inline-flex items-center justify-end gap-2">
+                        <ShareTicketButton ticketId={ticket.id} title={ticket.title} />
+                        <Button size="sm" onClick={() => navigate(`/tickets/${ticket.id}`)}>
+                          View
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

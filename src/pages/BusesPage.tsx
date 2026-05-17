@@ -84,34 +84,31 @@ export function BusesPage() {
 
   return (
     <section className="space-y-6">
-      <header className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-amber-50 via-white to-emerald-50 p-6 shadow-sm">
+      <header className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-amber-500/10 via-background to-emerald-500/10 p-6 shadow-sm">
         <div
           aria-hidden
-          className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-amber-200/40 blur-3xl"
+          className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-amber-400/25 blur-3xl dark:bg-amber-500/15"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-emerald-200/35 blur-3xl"
+          className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-emerald-400/20 blur-3xl dark:bg-emerald-500/10"
         />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">Fleet Registry</p>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Buses</h1>
-            <p className="max-w-xl text-sm text-slate-600">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700 dark:text-amber-400">Fleet Registry</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">Buses</h1>
+            <p className="max-w-xl text-sm text-muted-foreground">
               Keep a clean bus inventory for ticket linking and maintenance traceability.
             </p>
           </div>
           <div className="flex w-full items-stretch justify-end gap-2 sm:w-auto sm:items-center">
             {isFetching && !isLoading ? (
-              <span className="inline-flex items-center gap-1 text-xs text-slate-600">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                 Syncing...
               </span>
             ) : null}
-            <Button
-              className="w-full bg-slate-900 text-white hover:bg-slate-800 sm:w-auto"
-              onClick={() => setIsCreateOpen(true)}
-            >
+            <Button className="w-full sm:w-auto" onClick={() => setIsCreateOpen(true)}>
               <Plus className="h-4 w-4" />
               Create Bus
             </Button>
@@ -128,17 +125,17 @@ export function BusesPage() {
       ) : null}
 
       {isError ? (
-        <Card className="space-y-2 border-red-200 bg-red-50/60 p-5">
-          <p className="font-semibold text-red-700">Unable to load buses</p>
-          <p className="text-sm text-red-700/80">{(error as Error)?.message ?? 'Unexpected error occurred.'}</p>
+        <Card className="space-y-2 p-5">
+          <p className="font-semibold text-destructive">Unable to load buses</p>
+          <p className="text-sm text-muted-foreground">{(error as Error)?.message ?? 'Unexpected error occurred.'}</p>
         </Card>
       ) : null}
 
       {!isLoading && !isError && sortedBuses.length === 0 ? (
         <Card className="flex flex-col items-center gap-3 p-10 text-center">
-          <BusFront className="h-10 w-10 text-slate-500" />
+          <BusFront className="h-10 w-10 text-muted-foreground" />
           <h2 className="text-lg font-semibold">No buses available</h2>
-          <p className="max-w-md text-sm text-slate-600">
+          <p className="max-w-md text-sm text-muted-foreground">
             Start by creating your first bus. It will be available in ticket forms immediately.
           </p>
           <Button onClick={() => setIsCreateOpen(true)}>
@@ -149,30 +146,30 @@ export function BusesPage() {
       ) : null}
 
       {!isLoading && !isError && sortedBuses.length > 0 ? (
-        <Card className="overflow-hidden border-slate-200">
+        <Card className="overflow-hidden">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="bg-slate-50/80 text-left">
-                <th className="px-4 py-3 font-medium text-slate-600">Bus Number</th>
-                <th className="px-4 py-3 font-medium text-slate-600">Last Maintenance</th>
+              <tr className="border-b bg-muted/30 text-left">
+                <th className="px-4 py-3 font-medium">Bus Number</th>
+                <th className="px-4 py-3 font-medium">Last Maintenance</th>
               </tr>
             </thead>
             <tbody>
               {sortedBuses.map((bus) => (
                 <tr
                   key={bus.id}
-                  className="cursor-pointer border-t border-slate-100 transition-colors hover:bg-slate-50"
+                  className="cursor-pointer border-b transition-colors last:border-b-0 hover:bg-muted/50"
                   onClick={() => navigate(`/buses/${bus.id}/tickets`, { state: { busNumber: bus.busNumber } })}
                 >
                   <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-700">
-                      <BusFront className="h-3.5 w-3.5 text-slate-500" />
+                    <span className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 font-medium">
+                      <BusFront className="h-3.5 w-3.5 text-muted-foreground" />
                       {bus.busNumber}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-2 text-slate-600">
-                      <Wrench className="h-3.5 w-3.5 text-amber-600" />
+                    <span className="inline-flex items-center gap-2 text-muted-foreground">
+                      <Wrench className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                       {formatDate(bus.lastMaintenanceDate)}
                     </span>
                   </td>

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Loader2, Pencil, Printer } from 'lucide-react'
+import { ShareTicketButton } from '@/features/tickets/components/share-ticket-button'
+import { getTicketShareUrl } from '@/features/tickets/utils/ticket-share'
 import { QRCodeSVG } from 'qrcode.react'
 import { useParams } from 'react-router-dom'
 import { toast } from '@/lib/toast'
@@ -144,22 +146,22 @@ function getActivityTone(action: string | undefined): string {
   const normalized = (action || '').toUpperCase()
 
   if (normalized.includes('STATUS') || normalized.includes('STATE')) {
-    return 'border-blue-200 bg-blue-50 text-blue-700'
+    return 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300'
   }
 
   if (normalized.includes('ASSIGN')) {
-    return 'border-indigo-200 bg-indigo-50 text-indigo-700'
+    return 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800/60 dark:bg-indigo-950/40 dark:text-indigo-300'
   }
 
   if (normalized.includes('COMMENT') || normalized.includes('NOTE')) {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300'
   }
 
   if (normalized.includes('CLOSE') || normalized.includes('RESOLVE')) {
-    return 'border-violet-200 bg-violet-50 text-violet-700'
+    return 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800/60 dark:bg-violet-950/40 dark:text-violet-300'
   }
 
-  return 'border-slate-200 bg-slate-100 text-slate-700'
+  return 'border-border bg-muted/50 text-foreground'
 }
 
 function EditableDetailValue({
@@ -348,7 +350,7 @@ export function TicketDetailsPage() {
   const hasAssignmentChanged = Boolean(effectiveAssignToId) && effectiveAssignToId !== (ticket.assignedToUserId ?? '')
   const hasStatusChanged = nextStatus !== '' && nextStatus !== ticket.status
   const statusDialogOptions = getStatusDialogOptions(ticket.status, capabilities.allowedStatuses)
-  const ticketRouteUrl = `${window.location.origin}/tickets/${ticket.id}`
+  const ticketRouteUrl = getTicketShareUrl(ticket.id)
 
   const handlePrintTicket = () => {
     setPrintGeneratedAt(formatDateTime(new Date().toISOString()))
@@ -389,10 +391,17 @@ export function TicketDetailsPage() {
               Ticket ID: {ticket.id} {!canEditAnyAction ? '- Read only access' : ''}
             </p>
           </div>
-          <Button size="sm" variant="outline" className="no-print gap-2" onClick={handlePrintTicket}>
-            <Printer className="h-4 w-4" />
-            Print Ticket
-          </Button>
+          <div className="no-print flex flex-wrap items-center gap-2">
+            <ShareTicketButton
+              ticketId={ticket.id}
+              ticketNumber={ticket.ticketNumber}
+              title={ticket.title}
+            />
+            <Button size="sm" variant="outline" className="gap-2" onClick={handlePrintTicket}>
+              <Printer className="h-4 w-4" />
+              Print Ticket
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -454,10 +463,6 @@ export function TicketDetailsPage() {
             <div className="rounded-md border bg-muted/20 p-3 print-card">
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Created By</p>
               <p className="mt-1 text-sm font-semibold">{ticket.createdByName || 'Unknown'}</p>
-            </div>
-            <div className="rounded-md border bg-muted/20 p-3 print-card">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Assignee User ID</p>
-              <p className="mt-1 break-all text-sm font-medium">{ticket.assignedToUserId || 'N/A'}</p>
             </div>
             <div className="rounded-md border bg-background p-3 print-card">
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Ticket QR</p>
@@ -630,11 +635,11 @@ export function TicketDetailsPage() {
           <ul className="space-y-4">
             {sortedTimeline.map((entry) => (
               <li key={entry.id} className="relative pl-14 text-sm">
-                <span className="absolute left-5 top-0 h-full w-px bg-slate-200" aria-hidden />
-                <span className="absolute left-0 top-0.5 flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-xs font-semibold tracking-wide text-slate-700 shadow-sm">
+                <span className="absolute left-5 top-0 h-full w-px bg-border" aria-hidden />
+                <span className="absolute left-0 top-0.5 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-xs font-semibold tracking-wide text-foreground shadow-sm">
                   {getActorInitials(entry.actorName, entry.actorUsername)}
                 </span>
-                <div className="print-card rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+                <div className="print-card rounded-md border border-border bg-card p-3 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span
                       className={`inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${getActivityTone(entry.actionType || entry.action)}`}
@@ -643,16 +648,16 @@ export function TicketDetailsPage() {
                     </span>
                     <span className="text-xs text-muted-foreground">{formatSla(entry.createdAt)}</span>
                   </div>
-                  <p className="mt-2 text-xs text-slate-600">
+                  <p className="mt-2 text-xs text-muted-foreground">
                     {(entry.actorName || 'System') + (entry.actorUsername ? ` (@${entry.actorUsername})` : '')}
                   </p>
                   {entry.fromStatus || entry.toStatus ? (
-                    <p className="mt-2 inline-flex items-center rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700">
+                    <p className="mt-2 inline-flex items-center rounded border border-border bg-muted/40 px-2 py-1 text-xs text-foreground">
                       {formatWord(entry.fromStatus)} {'->'} {formatWord(entry.toStatus)}
                     </p>
                   ) : null}
                   {entry.note ? (
-                    <p className="mt-2 rounded-md border border-slate-200 bg-slate-50 p-2 text-sm leading-5 text-slate-700">
+                    <p className="mt-2 rounded-md border border-border bg-muted/40 p-2 text-sm leading-5 text-foreground">
                       {entry.note}
                     </p>
                   ) : null}

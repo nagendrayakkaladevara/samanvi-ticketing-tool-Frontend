@@ -18,9 +18,12 @@ import { cn } from '@/lib/utils'
 
 const MIN_DESCRIPTION_WORDS_FOR_AI = 4
 
+const invalidFieldClass =
+  'border-red-500 ring-1 ring-red-500/30 focus-visible:ring-red-500 dark:border-red-400 dark:ring-red-400/30 dark:focus-visible:ring-red-400'
+
 function RequiredBadge() {
   return (
-    <span className="ml-2 inline-flex items-center rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700">
+    <span className="ml-2 inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
       Required
     </span>
   )
@@ -28,7 +31,7 @@ function RequiredBadge() {
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null
-  return <p className="text-xs font-medium !text-red-600">{message}</p>
+  return <p className="text-xs font-medium text-red-600 dark:text-red-400">{message}</p>
 }
 
 export function CreateTicketPage() {
@@ -182,7 +185,7 @@ export function CreateTicketPage() {
             <Input
               id="title"
               placeholder="e.g., Engine overheating on route 42"
-              className={cn(form.errors.title && '!border-red-600 !ring-1 !ring-red-500/30')}
+              className={cn(form.errors.title && invalidFieldClass)}
               value={form.values.title}
               onChange={(event) => form.setField('title', event.target.value)}
               aria-invalid={Boolean(form.errors.title)}
@@ -215,7 +218,7 @@ export function CreateTicketPage() {
                 placeholder="Briefly describe what happened and any observed impact."
                 className={cn(
                   'min-h-28 pr-10',
-                  form.errors.description && '!border-red-600 !ring-1 !ring-red-500/30',
+                  form.errors.description && invalidFieldClass,
                 )}
                 value={form.values.description}
                 onChange={(event) => form.setField('description', event.target.value)}
@@ -286,7 +289,7 @@ export function CreateTicketPage() {
                 <SelectTrigger
                   id="categoryId"
                   aria-invalid={Boolean(form.errors.categoryId)}
-                  className={cn(form.errors.categoryId && '!border-red-600 !ring-1 !ring-red-500/30')}
+                  className={cn(form.errors.categoryId && invalidFieldClass)}
                 >
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
@@ -309,7 +312,7 @@ export function CreateTicketPage() {
               <Input
                 id="busNumber"
                 placeholder="e.g., AP09AB1234"
-                className={cn(form.errors.busNumber && '!border-red-600 !ring-1 !ring-red-500/30')}
+                className={cn(form.errors.busNumber && invalidFieldClass)}
                 value={form.values.busNumber}
                 onChange={(event) => form.setField('busNumber', event.target.value)}
                 aria-invalid={Boolean(form.errors.busNumber)}
@@ -360,7 +363,10 @@ export function CreateTicketPage() {
             <Input
               id="slaDueAtLocal"
               type="datetime-local"
-              className={cn(form.errors.slaDueAtLocal && '!border-red-600 !ring-1 !ring-red-500/30')}
+              className={cn(
+                'dark:[color-scheme:dark]',
+                form.errors.slaDueAtLocal && invalidFieldClass,
+              )}
               value={form.values.slaDueAtLocal}
               onChange={(event) => form.setField('slaDueAtLocal', event.target.value)}
               aria-invalid={Boolean(form.errors.slaDueAtLocal)}
@@ -369,14 +375,14 @@ export function CreateTicketPage() {
             <FieldError message={form.errors.slaDueAtLocal} />
           </div>
 
-          <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm">
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
             <span className="text-muted-foreground">Created By: </span>
-            <span className="font-medium">{currentUser?.name ?? 'Current user'}</span>
+            <span className="font-medium text-foreground">{currentUser?.name ?? 'Current user'}</span>
           </div>
         </Card>
 
         <div className="sticky bottom-3 z-10">
-          <Card className="flex items-center justify-between gap-3 border bg-background/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/85">
+          <Card className="flex items-center justify-between gap-3 border border-border bg-background/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/85 dark:shadow-black/30">
             <p className="text-xs text-muted-foreground">Press Enter on the final field or use Create Ticket.</p>
             <div className="flex items-center gap-2">
               <Button

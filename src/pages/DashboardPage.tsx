@@ -1,5 +1,8 @@
+import { useMutation } from '@tanstack/react-query'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { Label, Pie, PieChart } from 'recharts'
 import {
   AlertTriangle,
   ArrowRight,
@@ -9,9 +12,11 @@ import {
   FolderOpen,
   Gauge,
   Loader2,
+  Search,
   ShieldCheck,
   Siren,
   Ticket,
+  X,
   TrendingDown,
   TrendingUp,
   UserX,
@@ -20,9 +25,70 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { ticketsService } from '@/features/tickets/api/tickets.service'
+import { getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
+import { useDashboardSummaryQuery } from '@/features/dashboard/hooks/use-dashboard-summary-query'
+import { toast } from '@/lib/toast'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useDashboardSummaryQuery } from '@/features/dashboard/hooks/use-dashboard-summary-query'
+
+const HEADER_ACTIONS_ENTER_EASE = [0.16, 1, 0.3, 1] as const
+const HEADER_ACTIONS_EXIT_EASE = [0.4, 0, 1, 1] as const
+
+const headerActionsLayoutTransition = {
+  layout: { type: 'spring' as const, stiffness: 380, damping: 32, mass: 0.85 },
+}
+
+function getHeaderActionsPanelVariants(reduceMotion: boolean | null) {
+  if (reduceMotion) {
+    return {
+      initial: { opacity: 0 },
+      animate: { opacity: 1, transition: { duration: 0.12 } },
+      exit: { opacity: 0, transition: { duration: 0.1 } },
+    }
+  }
+
+  return {
+    initial: { opacity: 0, x: 6 },
+    animate: {
+      opacity: 1,
+      x: 0,
+      transition: { duration: 0.22, ease: HEADER_ACTIONS_ENTER_EASE },
+    },
+    exit: {
+      opacity: 0,
+      x: -4,
+      transition: { duration: 0.16, ease: HEADER_ACTIONS_EXIT_EASE },
+    },
+  }
+}
+
+function getHeaderActionsPanelVariantsReverse(reduceMotion: boolean | null) {
+  if (reduceMotion) {
+    return getHeaderActionsPanelVariants(true)
+  }
+
+  return {
+    initial: { opacity: 0, x: -6 },
+    animate: {
+      opacity: 1,
+      x: 0,
+      transition: { duration: 0.22, ease: HEADER_ACTIONS_ENTER_EASE },
+    },
+    exit: {
+      opacity: 0,
+      x: 4,
+      transition: { duration: 0.16, ease: HEADER_ACTIONS_EXIT_EASE },
+    },
+  }
+}
 
 const WINDOW_DAYS_OPTIONS = [
   { value: 14, label: 'Last 14 days' },
@@ -31,12 +97,104 @@ const WINDOW_DAYS_OPTIONS = [
   { value: 90, label: 'Last 90 days' },
 ] as const
 
-type RingSegment = {
+const QUEUE_STATUS_ORDER = ['created', 'unassigned', 'assigned', 'in_progress', 'reopened', 'blocked'] as const
+
+type QueueStatusStyle = {
+  rowClass: string
+  trackClass: string
+  barClass: string
+}
+
+const QUEUE_STATUS_STYLES: Record<string, QueueStatusStyle> = {
+  created: {
+    rowClass: 'border-slate-200/80 bg-slate-50/50 dark:border-slate-700/60 dark:bg-slate-900/40',
+    trackClass: 'bg-slate-100 dark:bg-slate-800',
+    barClass: 'bg-slate-500/85',
+  },
+  unassigned: {
+    rowClass: 'border-orange-200/80 bg-orange-50/40 dark:border-orange-800/50 dark:bg-orange-950/30',
+    trackClass: 'bg-orange-100 dark:bg-orange-950/50',
+    barClass: 'bg-orange-500/85',
+  },
+  assigned: {
+    rowClass: 'border-sky-200/80 bg-sky-50/40 dark:border-sky-800/50 dark:bg-sky-950/30',
+    trackClass: 'bg-sky-100 dark:bg-sky-950/50',
+    barClass: 'bg-sky-500/85',
+  },
+  in_progress: {
+    rowClass: 'border-amber-200/80 bg-amber-50/40 dark:border-amber-800/50 dark:bg-amber-950/30',
+    trackClass: 'bg-amber-100 dark:bg-amber-950/50',
+    barClass: 'bg-amber-500/85',
+  },
+  reopened: {
+    rowClass: 'border-violet-200/80 bg-violet-50/40 dark:border-violet-800/50 dark:bg-violet-950/30',
+    trackClass: 'bg-violet-100 dark:bg-violet-950/50',
+    barClass: 'bg-violet-500/85',
+  },
+  blocked: {
+    rowClass: 'border-rose-200/80 bg-rose-50/40 dark:border-rose-800/50 dark:bg-rose-950/30',
+    trackClass: 'bg-rose-100 dark:bg-rose-950/50',
+    barClass: 'bg-rose-500/85',
+  },
+}
+
+const DEFAULT_QUEUE_STATUS_STYLE: QueueStatusStyle = {
+  rowClass: 'border-border/80 bg-muted/30',
+  trackClass: 'bg-muted',
+  barClass: 'bg-muted-foreground/70',
+}
+
+function getQueueStatusStyle(status: string): QueueStatusStyle {
+  return QUEUE_STATUS_STYLES[status] ?? DEFAULT_QUEUE_STATUS_STYLE
+}
+
+function formatQueueStatusLabel(status: string) {
+  return status.replaceAll('_', ' ')
+}
+
+function buildQueueStatusRows(openByStatus: Record<string, number>) {
+  const keys = Object.keys(openByStatus)
+  const orderedKeys = [
+    ...QUEUE_STATUS_ORDER.filter((status) => keys.includes(status)),
+    ...keys.filter((status) => !QUEUE_STATUS_ORDER.includes(status as (typeof QUEUE_STATUS_ORDER)[number])).sort(),
+  ]
+
+  return orderedKeys.map((status) => ({
+    status,
+    label: formatQueueStatusLabel(status),
+    value: openByStatus[status] ?? 0,
+    style: getQueueStatusStyle(status),
+  }))
+}
+
+type StatusSegment = {
+  status: keyof typeof STATUS_CHART_CONFIG
   label: string
   value: number
-  colorClass: string
   trailClass: string
 }
+
+const STATUS_CHART_CONFIG = {
+  tickets: {
+    label: 'Tickets',
+  },
+  open: {
+    label: 'Open',
+    color: 'hsl(var(--chart-1))',
+  },
+  inProgress: {
+    label: 'In Progress',
+    color: 'hsl(var(--chart-2))',
+  },
+  closedResolved: {
+    label: 'Closed / Resolved',
+    color: 'hsl(var(--chart-3))',
+  },
+  overdue: {
+    label: 'Overdue',
+    color: 'hsl(var(--chart-4))',
+  },
+} satisfies ChartConfig
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-IN').format(value)
@@ -76,7 +234,9 @@ function SummaryCard({
   const hasTrend = typeof trendPercent === 'number' && Number.isFinite(trendPercent)
   const isPositive = (trendPercent ?? 0) >= 0
   const trendIsGood = hasTrend ? (lowerIsBetter ? !isPositive : isPositive) : true
-  const trendTextColor = trendIsGood ? 'text-emerald-700' : 'text-rose-700'
+  const trendTextColor = trendIsGood
+    ? 'text-emerald-700 dark:text-emerald-400'
+    : 'text-rose-700 dark:text-rose-400'
   const TrendIcon = isPositive ? TrendingUp : TrendingDown
 
   return (
@@ -109,8 +269,8 @@ function DashboardSkeleton() {
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-4 w-96 max-w-full" />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
           <Card key={i} className="border-border/70">
             <CardHeader className="pb-2">
               <Skeleton className="h-3 w-24" />
@@ -147,8 +307,41 @@ function DashboardSkeleton() {
 }
 
 export function DashboardPage() {
+  const navigate = useNavigate()
+  const shouldReduceMotion = useReducedMotion()
   const [windowDays, setWindowDays] = useState(14)
+  const [isTicketSearchOpen, setIsTicketSearchOpen] = useState(false)
+  const [ticketNumberQuery, setTicketNumberQuery] = useState('')
   const { data, isLoading, isError, error, refetch, isFetching } = useDashboardSummaryQuery(windowDays)
+
+  const searchTicketMutation = useMutation({
+    mutationFn: async (ticketNumber: string) => ticketsService.searchByTicketNumber(ticketNumber),
+    onSuccess: (ticket) => {
+      navigate(getTicketDetailsPath(ticket.id))
+    },
+    onError: (mutationError) => {
+      toast.error(mutationError instanceof Error ? mutationError.message : 'Unable to find ticket.')
+    },
+  })
+
+  function handleTicketSearch() {
+    if (searchTicketMutation.isPending) {
+      return
+    }
+
+    const trimmedTicketNumber = ticketNumberQuery.trim()
+    if (!/^\d{4}$/.test(trimmedTicketNumber)) {
+      toast.error('Enter a valid 4-digit ticket number.')
+      return
+    }
+
+    searchTicketMutation.mutate(trimmedTicketNumber)
+  }
+
+  function closeTicketSearch() {
+    setIsTicketSearchOpen(false)
+    setTicketNumberQuery('')
+  }
 
   const summary = data ?? {
     totalTickets: 0,
@@ -184,50 +377,64 @@ export function DashboardPage() {
     leaderboard: [],
   }
 
-  const statusSegments = useMemo<RingSegment[]>(() => {
+  const statusSegments = useMemo<StatusSegment[]>(() => {
     return [
       {
+        status: 'open',
         label: 'Open',
         value: summary.openTickets,
-        colorClass: 'stroke-sky-500',
-        trailClass: 'bg-sky-100 text-sky-700',
+        trailClass: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
       },
       {
+        status: 'inProgress',
         label: 'In Progress',
         value: summary.inProgressTickets,
-        colorClass: 'stroke-amber-500',
-        trailClass: 'bg-amber-100 text-amber-800',
+        trailClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
       },
       {
+        status: 'closedResolved',
         label: 'Closed / Resolved',
         value: summary.closedResolvedTickets,
-        colorClass: 'stroke-emerald-500',
-        trailClass: 'bg-emerald-100 text-emerald-800',
+        trailClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
       },
       {
+        status: 'overdue',
         label: 'Overdue',
         value: summary.overdueTickets,
-        colorClass: 'stroke-rose-500',
-        trailClass: 'bg-rose-100 text-rose-800',
+        trailClass: 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300',
       },
     ]
   }, [summary.closedResolvedTickets, summary.inProgressTickets, summary.openTickets, summary.overdueTickets])
 
+  const statusChartData = useMemo(
+    () =>
+      statusSegments.map((segment) => ({
+        status: segment.status,
+        tickets: segment.value,
+        fill: `var(--color-${segment.status})`,
+      })),
+    [statusSegments],
+  )
+
   const priorityRows = useMemo(
     () => [
-      { label: 'High', value: summary.priority.high, barClass: 'bg-rose-500/85 text-rose-900' },
-      { label: 'Medium', value: summary.priority.medium, barClass: 'bg-amber-400/90 text-amber-900' },
-      { label: 'Low', value: summary.priority.low, barClass: 'bg-emerald-500/80 text-emerald-900' },
+      { label: 'High', value: summary.priority.high, barClass: 'bg-rose-500/85' },
+      { label: 'Medium', value: summary.priority.medium, barClass: 'bg-amber-400/90' },
+      { label: 'Low', value: summary.priority.low, barClass: 'bg-emerald-500/80' },
     ],
     [summary.priority.high, summary.priority.low, summary.priority.medium],
   )
 
   const totalStatus = statusSegments.reduce((acc, item) => acc + item.value, 0)
   const priorityPeak = Math.max(...priorityRows.map((item) => item.value), 1)
-  const statusRows = Object.entries(summary.queue.openByStatus).map(([label, value]) => ({
-    label: label.replaceAll('_', ' '),
-    value,
-  }))
+  const statusRows = useMemo(
+    () => buildQueueStatusRows(summary.queue.openByStatus),
+    [summary.queue.openByStatus],
+  )
+  const unassignedOpenCount =
+    'unassigned' in summary.queue.openByStatus
+      ? (summary.queue.openByStatus.unassigned ?? 0)
+      : summary.snapshot.unassignedOpenTickets
   const severityRows = Object.entries(summary.queue.openBySeverity).map(([label, value]) => ({
     label,
     value,
@@ -246,13 +453,13 @@ export function DashboardPage() {
           <h1 className="font-serif text-3xl tracking-tight">Operations Dashboard</h1>
           <p className="text-sm text-muted-foreground">Real-time summary for ticket health and team throughput.</p>
         </header>
-        <Card className="border-rose-200 bg-rose-50/60">
+        <Card className="border-rose-200 bg-rose-50/60 dark:border-rose-800/60 dark:bg-rose-950/40">
           <CardHeader className="space-y-2">
-            <div className="flex items-center gap-2 text-rose-700">
+            <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400">
               <AlertTriangle className="h-5 w-5" />
               <CardTitle>Unable to load dashboard</CardTitle>
             </div>
-            <CardDescription className="text-rose-700/90">
+            <CardDescription className="text-rose-700/90 dark:text-rose-400/90">
               {(error as Error)?.message ?? 'Something went wrong while fetching summary data.'}
             </CardDescription>
           </CardHeader>
@@ -264,35 +471,113 @@ export function DashboardPage() {
     )
   }
 
-  let progressOffset = 0
-  const circumference = 2 * Math.PI * 42
-
   return (
     <section className="space-y-6 pb-4">
-      <header className="rounded-xl border border-border/70 bg-gradient-to-br from-slate-50 to-slate-100/70 p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <header className="relative isolate rounded-xl border border-border bg-gradient-to-br from-sky-500/10 via-background to-slate-500/10 p-5 shadow-sm">
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl"
+        >
+          <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-sky-400/20 blur-3xl dark:bg-sky-500/10" />
+        </motion.div>
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="font-serif text-3xl tracking-tight text-slate-900">Operations Dashboard</h1>
-            <p className="max-w-2xl text-sm text-slate-600">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400">
+              Operations
+            </p>
+            <h1 className="font-serif text-3xl tracking-tight text-foreground">Operations Dashboard</h1>
+            <p className="max-w-2xl text-sm text-muted-foreground">
               See ticket status, SLA deadlines, and priorities in one place.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline">
-              <Link to="/tickets/create">Create Ticket</Link>
-            </Button>
-            <Button asChild>
-              <Link to="/tickets">
-                View All Tickets
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
+          <motion.div
+            layout
+            transition={shouldReduceMotion ? { duration: 0 } : headerActionsLayoutTransition}
+            className="flex min-h-9 items-center justify-end gap-2"
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {isTicketSearchOpen ? (
+                <motion.div
+                  key="ticket-search"
+                  role="search"
+                  aria-label="Search ticket by number"
+                  {...getHeaderActionsPanelVariants(shouldReduceMotion)}
+                  className="flex items-center gap-2"
+                >
+                  <Input
+                    value={ticketNumberQuery}
+                    onChange={(event) => setTicketNumberQuery(event.target.value.replace(/\D/g, '').slice(0, 4))}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        handleTicketSearch()
+                      }
+                    }}
+                    inputMode="numeric"
+                    pattern="[0-9]{4}"
+                    maxLength={4}
+                    placeholder="Search ticket # (4 digits)"
+                    aria-label="Search ticket by number"
+                    className="w-44 border-input bg-background shadow-sm sm:w-52"
+                    autoFocus
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleTicketSearch}
+                    disabled={searchTicketMutation.isPending}
+                    className="gap-2"
+                  >
+                    {searchTicketMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    Search
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={closeTicketSearch}
+                    aria-label="Close ticket search"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="ticket-actions"
+                  {...getHeaderActionsPanelVariantsReverse(shouldReduceMotion)}
+                  className="flex items-center gap-2"
+                >
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsTicketSearchOpen(true)}
+                    aria-label="Search ticket by number"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                  <Button asChild variant="outline">
+                    <Link to="/tickets/create">Create Ticket</Link>
+                  </Button>
+                  <Button asChild>
+                    <Link to="/tickets">
+                      View All Tickets
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-stretch overflow-hidden rounded-full border border-slate-200/90 bg-white/90 text-xs shadow-sm ring-1 ring-black/[0.03]">
-            <span className="flex items-center gap-1.5 border-r border-slate-200/80 px-3 py-1.5 font-medium text-slate-500">
-              <CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+          <div className="inline-flex items-stretch overflow-hidden rounded-full border border-border bg-card/90 text-xs shadow-sm ring-1 ring-black/[0.03] dark:ring-white/[0.04]">
+            <span className="flex items-center gap-1.5 border-r border-border px-3 py-1.5 font-medium text-muted-foreground">
+              <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
               Period
             </span>
             <Select
@@ -301,7 +586,7 @@ export function DashboardPage() {
             >
               <SelectTrigger
                 aria-label="Reporting period"
-                className="h-auto min-w-[8.25rem] gap-1 rounded-none border-0 bg-transparent py-1.5 pl-2.5 pr-2 text-xs font-semibold text-slate-800 shadow-none transition-colors hover:bg-slate-50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-slate-50"
+                className="h-auto min-w-[8.25rem] gap-1 rounded-none border-0 bg-transparent py-1.5 pl-2.5 pr-2 text-xs font-semibold text-foreground shadow-none transition-colors hover:bg-muted/60 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/60"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -315,19 +600,19 @@ export function DashboardPage() {
             </Select>
           </div>
 
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/90 bg-white/90 px-3 py-1.5 text-xs text-slate-500 shadow-sm ring-1 ring-black/[0.03]">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm ring-1 ring-black/[0.03] dark:ring-white/[0.04]">
             {isFetching ? (
-              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-sky-600" aria-hidden />
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-sky-600 dark:text-sky-400" aria-hidden />
             ) : (
-              <Clock3 className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+              <Clock3 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
             )}
             <span>
               {isFetching ? (
-                <span className="text-slate-600">Updating metrics…</span>
+                <span className="text-muted-foreground">Updating metrics…</span>
               ) : (
                 <>
                   Updated{' '}
-                  <span className="font-medium text-slate-700">{formatDateTime(summary.meta.generatedAt)}</span>
+                  <span className="font-medium text-foreground">{formatDateTime(summary.meta.generatedAt)}</span>
                 </>
               )}
             </span>
@@ -335,7 +620,7 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         <SummaryCard
           title="Total Tickets"
           value={summary.totalTickets}
@@ -351,6 +636,14 @@ export function DashboardPage() {
           toneClass="bg-sky-500/80"
           helper="Awaiting assignment or work"
           trendPercent={summary.trends?.openTicketsPct}
+        />
+        <SummaryCard
+          title="Unassigned"
+          value={unassignedOpenCount}
+          icon={UserX}
+          toneClass="bg-orange-500/90"
+          helper="Open tickets without assignee"
+          lowerIsBetter
         />
         <SummaryCard
           title="In Progress"
@@ -386,42 +679,56 @@ export function DashboardPage() {
             <CardDescription>Donut chart of current status split</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 md:grid-cols-[220px_minmax(0,1fr)] md:items-center">
-            <div className="mx-auto">
-              <svg viewBox="0 0 100 100" className="h-56 w-56 -rotate-90">
-                <circle cx="50" cy="50" r="42" className="fill-none stroke-muted/60" strokeWidth="11" />
-                {statusSegments.map((segment) => {
-                  const segmentLength = totalStatus > 0 ? (segment.value / totalStatus) * circumference : 0
-                  const currentOffset = progressOffset
-                  progressOffset += segmentLength
-                  return (
-                    <circle
-                      key={segment.label}
-                      cx="50"
-                      cy="50"
-                      r="42"
-                      className={`fill-none ${segment.colorClass}`}
-                      strokeWidth="11"
-                      strokeLinecap="butt"
-                      strokeDasharray={`${segmentLength} ${circumference}`}
-                      strokeDashoffset={-currentOffset}
-                    />
-                  )
-                })}
-                <circle cx="50" cy="50" r="30" className="fill-background" />
-                <text x="50" y="47" textAnchor="middle" className="rotate-90 fill-muted-foreground text-[7px] font-medium">
-                  TOTAL
-                </text>
-                <text x="50" y="58" textAnchor="middle" className="rotate-90 fill-foreground text-[13px] font-semibold">
-                  {formatNumber(totalStatus)}
-                </text>
-              </svg>
-            </div>
-
+            <ChartContainer
+              config={STATUS_CHART_CONFIG}
+              className="mx-auto aspect-square h-56 w-full max-w-[14rem]"
+            >
+              <PieChart>
+                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                <Pie
+                  data={statusChartData}
+                  dataKey="tickets"
+                  nameKey="status"
+                  innerRadius={58}
+                  outerRadius={84}
+                  strokeWidth={4}
+                >
+                  <Label
+                    content={({ viewBox }) => {
+                      if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
+                        return (
+                          <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                            <tspan
+                              x={viewBox.cx}
+                              y={(viewBox.cy ?? 0) - 8}
+                              className="fill-muted-foreground text-[10px] font-medium uppercase tracking-wider"
+                            >
+                              Total
+                            </tspan>
+                            <tspan
+                              x={viewBox.cx}
+                              y={(viewBox.cy ?? 0) + 14}
+                              className="fill-foreground text-xl font-semibold"
+                            >
+                              {formatNumber(totalStatus)}
+                            </tspan>
+                          </text>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                </Pie>
+              </PieChart>
+            </ChartContainer>
             <div className="space-y-3">
               {statusSegments.map((segment) => (
                 <div key={segment.label} className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
                   <div className="flex items-center gap-2">
-                    <span className={`inline-block h-2.5 w-2.5 rounded-full ${segment.colorClass.replace('stroke-', 'bg-')}`} />
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: `var(--color-${segment.status})` }}
+                    />
                     <span className="text-sm">{segment.label}</span>
                   </div>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${segment.trailClass}`}>
@@ -463,7 +770,7 @@ export function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-600" />
+              <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               SLA Health
             </CardTitle>
             <CardDescription>Compliance and risk indicators</CardDescription>
@@ -475,7 +782,7 @@ export function DashboardPage() {
             </div>
             <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
               <span className="inline-flex items-center gap-1 text-muted-foreground">
-                <Siren className="h-3.5 w-3.5 text-rose-600" />
+                <Siren className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
                 Overdue Open
               </span>
               <span className="font-semibold">{formatNumber(summary.sla.overdueOpenCount)}</span>
@@ -490,10 +797,10 @@ export function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Gauge className="h-4 w-4 text-sky-600" />
-              Throughput Snapshot
+              <Gauge className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+              Ticket Activity
             </CardTitle>
-            <CardDescription>Window and speed details</CardDescription>
+            <CardDescription>New tickets, resolved tickets, and average resolution time</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
@@ -514,15 +821,15 @@ export function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <UserX className="h-4 w-4 text-amber-600" />
-              Queue Watch
+              <UserX className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              Open Tickets to Watch
             </CardTitle>
-            <CardDescription>Open queue pressure points</CardDescription>
+            <CardDescription>Unassigned tickets and the oldest open ticket</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
               <span className="text-muted-foreground">Unassigned Open</span>
-              <span className="font-semibold">{formatNumber(summary.snapshot.unassignedOpenTickets)}</span>
+              <span className="font-semibold">{formatNumber(unassignedOpenCount)}</span>
             </div>
             <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
               <span className="text-muted-foreground">Oldest Open Age</span>
@@ -543,22 +850,22 @@ export function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Open Queue by Status</CardTitle>
-            <CardDescription>Distribution of active ticket states</CardDescription>
+            <CardTitle>Open Tickets by Status</CardTitle>
+            <CardDescription>How many open tickets are in each status</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {statusRows.length === 0 ? (
               <p className="text-sm text-muted-foreground">No status data available.</p>
             ) : (
               statusRows.map((row) => (
-                <div key={row.label} className="rounded border px-3 py-2">
+                <div key={row.status} className={`rounded border px-3 py-2 ${row.style.rowClass}`}>
                   <div className="mb-1.5 flex items-center justify-between text-sm">
                     <span className="capitalize">{row.label}</span>
                     <span className="font-semibold">{formatNumber(row.value)}</span>
                   </div>
-                  <div className="h-2 rounded-full bg-sky-100">
+                  <div className={`h-2 rounded-full ${row.style.trackClass}`}>
                     <div
-                      className="h-full rounded-full bg-sky-500/85 transition-[width] duration-500"
+                      className={`h-full rounded-full transition-[width] duration-500 ${row.style.barClass}`}
                       style={{ width: `${(row.value / statusPeak) * 100}%` }}
                     />
                   </div>
@@ -583,7 +890,7 @@ export function DashboardPage() {
                     <span className="capitalize">{row.label}</span>
                     <span className="font-semibold">{formatNumber(row.value)}</span>
                   </div>
-                  <div className="h-2 rounded-full bg-amber-100">
+                  <div className="h-2 rounded-full bg-amber-100 dark:bg-amber-950/50">
                     <div
                       className="h-full rounded-full bg-amber-500/85 transition-[width] duration-500"
                       style={{ width: `${(row.value / severityPeak) * 100}%` }}

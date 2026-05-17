@@ -164,6 +164,7 @@ function normalizeSummary(raw: unknown): DashboardSummary {
       : undefined
   const openByStatusTotal = openByStatus
     ? (pickNumber(openByStatus, ['created']) ?? 0) +
+      (pickNumber(openByStatus, ['unassigned']) ?? 0) +
       (pickNumber(openByStatus, ['assigned']) ?? 0) +
       (pickNumber(openByStatus, ['in_progress']) ?? 0) +
       (pickNumber(openByStatus, ['reopened']) ?? 0) +
@@ -290,7 +291,8 @@ function normalizeSummary(raw: unknown): DashboardSummary {
     snapshot: {
       newTicketsInWindow: pickNumber(snapshot, ['newTicketsInWindow']) ?? 0,
       resolvedTicketsInWindow: pickNumber(snapshot, ['resolvedTicketsInWindow']) ?? 0,
-      unassignedOpenTickets: pickNumber(snapshot, ['unassignedOpenTickets']) ?? 0,
+      unassignedOpenTickets:
+        pickNumber(snapshot, ['unassignedOpenTickets']) ?? pickNumber(openByStatus, ['unassigned']) ?? 0,
       oldestOpenTicketAgeHours: pickNumber(snapshot, ['oldestOpenTicketAgeHours']) ?? 0,
       oldestOpenTicket:
         oldestOpenTicketRaw && typeof oldestOpenTicketRaw.id === 'string'

@@ -16,7 +16,23 @@ const loginSchema = z.object({
     .max(128, 'Password is too long'),
 })
 
+function unwrapApiData(raw: unknown): unknown {
+  if (typeof raw === 'object' && raw !== null && 'data' in (raw as Record<string, unknown>)) {
+    return (raw as Record<string, unknown>).data
+  }
+  return raw
+}
+
+function unwrapUserRecord(raw: unknown): unknown {
+  const data = unwrapApiData(raw)
+  if (typeof data === 'object' && data !== null && 'user' in (data as Record<string, unknown>)) {
+    return (data as Record<string, unknown>).user
+  }
+  return data
+}
+
 function parseAuthUser(raw: unknown): AuthUser {
+  const userRecord = unwrapUserRecord(raw)
   const parsed = z
     .object({
       id: z.union([z.string(), z.number()]).transform(String),
@@ -39,7 +55,7 @@ function parseAuthUser(raw: unknown): AuthUser {
         roleCode: z.string().optional(),
       }),
     )
-    .safeParse(raw)
+    .safeParse(userRecord)
 
   if (!parsed.success) {
     throw new ApiError('Login succeeded but user information is malformed')
@@ -131,12 +147,7 @@ async function fetchCurrentUser(accessToken: string): Promise<AuthUser> {
         Authorization: `Bearer ${accessToken}`,
       },
     })
-    const data = response.data as unknown
-    const source =
-      (typeof data === 'object' && data !== null && 'data' in (data as Record<string, unknown>)
-        ? (data as Record<string, unknown>).data
-        : data) ?? data
-    return parseAuthUser(source)
+    return parseAuthUser(response.data)
   } catch (error) {
     if (error instanceof ApiError) {
       throw error
@@ -145,7 +156,24 @@ async function fetchCurrentUser(accessToken: string): Promise<AuthUser> {
   }
 }
 
+function assertLoginSucceeded(raw: unknown): void {
+  if (
+    typeof raw === 'object' &&
+    raw !== null &&
+    'success' in (raw as Record<string, unknown>) &&
+    (raw as Record<string, unknown>).success === false
+  ) {
+    const record = raw as Record<string, unknown>
+    const message =
+      typeof record.message === 'string' && record.message.trim().length > 0
+        ? record.message
+        : 'Unable to sign in right now. Please try again.'
+    throw new ApiError(message)
+  }
+}
+
 async function parseSessionPayload(raw: unknown): Promise<AuthSession> {
+  assertLoginSucceeded(raw)
   const { accessToken, refreshToken, user } = extractSessionEnvelope(raw)
   const parsedUser = user ? parseAuthUser(user) : await fetchCurrentUser(accessToken)
 
@@ -153,9 +181,8 @@ async function parseSessionPayload(raw: unknown): Promise<AuthSession> {
 }
 
 export async function login(input: LoginInput): Promise<AuthSession> {
-  const payload = loginSchema.parse(input)
-
   try {
+    const payload = loginSchema.parse(input)
     const response = await apiClient.post('/auth/login', payload)
     return await parseSessionPayload(response.data)
   } catch (error) {

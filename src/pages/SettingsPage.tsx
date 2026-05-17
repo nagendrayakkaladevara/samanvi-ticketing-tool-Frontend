@@ -11,7 +11,7 @@ const THEME_STORAGE_KEY = 'samanvi.theme.mode'
 
 function getInitialTheme(): ThemeMode {
   if (typeof window === 'undefined') {
-    return 'light'
+    return 'dark'
   }
 
   const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
@@ -19,7 +19,7 @@ function getInitialTheme(): ThemeMode {
     return stored
   }
 
-  return 'light'
+  return 'dark'
 }
 
 function formatDate(dateString: string): string {
@@ -199,10 +199,6 @@ export function SettingsPage() {
               </span>
               {theme === 'dark' ? <Check className="h-4 w-4 text-primary" /> : null}
             </button>
-
-            <p className="pt-1 text-xs text-muted-foreground">
-              Theme is saved in local storage and applied immediately.
-            </p>
           </CardContent>
         </Card>
       </div>
