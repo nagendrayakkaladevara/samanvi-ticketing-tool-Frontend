@@ -109,10 +109,33 @@
     color: #4b5563 !important;
   }
 
+  [data-sidebar='sidebar'],
+  [data-sidebar='rail'] {
+    display: none !important;
+  }
+
   .print-report-header {
     margin-bottom: 10px;
     border-bottom: 1px solid #d1d5db;
     padding-bottom: 8px;
+  }
+
+  .print-report-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .print-report-logo {
+    height: 40px;
+    width: auto;
+    max-width: 200px;
+    object-fit: contain;
+  }
+
+  .print-report-header-text {
+    text-align: right;
   }
 
   .print-report-title {

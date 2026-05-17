@@ -17,6 +17,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { useCurrentUser, type CurrentUser } from '@/hooks/use-current-user'
+import { SAMANVI_LOGO_URL } from '@/lib/branding'
 import { useAuthStore } from '@/store/auth-store'
 
 type NavItem = {
@@ -59,7 +60,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   })
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon" className="no-print" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -69,7 +70,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   ST
                 </div>
                 <img
-                  src="https://gst-contracts.s3.ap-southeast-1.amazonaws.com/uploads/bcc/cms/asset/avatar/613944/samv_logo.png"
+                  src={SAMANVI_LOGO_URL}
                   alt="Samanvi"
                   className="h-8 w-auto object-contain"
                 />

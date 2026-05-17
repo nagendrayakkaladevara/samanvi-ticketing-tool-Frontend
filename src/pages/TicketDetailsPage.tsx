@@ -1,21 +1,48 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Loader2, Printer, Save } from 'lucide-react'
+import { Loader2, Pencil, Printer } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useParams } from 'react-router-dom'
 import { toast } from '@/lib/toast'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { ticketsService } from '@/features/tickets/api/tickets.service'
+import type { TicketStatus } from '@/features/tickets/types/ticket'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { SAMANVI_LOGO_URL } from '@/lib/branding'
 import { queryClient } from '@/lib/query/query-client'
 
 type UpdatableStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
+
+function isUpdatableStatus(status: TicketStatus): status is UpdatableStatus {
+  return status === 'ASSIGNED' || status === 'IN_PROGRESS' || status === 'RESOLVED' || status === 'CLOSED'
+}
+
+function getStatusDialogOptions(currentStatus: TicketStatus, allowedStatuses: UpdatableStatus[]): TicketStatus[] {
+  const options = new Set<TicketStatus>(allowedStatuses)
+  options.add(currentStatus)
+  return Array.from(options)
+}
 const adminStatuses: UpdatableStatus[] = ['ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']
 const workerStatuses: UpdatableStatus[] = ['IN_PROGRESS', 'RESOLVED', 'CLOSED']
-const priorityOptions = ['P1', 'P2', 'P3'] as const
 type Role = 'ADMIN' | 'SUPERVISOR' | 'WORKER' | 'VIEWER'
 
 const roleCapabilityMatrix: Record<
@@ -68,6 +95,11 @@ function formatSla(rawSlaDueAt: string | undefined): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(parsed)
+}
+
+function getTicketPrintDocumentTitle(ticketNumber: string | undefined, ticketId: string): string {
+  const label = (ticketNumber || ticketId).replace(/[/\\?%*:|"<>]/g, '-').trim()
+  return `Ticket-${label}`
 }
 
 function formatDateTime(rawDate: string | undefined): string {
@@ -130,14 +162,44 @@ function getActivityTone(action: string | undefined): string {
   return 'border-slate-200 bg-slate-100 text-slate-700'
 }
 
+function EditableDetailValue({
+  value,
+  editable,
+  onClick,
+  ariaLabel,
+}: {
+  value: string
+  editable: boolean
+  onClick?: () => void
+  ariaLabel: string
+}) {
+  if (!editable) {
+    return <p className="mt-1 text-sm font-semibold">{value}</p>
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className="group mt-1 flex w-full items-center justify-between gap-2 rounded-md border border-transparent px-1 py-0.5 text-left text-sm font-semibold transition-colors hover:border-primary/30 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <span>{value}</span>
+      <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-visible:opacity-100" />
+    </button>
+  )
+}
+
 export function TicketDetailsPage() {
   const { ticketId } = useParams<{ ticketId: string }>()
   const currentUser = useCurrentUser()
-  const [nextStatus, setNextStatus] = useState<UpdatableStatus | ''>('')
+  const [nextStatus, setNextStatus] = useState<TicketStatus | ''>('')
   const [assignToId, setAssignToId] = useState('')
   const [statusNote, setStatusNote] = useState('')
   const [commentNote, setCommentNote] = useState('')
   const [assignNote, setAssignNote] = useState('')
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false)
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false)
   const [printGeneratedAt, setPrintGeneratedAt] = useState(() => formatDateTime(new Date().toISOString()))
 
   const { data: ticket, isLoading, isError, error } = useQuery({
@@ -188,6 +250,9 @@ export function TicketDetailsPage() {
       if (nextStatus === ticket.status) {
         throw new Error('Please select a different status.')
       }
+      if (!isUpdatableStatus(nextStatus)) {
+        throw new Error('This status cannot be applied.')
+      }
       return ticketsService.updateStatus({
         ticketId,
         status: nextStatus,
@@ -197,6 +262,7 @@ export function TicketDetailsPage() {
     onSuccess: () => {
       setNextStatus('')
       setStatusNote('')
+      setStatusDialogOpen(false)
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
@@ -217,6 +283,7 @@ export function TicketDetailsPage() {
     onSuccess: () => {
       setAssignToId('')
       setAssignNote('')
+      setAssignDialogOpen(false)
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
@@ -246,6 +313,18 @@ export function TicketDetailsPage() {
 
   const effectiveAssignToId = assignToId || ticket?.assignedToUserId || ''
 
+  const openStatusDialog = () => {
+    setNextStatus(ticket?.status ?? '')
+    setStatusNote('')
+    setStatusDialogOpen(true)
+  }
+
+  const openAssignDialog = () => {
+    setAssignToId(ticket?.assignedToUserId ?? '')
+    setAssignNote('')
+    setAssignDialogOpen(true)
+  }
+
   if (!ticketId) {
     return (
       <Card className="p-4 text-sm text-destructive">
@@ -267,13 +346,23 @@ export function TicketDetailsPage() {
   }
 
   const hasAssignmentChanged = Boolean(effectiveAssignToId) && effectiveAssignToId !== (ticket.assignedToUserId ?? '')
-  const hasStatusSelection = nextStatus !== ''
-  const hasStatusChanged = hasStatusSelection && nextStatus !== ticket.status
+  const hasStatusChanged = nextStatus !== '' && nextStatus !== ticket.status
+  const statusDialogOptions = getStatusDialogOptions(ticket.status, capabilities.allowedStatuses)
   const ticketRouteUrl = `${window.location.origin}/tickets/${ticket.id}`
 
   const handlePrintTicket = () => {
     setPrintGeneratedAt(formatDateTime(new Date().toISOString()))
+    const previousTitle = document.title
+    const printTitle = getTicketPrintDocumentTitle(ticket.ticketNumber, ticket.id)
+
+    const restoreTitle = () => {
+      document.title = previousTitle
+      window.removeEventListener('afterprint', restoreTitle)
+    }
+
     requestAnimationFrame(() => {
+      document.title = printTitle
+      window.addEventListener('afterprint', restoreTitle)
       window.print()
     })
   }
@@ -281,10 +370,15 @@ export function TicketDetailsPage() {
   return (
     <section className="space-y-4 print:space-y-3">
       <div className="print-only print-report-header">
-        <p className="print-report-title">Ticket Report</p>
-        <p className="print-report-subtitle">
-          #{ticket.id} - Printed on {printGeneratedAt}
-        </p>
+        <div className="print-report-header-row">
+          <img src={SAMANVI_LOGO_URL} alt="Samanvi" className="print-report-logo" />
+          <div className="print-report-header-text">
+            <p className="print-report-title">Ticket Report</p>
+            <p className="print-report-subtitle">
+              #{ticket.id} - Printed on {printGeneratedAt}
+            </p>
+          </div>
+        </div>
       </div>
 
       <header className="space-y-3 border-b pb-4 print:border-slate-300 print:pb-3">
@@ -313,7 +407,12 @@ export function TicketDetailsPage() {
             </div>
             <div className="rounded-md border bg-muted/20 p-3 print-card">
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Status</p>
-              <p className="mt-1 text-sm font-semibold">{formatWord(ticket.status)}</p>
+              <EditableDetailValue
+                value={formatWord(ticket.status)}
+                editable={canUpdateStatus}
+                onClick={openStatusDialog}
+                ariaLabel="Update status"
+              />
             </div>
             <div className="rounded-md border bg-muted/20 p-3 print-card">
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Created At</p>
@@ -344,8 +443,13 @@ export function TicketDetailsPage() {
               <p className="mt-1 text-sm font-semibold">{formatSla(ticket.slaDueAt)}</p>
             </div>
             <div className="rounded-md border bg-muted/20 p-3 print-card">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Assigned To</p>
-              <p className="mt-1 text-sm font-semibold">{ticket.assignedToName || 'Unassigned'}</p>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Assignment</p>
+              <EditableDetailValue
+                value={ticket.assignedToName || 'Unassigned'}
+                editable={canAssign}
+                onClick={openAssignDialog}
+                ariaLabel="Update assignment"
+              />
             </div>
             <div className="rounded-md border bg-muted/20 p-3 print-card">
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Created By</p>
@@ -373,137 +477,147 @@ export function TicketDetailsPage() {
         </Card>
 
         <Card className="no-print space-y-3 p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Update Work Item</h2>
-
-          <div className="grid gap-3">
-            <label className="space-y-1">
-              <span className="text-xs text-muted-foreground">Status</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild disabled={!canUpdateStatus || updateStatusMutation.isPending}>
-                  <Button variant="outline" className="h-9 w-full justify-between px-3 font-normal">
-                    <span>{nextStatus ? formatWord(nextStatus) : 'Select status'}</span>
-                    <span className="text-xs text-muted-foreground">Change</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                  {capabilities.allowedStatuses.map((status) => (
-                    <DropdownMenuItem key={status} onClick={() => setNextStatus(status)}>
-                      {formatWord(status)}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-xs text-muted-foreground">Priority</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild disabled>
-                  <Button variant="outline" className="h-9 w-full justify-between px-3 font-normal">
-                    <span>{ticket.priority}</span>
-                    <span className="text-xs text-muted-foreground">Read-only</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                  {priorityOptions.map((priority) => (
-                    <DropdownMenuItem key={priority}>{priority}</DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </label>
-          </div>
-
-          <label className="space-y-1">
-            <span className="text-xs text-muted-foreground">Status note</span>
-            <textarea
-              className="min-h-20 w-full rounded-md border bg-background px-3 py-2 text-sm"
-              disabled={!canUpdateStatus || updateStatusMutation.isPending}
-              value={statusNote}
-              onChange={(event) => setStatusNote(event.target.value)}
-              placeholder={canUpdateStatus ? 'Optional note for the status change' : 'Read-only'}
-            />
-          </label>
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              disabled={!canUpdateStatus || !hasStatusChanged || updateStatusMutation.isPending}
-              onClick={() => updateStatusMutation.mutate()}
-            >
-              {updateStatusMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Update status
-            </Button>
-            <Button size="sm" variant="outline" disabled>
-              Priority updates not available in API
-            </Button>
-          </div>
-
-          {canAssign ? (
-            <div className="space-y-2 rounded-md border p-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Assignment</h3>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild disabled={assignTicketMutation.isPending}>
-                    <Button variant="outline" className="h-9 justify-between px-3 font-normal">
-                      <span>
-                        {effectiveAssignToId
-                          ? (assignableUsers.find((user) => user.id === effectiveAssignToId)?.displayName ??
-                            ticket.assignedToName ??
-                            ticket.assignedToUserId ??
-                            'Selected')
-                          : 'Select user'}
-                      </span>
-                      <span className="text-xs text-muted-foreground">Choose</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                    {assignableUsers.map((user) => (
-                      <DropdownMenuItem key={user.id} onClick={() => setAssignToId(user.id)}>
-                        {user.displayName} ({user.role})
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button
-                  size="sm"
-                  variant="default"
-                  disabled={!hasAssignmentChanged || assignTicketMutation.isPending}
-                  onClick={() => assignTicketMutation.mutate()}
-                >
-                  {assignTicketMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Assign
-                </Button>
-              </div>
-              <textarea
-                className="min-h-16 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                value={assignNote}
-                disabled={assignTicketMutation.isPending}
-                onChange={(event) => setAssignNote(event.target.value)}
-                placeholder="Optional assignment note"
-              />
-            </div>
-          ) : null}
-
-          <div className="space-y-2 rounded-md border p-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Comments</h3>
-            <textarea
-              className="min-h-20 w-full rounded-md border bg-background px-3 py-2 text-sm"
-              value={commentNote}
-              disabled={!canComment || commentMutation.isPending}
-              onChange={(event) => setCommentNote(event.target.value)}
-              placeholder={canComment ? 'Add a comment or resolution note' : 'Read-only'}
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!canComment || commentNote.trim().length === 0 || commentMutation.isPending}
-              onClick={() => commentMutation.mutate()}
-            >
-              {commentMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Add comment
-            </Button>
-          </div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Comments</h2>
+          <Textarea
+            className="min-h-20"
+            value={commentNote}
+            disabled={!canComment || commentMutation.isPending}
+            onChange={(event) => setCommentNote(event.target.value)}
+            placeholder={canComment ? 'Add a comment or resolution note' : 'Read-only'}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!canComment || commentNote.trim().length === 0 || commentMutation.isPending}
+            onClick={() => commentMutation.mutate()}
+          >
+            {commentMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Add comment
+          </Button>
         </Card>
+
+        <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Update status</DialogTitle>
+              <DialogDescription>
+                Update the ticket status and add an optional note for the change.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="status-select">Status</Label>
+                <Select
+                  value={nextStatus}
+                  onValueChange={(value) => setNextStatus(value as TicketStatus)}
+                  disabled={updateStatusMutation.isPending}
+                >
+                  <SelectTrigger id="status-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusDialogOptions.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {formatWord(status)}
+                        {status === ticket.status ? ' (current)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status-note">Status change notes</Label>
+                <Textarea
+                  id="status-note"
+                  className="min-h-24"
+                  value={statusNote}
+                  disabled={updateStatusMutation.isPending}
+                  onChange={(event) => setStatusNote(event.target.value)}
+                  placeholder="Optional note for the status change"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={updateStatusMutation.isPending}
+                onClick={() => setStatusDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={!hasStatusChanged || updateStatusMutation.isPending}
+                onClick={() => updateStatusMutation.mutate()}
+              >
+                {updateStatusMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Save status
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Update assignment</DialogTitle>
+              <DialogDescription>
+                Currently assigned to {ticket.assignedToName || 'no one'}. Select a new assignee below.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="assignee-select">Assignee</Label>
+                <Select
+                  value={effectiveAssignToId || undefined}
+                  onValueChange={setAssignToId}
+                  disabled={assignTicketMutation.isPending}
+                >
+                  <SelectTrigger id="assignee-select">
+                    <SelectValue placeholder="Select user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assignableUsers.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.displayName} ({user.role})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="assign-note">Assignment note</Label>
+                <Textarea
+                  id="assign-note"
+                  className="min-h-20"
+                  value={assignNote}
+                  disabled={assignTicketMutation.isPending}
+                  onChange={(event) => setAssignNote(event.target.value)}
+                  placeholder="Optional assignment note"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={assignTicketMutation.isPending}
+                onClick={() => setAssignDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={!hasAssignmentChanged || assignTicketMutation.isPending}
+                onClick={() => assignTicketMutation.mutate()}
+              >
+                {assignTicketMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Save assignment
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card className="print-card space-y-3 p-4">

@@ -12,7 +12,7 @@ export function AppShell() {
     <SidebarProvider defaultOpen={false}>
       <AppSidebar />
       <SidebarInset>
-        <header className="bg-card sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b px-4">
+        <header className="no-print bg-card sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b px-4">
           <div className="flex items-center gap-2">
             <SidebarTrigger />
             <Separator orientation="vertical" className="mr-2 h-4" />
@@ -25,7 +25,7 @@ export function AppShell() {
             </div>
           </div>
         </header>
-        <main className="min-w-0 p-6">
+        <main className="min-w-0 p-6 print:p-0">
           <Outlet />
         </main>
       </SidebarInset>

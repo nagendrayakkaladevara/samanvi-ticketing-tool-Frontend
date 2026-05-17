@@ -326,8 +326,10 @@ function normalizeSummary(raw: unknown): DashboardSummary {
 }
 
 export const dashboardService = {
-  async getAdminSummary(): Promise<DashboardSummary> {
-    const { data } = await apiClient.get<unknown>('/dashboard/admin-summary')
+  async getAdminSummary(days = 14): Promise<DashboardSummary> {
+    const { data } = await apiClient.get<unknown>('/dashboard/admin-summary', {
+      params: { days },
+    })
     return normalizeSummary(data)
   },
 }

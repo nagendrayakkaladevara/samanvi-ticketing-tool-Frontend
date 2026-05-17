@@ -47,7 +47,17 @@ type TicketGridRow = {
   assignedTo: string
   severity: string
   slaDueAt: string
+  createdAt: string
   isOverdue: boolean
+}
+
+function compareTicketsNewestFirst(a: Ticket, b: Ticket): number {
+  const dateA = a.createdAt ? new Date(a.createdAt).getTime() || 0 : 0
+  const dateB = b.createdAt ? new Date(b.createdAt).getTime() || 0 : 0
+  if (dateB !== dateA) {
+    return dateB - dateA
+  }
+  return b.id.localeCompare(a.id)
 }
 
 function formatSlaDueAt(rawSlaDueAt: string): string {
@@ -91,6 +101,7 @@ function toTicketGridRow(ticket: Ticket): TicketGridRow {
     assignedTo: ticket.assignedToName || ticket.assignedToUserId || 'Unassigned',
     severity: ticket.severity,
     slaDueAt: ticket.slaDueAt,
+    createdAt: ticket.createdAt ?? '',
     isOverdue: isSlaOverdue(ticket.slaDueAt),
   }
 }
@@ -212,7 +223,7 @@ function EmptyState() {
 }
 
 export function TicketsPage() {
-  const { data: tickets = [], isLoading, isFetching, isError, error } = useTicketsQuery()
+  const { data: tickets = [], isLoading, isFetching, isError, error } = useTicketsQuery({ poll: true })
   const navigate = useNavigate()
   const currentUser = useCurrentUser()
   const canCreateTicket = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR'
@@ -220,7 +231,10 @@ export function TicketsPage() {
   const [deleteTarget, setDeleteTarget] = useState<TicketGridRow | null>(null)
   const [ticketNumberQuery, setTicketNumberQuery] = useState('')
 
-  const rowData = useMemo(() => tickets.map(toTicketGridRow), [tickets])
+  const rowData = useMemo(
+    () => [...tickets].sort(compareTicketsNewestFirst).map(toTicketGridRow),
+    [tickets],
+  )
 
   const deleteMutation = useMutation({
     mutationFn: (ticketId: string) => ticketsService.remove(ticketId),
@@ -271,6 +285,17 @@ export function TicketsPage() {
   const columnDefs = useMemo<Array<ColDef<TicketGridRow>>>(
     () => [
       {
+        field: 'createdAt',
+        hide: true,
+        sortable: true,
+        sort: 'desc',
+        comparator: (valueA: string, valueB: string) => {
+          const dateA = new Date(valueA).getTime() || 0
+          const dateB = new Date(valueB).getTime() || 0
+          return dateA - dateB
+        },
+      },
+      {
         field: 'title',
         headerName: 'Title',
         headerClass: 'ticket-grid__header-cell',
@@ -316,7 +341,6 @@ export function TicketsPage() {
         flex: 1.2,
         sortable: true,
         filter: true,
-        sort: 'asc',
         comparator: (valueA: string, valueB: string) => {
           const dateA = new Date(valueA).getTime() || 0
           const dateB = new Date(valueB).getTime() || 0

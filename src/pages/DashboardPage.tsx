@@ -1,12 +1,14 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
   ArrowRight,
+  CalendarDays,
   CircleCheckBig,
   Clock3,
   FolderOpen,
   Gauge,
+  Loader2,
   ShieldCheck,
   Siren,
   Ticket,
@@ -18,8 +20,16 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDashboardSummaryQuery } from '@/features/dashboard/hooks/use-dashboard-summary-query'
+
+const WINDOW_DAYS_OPTIONS = [
+  { value: 14, label: 'Last 14 days' },
+  { value: 30, label: 'Last 30 days' },
+  { value: 60, label: 'Last 60 days' },
+  { value: 90, label: 'Last 90 days' },
+] as const
 
 type RingSegment = {
   label: string
@@ -137,7 +147,8 @@ function DashboardSkeleton() {
 }
 
 export function DashboardPage() {
-  const { data, isLoading, isError, error, refetch, isFetching } = useDashboardSummaryQuery()
+  const [windowDays, setWindowDays] = useState(14)
+  const { data, isLoading, isError, error, refetch, isFetching } = useDashboardSummaryQuery(windowDays)
 
   const summary = data ?? {
     totalTickets: 0,
@@ -263,7 +274,7 @@ export function DashboardPage() {
           <div className="space-y-1">
             <h1 className="font-serif text-3xl tracking-tight text-slate-900">Operations Dashboard</h1>
             <p className="max-w-2xl text-sm text-slate-600">
-              Snapshot of ticket flow, SLA pressure, and priority distribution to support faster decisions.
+              See ticket status, SLA deadlines, and priorities in one place.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -278,15 +289,49 @@ export function DashboardPage() {
             </Button>
           </div>
         </div>
-        {isFetching ? <p className="mt-3 text-xs text-muted-foreground">Refreshing latest metrics...</p> : null}
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="rounded-full border bg-background px-2 py-1">Scope: {summary.meta.scope}</span>
-          <span className="rounded-full border bg-background px-2 py-1">
-            Window: last {summary.meta.windowDays ?? 14} days
-          </span>
-          <span className="rounded-full border bg-background px-2 py-1">
-            Generated: {formatDateTime(summary.meta.generatedAt)}
-          </span>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-stretch overflow-hidden rounded-full border border-slate-200/90 bg-white/90 text-xs shadow-sm ring-1 ring-black/[0.03]">
+            <span className="flex items-center gap-1.5 border-r border-slate-200/80 px-3 py-1.5 font-medium text-slate-500">
+              <CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+              Period
+            </span>
+            <Select
+              value={String(windowDays)}
+              onValueChange={(value) => setWindowDays(Number(value))}
+            >
+              <SelectTrigger
+                aria-label="Reporting period"
+                className="h-auto min-w-[8.25rem] gap-1 rounded-none border-0 bg-transparent py-1.5 pl-2.5 pr-2 text-xs font-semibold text-slate-800 shadow-none transition-colors hover:bg-slate-50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-slate-50"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="start" className="min-w-[10rem]">
+                {WINDOW_DAYS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={String(option.value)} className="text-xs">
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/90 bg-white/90 px-3 py-1.5 text-xs text-slate-500 shadow-sm ring-1 ring-black/[0.03]">
+            {isFetching ? (
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-sky-600" aria-hidden />
+            ) : (
+              <Clock3 className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+            )}
+            <span>
+              {isFetching ? (
+                <span className="text-slate-600">Updating metrics…</span>
+              ) : (
+                <>
+                  Updated{' '}
+                  <span className="font-medium text-slate-700">{formatDateTime(summary.meta.generatedAt)}</span>
+                </>
+              )}
+            </span>
+          </div>
         </div>
       </header>
 
