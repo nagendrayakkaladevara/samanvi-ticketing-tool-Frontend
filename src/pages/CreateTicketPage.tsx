@@ -162,8 +162,11 @@ export function CreateTicketPage() {
     enhanceDescriptionMutation.mutate(description)
   }
 
+  const flatOnMobileCard =
+    'border-0 bg-transparent p-0 shadow-none max-sm:rounded-none sm:border sm:bg-card sm:shadow'
+
   return (
-    <section className="mx-auto w-full max-w-3xl space-y-5">
+    <section className="mx-auto w-full max-w-3xl space-y-5 max-sm:-mx-2 max-sm:max-w-none sm:mx-auto">
       <header className="space-y-2">
         <Button variant="ghost" className="-ml-3 w-fit" onClick={() => navigate('/tickets')}>
           <ArrowLeft className="h-4 w-4" />
@@ -176,7 +179,7 @@ export function CreateTicketPage() {
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <Card className="space-y-4 p-5">
+        <Card className={cn(flatOnMobileCard, 'space-y-4 sm:p-5')}>
           <div className="space-y-2">
             <Label htmlFor="title">
               Title
@@ -381,10 +384,18 @@ export function CreateTicketPage() {
           </div>
         </Card>
 
-        <div className="sticky bottom-3 z-10">
-          <Card className="flex items-center justify-between gap-3 border border-border bg-background/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/85 dark:shadow-black/30">
-            <p className="text-xs text-muted-foreground">Press Enter on the final field or use Create Ticket.</p>
-            <div className="flex items-center gap-2">
+        <div className="sticky bottom-3 z-10 max-sm:-mx-2">
+          <Card
+            className={cn(
+              flatOnMobileCard,
+              'flex flex-col gap-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85',
+              'max-sm:pt-3 sm:flex-row sm:items-center sm:justify-between sm:border-border sm:p-3 sm:shadow-lg dark:sm:shadow-black/30',
+            )}
+          >
+            <p className="hidden text-xs text-muted-foreground sm:block">
+              Press Enter on the final field or use Create Ticket.
+            </p>
+            <div className="flex items-center gap-2 max-sm:w-full max-sm:[&>button]:flex-1">
               <Button
                 type="button"
                 variant="outline"
