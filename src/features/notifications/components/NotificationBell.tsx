@@ -28,14 +28,10 @@ import type { AppNotification, NotificationType } from '@/features/notifications
 import { getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
 import { cn } from '@/lib/utils'
 
-function formatRelativeTime(iso?: string): string {
-  if (!iso) {
-    return ''
-  }
-
+function formatRelativeTime(iso: string): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) {
-    return ''
+    return 'Recently'
   }
 
   const diffMs = Date.now() - date.getTime()
@@ -195,13 +191,18 @@ export function NotificationBell() {
           ) : null}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[360px] p-0" sideOffset={8}>
-        <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        collisionPadding={16}
+        className="w-[calc(100vw-2rem)] max-w-[360px] p-0"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 py-2.5">
           <DropdownMenuLabel className="p-0 text-sm font-semibold">Notifications</DropdownMenuLabel>
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs"
+            className="h-8 shrink-0 px-2 text-xs sm:h-7"
             disabled={unreadCount === 0 || markAllReadMutation.isPending}
             onClick={(event) => {
               event.preventDefault()
@@ -211,7 +212,8 @@ export function NotificationBell() {
             {markAllReadMutation.isPending ? (
               <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
             ) : null}
-            Mark all read
+            <span className="sm:hidden">Mark all</span>
+            <span className="hidden sm:inline">Mark all read</span>
           </Button>
         </div>
 
@@ -220,7 +222,7 @@ export function NotificationBell() {
             type="button"
             variant={unreadOnly ? 'ghost' : 'secondary'}
             size="sm"
-            className="h-7 px-2.5 text-xs"
+            className="h-8 flex-1 px-2.5 text-xs sm:h-7 sm:flex-none"
             onClick={() => setUnreadOnly(false)}
           >
             All
@@ -229,14 +231,14 @@ export function NotificationBell() {
             type="button"
             variant={unreadOnly ? 'secondary' : 'ghost'}
             size="sm"
-            className="h-7 px-2.5 text-xs"
+            className="h-8 flex-1 px-2.5 text-xs sm:h-7 sm:flex-none"
             onClick={() => setUnreadOnly(true)}
           >
             Unread only
           </Button>
         </div>
 
-        <div className="max-h-80 overflow-y-auto py-1">
+        <div className="max-h-[min(20rem,70dvh)] overflow-y-auto py-1 sm:max-h-80">
           {isLoading ? <NotificationListSkeleton /> : null}
 
           {!isLoading && isError ? (

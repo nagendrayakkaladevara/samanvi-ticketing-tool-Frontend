@@ -61,11 +61,52 @@ function normalizeTicketNumber(value: unknown): number | null {
   return null
 }
 
-function normalizeNotification(raw: unknown): AppNotification | null {
+function normalizeIsoDateString(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) {
+      return null
+    }
+
+    const date = new Date(trimmed)
+    if (Number.isNaN(date.getTime())) {
+      return null
+    }
+
+    return date.toISOString()
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) {
+      return null
+    }
+
+    return date.toISOString()
+  }
+
+  return null
+}
+
+type NormalizeNotificationOptions = {
+  /** When true, missing/invalid createdAt falls back to now (e.g. partial mark-read payloads). */
+  allowCreatedAtFallback?: boolean
+}
+
+function normalizeNotification(raw: unknown, options?: NormalizeNotificationOptions): AppNotification | null {
   const record = toRecord(raw)
   const id = normalizeString(record.id)
 
   if (!id) {
+    return null
+  }
+
+  let createdAt = normalizeIsoDateString(record.createdAt)
+  if (!createdAt && options?.allowCreatedAtFallback) {
+    createdAt = new Date().toISOString()
+  }
+
+  if (!createdAt) {
     return null
   }
 
@@ -77,8 +118,8 @@ function normalizeNotification(raw: unknown): AppNotification | null {
     ticketId: normalizeNullableString(record.ticketId),
     ticketNumber: normalizeTicketNumber(record.ticketNumber),
     activityLogId: normalizeNullableString(record.activityLogId),
-    readAt: normalizeNullableString(record.readAt),
-    createdAt: normalizeString(record.createdAt),
+    readAt: normalizeIsoDateString(record.readAt),
+    createdAt,
   }
 }
 
@@ -151,7 +192,7 @@ export const notificationsService = {
 
   async markRead(notificationId: string): Promise<AppNotification> {
     const { data } = await apiClient.patch<unknown>(`${endpoint}/${notificationId}/read`)
-    const normalized = normalizeNotification(extractEntityPayload(data))
+    const normalized = normalizeNotification(extractEntityPayload(data), { allowCreatedAtFallback: true })
 
     if (!normalized) {
       throw new Error('Invalid notification response.')

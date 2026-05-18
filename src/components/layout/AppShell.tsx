@@ -13,21 +13,22 @@ export function AppShell() {
     <SidebarProvider defaultOpen={false}>
       <AppSidebar />
       <SidebarInset>
-        <header className="no-print bg-card sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b px-4">
-          <div className="flex items-center gap-2">
+        <header className="no-print bg-card sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-2 border-b px-3 sm:px-4">
+          <div className="flex min-w-0 items-center gap-2">
             <SidebarTrigger />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <p className="text-sm font-medium">Samanvi Ticketing Tool</p>
+            <Separator orientation="vertical" className="mr-1 hidden h-4 sm:mr-2 sm:block" />
+            <p className="hidden truncate text-sm font-medium sm:block">Samanvi Ticketing Tool</p>
+            <p className="truncate text-sm font-medium sm:hidden">Samanvi</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             <NotificationBell />
-            <div className="text-right text-xs text-muted-foreground">
-              <p className="font-medium text-foreground">{currentUser?.name ?? 'Unknown user'}</p>
-              <p>{currentUser?.role ?? 'WORKER'}</p>
+            <div className="hidden min-w-0 max-w-[7.5rem] text-right text-xs text-muted-foreground min-[380px]:block sm:max-w-[10rem]">
+              <p className="truncate font-medium text-foreground">{currentUser?.name ?? 'Unknown user'}</p>
+              <p className="hidden truncate sm:block">{currentUser?.role ?? 'WORKER'}</p>
             </div>
           </div>
         </header>
-        <main className="min-w-0 p-6 print:p-0">
+        <main className="min-w-0 p-4 sm:p-6 print:p-0">
           <Outlet />
         </main>
       </SidebarInset>
