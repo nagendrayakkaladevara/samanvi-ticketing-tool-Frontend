@@ -5,7 +5,7 @@ const endpoint = '/tickets'
 
 type UpdateTicketStatusInput = {
   ticketId: string
-  status: 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
+  status: 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'REOPENED'
   note?: string
 }
 
@@ -37,7 +37,7 @@ export type CreateTicketInput = {
   slaDueAt: string
 }
 
-type TicketStatusApi = 'assigned' | 'in_progress' | 'resolved' | 'closed'
+type TicketStatusApi = 'assigned' | 'in_progress' | 'resolved' | 'closed' | 'reopened'
 
 function toApiStatus(status: UpdateTicketStatusInput['status']): TicketStatusApi {
   switch (status) {
@@ -49,6 +49,8 @@ function toApiStatus(status: UpdateTicketStatusInput['status']): TicketStatusApi
       return 'resolved'
     case 'CLOSED':
       return 'closed'
+    case 'REOPENED':
+      return 'reopened'
   }
 }
 

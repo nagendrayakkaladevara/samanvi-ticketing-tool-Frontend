@@ -23,6 +23,10 @@ import { ShareTicketButton } from '@/features/tickets/components/share-ticket-bu
 import { getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
 import { cn } from '@/lib/utils'
 import { queryClient } from '@/lib/query/query-client'
+import {
+  getInvalidStatusTransitionMessage,
+  isNoteRequiredForTransition,
+} from '@/features/tickets/utils/ticket-status-transition'
 
 const boardColumns: Array<{
   status: TicketStatus
@@ -47,10 +51,6 @@ function isUpdatableStatus(status: TicketStatus): status is UpdatableStatus {
 type PendingDrop = {
   ticket: Ticket
   targetStatus: TicketStatus
-}
-
-function isNoteRequiredForTransition(targetStatus: TicketStatus): boolean {
-  return targetStatus === 'RESOLVED' || targetStatus === 'CLOSED'
 }
 
 function formatSlaDueAt(rawSlaDueAt: string): string {
@@ -162,6 +162,14 @@ export function BoardPage() {
       return
     }
 
+    const invalidTransition = getInvalidStatusTransitionMessage(draggedTicket.status, targetStatus)
+    if (invalidTransition) {
+      toast.error(invalidTransition)
+      setDraggedTicketId(null)
+      setHoveredStatus(null)
+      return
+    }
+
     setPendingDrop({ ticket: draggedTicket, targetStatus })
     setTransitionNote('')
     setDraggedTicketId(null)
@@ -173,12 +181,22 @@ export function BoardPage() {
       return
     }
 
+    const invalidTransition = getInvalidStatusTransitionMessage(
+      pendingDrop.ticket.status,
+      pendingDrop.targetStatus,
+    )
+    if (invalidTransition) {
+      event?.preventDefault()
+      toast.error(invalidTransition)
+      return
+    }
+
     if (
       isNoteRequiredForTransition(pendingDrop.targetStatus) &&
       transitionNote.trim().length === 0
     ) {
       event?.preventDefault()
-      toast.error('Description is required when moving to resolved or closed.')
+      toast.error('Description is required when moving to resolved.')
       return
     }
 
@@ -217,7 +235,13 @@ export function BoardPage() {
         <div className="flex h-[calc(100svh-16rem)] min-h-[30rem] w-full gap-4 overflow-x-auto overflow-y-hidden pb-2">
           {boardColumns.map((column) => {
             const columnTickets = ticketsByStatus[column.status] ?? []
-            const isDropBlocked = !isUpdatableStatus(column.status)
+            const draggedTicket = draggedTicketId
+              ? tickets.find((ticket) => ticket.id === draggedTicketId)
+              : undefined
+            const invalidDropTransition = draggedTicket
+              ? getInvalidStatusTransitionMessage(draggedTicket.status, column.status)
+              : null
+            const isDropBlocked = !isUpdatableStatus(column.status) || Boolean(invalidDropTransition)
             const isActiveDropZone = hoveredStatus === column.status && !isDropBlocked
 
             return (
@@ -356,7 +380,7 @@ export function BoardPage() {
               />
               {isNoteRequiredForTransition(pendingDrop.targetStatus) ? (
                 <p className="text-xs text-muted-foreground">
-                  Description is required for resolved and closed transitions.
+                  Description is required when moving to resolved.
                 </p>
               ) : null}
             </div>

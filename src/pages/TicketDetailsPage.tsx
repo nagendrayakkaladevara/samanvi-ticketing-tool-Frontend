@@ -29,17 +29,29 @@ import { Textarea } from '@/components/ui/textarea'
 import { notificationQueryKeys } from '@/features/notifications/hooks/notification-query-keys'
 import { ticketsService } from '@/features/tickets/api/tickets.service'
 import type { TicketStatus } from '@/features/tickets/types/ticket'
+import {
+  getInvalidStatusTransitionMessage,
+  isNoteRequiredForTransition,
+} from '@/features/tickets/utils/ticket-status-transition'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { SAMANVI_LOGO_URL } from '@/lib/branding'
 import { queryClient } from '@/lib/query/query-client'
 
 type UpdatableStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
+type SelectableStatus = UpdatableStatus | 'REOPENED'
 
 function isUpdatableStatus(status: TicketStatus): status is UpdatableStatus {
   return status === 'ASSIGNED' || status === 'IN_PROGRESS' || status === 'RESOLVED' || status === 'CLOSED'
 }
 
+function isSelectableStatus(status: TicketStatus): status is SelectableStatus {
+  return isUpdatableStatus(status) || status === 'REOPENED'
+}
+
 function getStatusDialogOptions(currentStatus: TicketStatus, allowedStatuses: UpdatableStatus[]): TicketStatus[] {
+  if (currentStatus === 'CLOSED') {
+    return ['CLOSED', 'REOPENED']
+  }
   const options = new Set<TicketStatus>(allowedStatuses)
   options.add(currentStatus)
   return Array.from(options)
@@ -256,8 +268,15 @@ export function TicketDetailsPage() {
       if (nextStatus === ticket.status) {
         throw new Error('Please select a different status.')
       }
-      if (!isUpdatableStatus(nextStatus)) {
+      if (!isSelectableStatus(nextStatus)) {
         throw new Error('This status cannot be applied.')
+      }
+      const invalidTransition = getInvalidStatusTransitionMessage(ticket.status, nextStatus)
+      if (invalidTransition) {
+        throw new Error(invalidTransition)
+      }
+      if (isNoteRequiredForTransition(nextStatus) && statusNote.trim().length === 0) {
+        throw new Error('Description is required when moving to resolved.')
       }
       return ticketsService.updateStatus({
         ticketId,
@@ -356,6 +375,8 @@ export function TicketDetailsPage() {
 
   const hasAssignmentChanged = Boolean(effectiveAssignToId) && effectiveAssignToId !== (ticket.assignedToUserId ?? '')
   const hasStatusChanged = nextStatus !== '' && nextStatus !== ticket.status
+  const isStatusNoteRequired =
+    hasStatusChanged && isSelectableStatus(nextStatus) && isNoteRequiredForTransition(nextStatus)
   const statusDialogOptions = getStatusDialogOptions(ticket.status, capabilities.allowedStatuses)
   const ticketRouteUrl = getTicketShareUrl(ticket.id)
 
@@ -513,7 +534,10 @@ export function TicketDetailsPage() {
             <DialogHeader>
               <DialogTitle>Update status</DialogTitle>
               <DialogDescription>
-                Update the ticket status and add an optional note for the change.
+                Update the ticket status
+                {isStatusNoteRequired
+                  ? ' and add a description for this change.'
+                  : ' and add an optional note for the change.'}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -538,15 +562,27 @@ export function TicketDetailsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="status-note">Status change notes</Label>
+                <Label htmlFor="status-note">
+                  Status change notes
+                  {isStatusNoteRequired ? <span className="ml-1 text-destructive">*</span> : null}
+                </Label>
                 <Textarea
                   id="status-note"
                   className="min-h-24"
                   value={statusNote}
                   disabled={updateStatusMutation.isPending}
                   onChange={(event) => setStatusNote(event.target.value)}
-                  placeholder="Optional note for the status change"
+                  placeholder={
+                    isStatusNoteRequired
+                      ? 'Add context for this status update...'
+                      : 'Optional note for the status change'
+                  }
                 />
+                {isStatusNoteRequired ? (
+                  <p className="text-xs text-muted-foreground">
+                    Description is required when moving to resolved.
+                  </p>
+                ) : null}
               </div>
             </div>
             <DialogFooter>
