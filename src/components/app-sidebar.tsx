@@ -129,8 +129,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarFooter>
         <div className="px-2 pb-2 text-xs text-muted-foreground group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:text-center">
-          <span className="group-data-[collapsible=icon]:hidden">Version 2.0.0</span>
-          <span className="hidden group-data-[collapsible=icon]:inline">v2.0.0</span>
+          <span className="group-data-[collapsible=icon]:hidden">Version 2.1.0</span>
+          <span className="hidden group-data-[collapsible=icon]:inline">v2.1.0</span>
         </div>
         <SidebarMenu>
           <SidebarMenuItem>

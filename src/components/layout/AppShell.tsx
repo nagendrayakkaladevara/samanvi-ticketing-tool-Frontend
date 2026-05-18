@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 
 import { AppSidebar } from '@/components/app-sidebar'
 import { NotificationBell } from '@/features/notifications/components/NotificationBell'
+import { PwaInstallBanner } from '@/features/pwa/components/PwaInstallBanner'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
@@ -28,6 +29,7 @@ export function AppShell() {
             </div>
           </div>
         </header>
+        <PwaInstallBanner />
         <main className="min-w-0 p-4 sm:p-6 print:p-0">
           <Outlet />
         </main>

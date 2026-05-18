@@ -41,8 +41,14 @@ const boardColumns: Array<{
   { status: 'REOPENED', title: 'Reopened', accent: 'from-amber-500 to-orange-400' },
 ]
 
-const updatableStatuses = new Set<TicketStatus>(['ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'])
-type UpdatableStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
+const updatableStatuses = new Set<TicketStatus>([
+  'ASSIGNED',
+  'IN_PROGRESS',
+  'RESOLVED',
+  'CLOSED',
+  'REOPENED',
+])
+type UpdatableStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'REOPENED'
 
 function isUpdatableStatus(status: TicketStatus): status is UpdatableStatus {
   return updatableStatuses.has(status)
