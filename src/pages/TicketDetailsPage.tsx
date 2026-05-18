@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { notificationQueryKeys } from '@/features/notifications/hooks/notification-query-keys'
 import { ticketsService } from '@/features/tickets/api/tickets.service'
 import type { TicketStatus } from '@/features/tickets/types/ticket'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -271,6 +272,7 @@ export function TicketDetailsPage() {
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all })
       toast.success('Status updated successfully.')
     },
     onError: (mutationError) => {
@@ -292,6 +294,7 @@ export function TicketDetailsPage() {
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all })
       toast.success('Ticket assignment updated.')
     },
     onError: (mutationError) => {
@@ -309,6 +312,7 @@ export function TicketDetailsPage() {
     onSuccess: () => {
       setCommentNote('')
       queryClient.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] })
+      queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all })
       toast.success('Comment added.')
     },
     onError: (mutationError) => {
