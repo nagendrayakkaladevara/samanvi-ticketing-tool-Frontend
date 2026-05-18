@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { notificationsService } from '@/features/notifications/api/notifications.service'
 import { notificationQueryKeys } from '@/features/notifications/hooks/notification-query-keys'
 
-const UNREAD_COUNT_POLL_INTERVAL_MS = 30_000
+const UNREAD_COUNT_POLL_INTERVAL_MS = 15_000
 
 export function useNotificationsUnreadCountQuery() {
   return useQuery({

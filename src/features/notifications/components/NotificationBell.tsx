@@ -23,6 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useMarkAllNotificationsReadMutation } from '@/features/notifications/hooks/use-mark-all-notifications-read-mutation'
 import { useMarkNotificationReadMutation } from '@/features/notifications/hooks/use-mark-notification-read-mutation'
 import { useNotificationsQuery } from '@/features/notifications/hooks/use-notifications-query'
+import { useNotificationSound } from '@/features/notifications/hooks/use-notification-sound'
 import { useNotificationsUnreadCountQuery } from '@/features/notifications/hooks/use-notifications-unread-count-query'
 import type { AppNotification, NotificationType } from '@/features/notifications/types/notification'
 import { getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
@@ -129,6 +130,7 @@ export function NotificationBell() {
   const [unreadOnly, setUnreadOnly] = useState(false)
 
   const { data: unreadCount = 0 } = useNotificationsUnreadCountQuery()
+  useNotificationSound(unreadCount)
   const {
     data: notificationsResult,
     isLoading,
