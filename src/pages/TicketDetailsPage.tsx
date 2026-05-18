@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { notificationQueryKeys } from '@/features/notifications/hooks/notification-query-keys'
 import { ticketsService } from '@/features/tickets/api/tickets.service'
 import type { TicketStatus } from '@/features/tickets/types/ticket'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -142,26 +143,29 @@ function getActorInitials(name: string | undefined, username: string | undefined
   return source.slice(0, 2).toUpperCase()
 }
 
+const PRINT_ACTIVITY_TONE =
+  'print:border-gray-300 print:bg-gray-50 print:text-gray-800'
+
 function getActivityTone(action: string | undefined): string {
   const normalized = (action || '').toUpperCase()
 
   if (normalized.includes('STATUS') || normalized.includes('STATE')) {
-    return 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300'
+    return `border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300 print:border-blue-200 print:bg-blue-50 print:text-blue-800`
   }
 
   if (normalized.includes('ASSIGN')) {
-    return 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800/60 dark:bg-indigo-950/40 dark:text-indigo-300'
+    return `border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800/60 dark:bg-indigo-950/40 dark:text-indigo-300 print:border-indigo-200 print:bg-indigo-50 print:text-indigo-800`
   }
 
   if (normalized.includes('COMMENT') || normalized.includes('NOTE')) {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300'
+    return `border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300 print:border-emerald-200 print:bg-emerald-50 print:text-emerald-800`
   }
 
   if (normalized.includes('CLOSE') || normalized.includes('RESOLVE')) {
-    return 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800/60 dark:bg-violet-950/40 dark:text-violet-300'
+    return `border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800/60 dark:bg-violet-950/40 dark:text-violet-300 print:border-violet-200 print:bg-violet-50 print:text-violet-800`
   }
 
-  return 'border-border bg-muted/50 text-foreground'
+  return `border-border bg-muted/50 text-foreground ${PRINT_ACTIVITY_TONE}`
 }
 
 function EditableDetailValue({
@@ -268,6 +272,7 @@ export function TicketDetailsPage() {
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all })
       toast.success('Status updated successfully.')
     },
     onError: (mutationError) => {
@@ -289,6 +294,7 @@ export function TicketDetailsPage() {
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all })
       toast.success('Ticket assignment updated.')
     },
     onError: (mutationError) => {
@@ -306,6 +312,7 @@ export function TicketDetailsPage() {
     onSuccess: () => {
       setCommentNote('')
       queryClient.invalidateQueries({ queryKey: ['ticket-timeline', ticketId] })
+      queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all })
       toast.success('Comment added.')
     },
     onError: (mutationError) => {

@@ -91,12 +91,63 @@
     margin: 12mm;
   }
 
-  body {
+  /* Force light theme when printing from dark mode */
+  :root,
+  .dark {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    color-scheme: light;
+  }
+
+  html {
+    color-scheme: light !important;
+  }
+
+  body,
+  #root,
+  main {
     background: #fff !important;
     color: #111827 !important;
     font-size: 12px;
     line-height: 1.4;
     padding-bottom: 18mm;
+  }
+
+  .bg-background,
+  .bg-card {
+    background-color: #fff !important;
+  }
+
+  .text-foreground,
+  .text-card-foreground {
+    color: #111827 !important;
+  }
+
+  .text-muted-foreground {
+    color: #4b5563 !important;
+  }
+
+  [class*='bg-muted'] {
+    background-color: #f3f4f6 !important;
+  }
+
+  .border-border {
+    border-color: #d1d5db !important;
+  }
+
+  .shadow,
+  .shadow-sm {
+    box-shadow: none !important;
   }
 
   .no-print {

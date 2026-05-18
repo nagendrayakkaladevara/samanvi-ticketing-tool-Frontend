@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Card } from '@/components/ui/card'
+import { notificationQueryKeys } from '@/features/notifications/hooks/notification-query-keys'
 import { ticketsService } from '@/features/tickets/api/tickets.service'
 import type { Ticket, TicketStatus } from '@/features/tickets/types/ticket'
 import { useTicketsQuery } from '@/features/tickets/hooks/use-tickets-query'
@@ -120,6 +121,7 @@ export function BoardPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all })
       toast.success('Ticket status updated')
     },
     onError: (mutationError) => {

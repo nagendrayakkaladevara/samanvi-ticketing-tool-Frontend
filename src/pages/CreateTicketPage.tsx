@@ -1,4 +1,4 @@
-import { useEffect, type FormEventHandler } from 'react'
+import type { FormEventHandler } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Loader2, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { notificationQueryKeys } from '@/features/notifications/hooks/notification-query-keys'
 import { ticketsService } from '@/features/tickets/api/tickets.service'
 import { useCreateTicketForm } from '@/features/tickets/hooks/use-create-ticket-form'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -62,6 +63,7 @@ export function CreateTicketPage() {
     onSuccess: (_, variables) => {
       toast.success(variables.assignedToId ? 'Ticket created and assigned successfully.' : 'Ticket created successfully.')
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all })
       form.resetForm()
       navigate('/tickets')
     },
@@ -84,71 +86,13 @@ export function CreateTicketPage() {
   const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault()
     const nextErrors = form.validate()
-    // #region agent log
-    fetch('http://127.0.0.1:7927/ingest/54f1c9c3-dd97-451a-9825-8fa76e413742', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '016c02' },
-      body: JSON.stringify({
-        sessionId: '016c02',
-        runId: 'pre-fix',
-        hypothesisId: 'H1',
-        location: 'CreateTicketPage.tsx:handleSubmit:validate',
-        message: 'Validation result on submit',
-        data: {
-          errorKeys: Object.keys(nextErrors),
-          errorCount: Object.keys(nextErrors).length,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
-    // #endregion
     if (Object.keys(nextErrors).length > 0) {
-      // #region agent log
-      fetch('http://127.0.0.1:7927/ingest/54f1c9c3-dd97-451a-9825-8fa76e413742', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '016c02' },
-        body: JSON.stringify({
-          sessionId: '016c02',
-          runId: 'pre-fix',
-          hypothesisId: 'H2',
-          location: 'CreateTicketPage.tsx:handleSubmit:setErrors',
-          message: 'Submit blocked due to validation errors',
-          data: { willSetErrors: true },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {})
-      // #endregion
       form.setErrors(nextErrors)
       toast.error('Please fill all required fields.')
       return
     }
     createTicketMutation.mutate({ assignedToId: form.values.assignedToId })
   }
-
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7927/ingest/54f1c9c3-dd97-451a-9825-8fa76e413742', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '016c02' },
-      body: JSON.stringify({
-        sessionId: '016c02',
-        runId: 'pre-fix',
-        hypothesisId: 'H4',
-        location: 'CreateTicketPage.tsx:useEffect:errors',
-        message: 'Error state changed',
-        data: {
-          errorKeys: Object.keys(form.errors),
-          titleInvalid: Boolean(form.errors.title),
-          descriptionInvalid: Boolean(form.errors.description),
-          categoryInvalid: Boolean(form.errors.categoryId),
-          busInvalid: Boolean(form.errors.busNumber),
-          slaInvalid: Boolean(form.errors.slaDueAtLocal),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
-    // #endregion
-  }, [form.errors])
 
   const handleEnhanceDescription = () => {
     const description = form.values.description.trim()
