@@ -104,12 +104,12 @@ function NotificationItem({
   return (
     <DropdownMenuItem
       className={cn(
-        'flex cursor-pointer items-start gap-3 rounded-md px-3 py-2.5 focus:bg-accent',
-        isUnread && 'border-l-2 border-l-primary bg-accent/40 pl-[10px]',
+        'mx-1 flex cursor-pointer items-start gap-3 rounded-md px-3 py-2.5 focus:bg-background focus:text-foreground',
+        isUnread && 'border-l-2 border-l-primary bg-background/90 pl-[10px] shadow-sm',
       )}
       onSelect={() => onSelect(notification)}
     >
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
       <div className="min-w-0 flex-1 space-y-1">
         <p className={cn('truncate text-sm leading-tight', isUnread ? 'font-semibold text-foreground' : 'text-foreground/80')}>
           {notification.title}
@@ -197,9 +197,9 @@ export function NotificationBell() {
         align="end"
         sideOffset={8}
         collisionPadding={16}
-        className="w-[calc(100vw-2rem)] max-w-[360px] p-0"
+        className="w-[calc(100vw-2rem)] max-w-[360px] border-border/80 bg-muted p-0 shadow-xl ring-1 ring-border/50"
       >
-        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-border/60 bg-background/80 px-3 py-2.5">
           <DropdownMenuLabel className="p-0 text-sm font-semibold">Notifications</DropdownMenuLabel>
           <Button
             variant="ghost"
@@ -219,7 +219,7 @@ export function NotificationBell() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-1 border-y px-3 py-2">
+        <div className="flex items-center gap-1 border-b border-border/60 bg-background/50 px-3 py-2">
           <Button
             type="button"
             variant={unreadOnly ? 'ghost' : 'secondary'}
@@ -240,7 +240,7 @@ export function NotificationBell() {
           </Button>
         </div>
 
-        <div className="max-h-[min(20rem,70dvh)] overflow-y-auto py-1 sm:max-h-80">
+        <div className="max-h-[min(20rem,70dvh)] overflow-y-auto bg-muted py-1 sm:max-h-80">
           {isLoading ? <NotificationListSkeleton /> : null}
 
           {!isLoading && isError ? (
@@ -266,8 +266,8 @@ export function NotificationBell() {
 
         {!isLoading && !isError && notifications.length > 0 ? (
           <>
-            <DropdownMenuSeparator />
-            <p className="px-3 py-2 text-center text-[11px] text-muted-foreground">
+            <DropdownMenuSeparator className="bg-border/60" />
+            <p className="border-t border-border/60 bg-background/50 px-3 py-2 text-center text-[11px] text-muted-foreground">
               Showing latest {notifications.length} notification{notifications.length === 1 ? '' : 's'}
             </p>
           </>

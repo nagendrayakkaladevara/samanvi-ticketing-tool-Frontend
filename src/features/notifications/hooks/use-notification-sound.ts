@@ -10,8 +10,8 @@ export function useNotificationSound(unreadCount: number) {
       unlockNotificationAudio()
     }
 
-    window.addEventListener('pointerdown', unlock, { once: true })
-    window.addEventListener('keydown', unlock, { once: true })
+    window.addEventListener('pointerdown', unlock)
+    window.addEventListener('keydown', unlock)
 
     return () => {
       window.removeEventListener('pointerdown', unlock)
