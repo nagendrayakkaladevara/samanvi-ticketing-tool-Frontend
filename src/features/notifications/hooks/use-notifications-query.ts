@@ -10,11 +10,10 @@ type UseNotificationsQueryOptions = NotificationsListParams & {
 
 export function useNotificationsQuery(options: UseNotificationsQueryOptions = {}) {
   const { enabled = true, page = 1, limit = 20, unreadOnly = false } = options
-  const params = { page, limit, unreadOnly }
 
   return useQuery({
-    queryKey: notificationQueryKeys.list(params),
-    queryFn: () => notificationsService.list(params),
+    queryKey: notificationQueryKeys.list(page, limit, unreadOnly),
+    queryFn: () => notificationsService.list({ page, limit, unreadOnly }),
     enabled,
   })
 }

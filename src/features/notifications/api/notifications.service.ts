@@ -169,7 +169,7 @@ export const notificationsService = {
     const { data } = await apiClient.get<unknown>(endpoint, { params: queryParams })
     const record = toRecord(data)
     const items = extractArrayPayload(data)
-      .map(normalizeNotification)
+      .map((raw) => normalizeNotification(raw))
       .filter((item): item is AppNotification => Boolean(item))
 
     return {
