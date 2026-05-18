@@ -97,6 +97,13 @@ const WINDOW_DAYS_OPTIONS = [
   { value: 90, label: 'Last 90 days' },
 ] as const
 
+const dashboardMetaPillClass =
+  'flex w-full min-w-0 items-stretch overflow-hidden rounded-full border border-border bg-card/90 text-xs shadow-sm ring-1 ring-black/[0.03] dark:ring-white/[0.04] sm:inline-flex sm:w-auto'
+const dashboardMetaLabelClass =
+  'flex w-[7.125rem] shrink-0 items-center gap-1.5 border-r border-border px-3 py-1.5 font-medium text-muted-foreground sm:w-auto'
+const dashboardMetaValueClass =
+  'flex min-w-0 flex-1 items-center py-1.5 pl-2.5 pr-2 text-xs font-semibold text-foreground'
+
 const QUEUE_STATUS_ORDER = ['created', 'unassigned', 'assigned', 'in_progress', 'reopened', 'blocked'] as const
 
 type QueueStatusStyle = {
@@ -450,7 +457,7 @@ export function DashboardPage() {
     return (
       <section className="space-y-4">
         <header>
-          <h1 className="font-serif text-3xl tracking-tight">Operations Dashboard</h1>
+          <h1 className="font-serif text-3xl tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground">Real-time summary for ticket health and team throughput.</p>
         </header>
         <Card className="border-rose-200 bg-rose-50/60 dark:border-rose-800/60 dark:bg-rose-950/40">
@@ -480,12 +487,12 @@ export function DashboardPage() {
         >
           <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-sky-400/20 blur-3xl dark:bg-sky-500/10" />
         </motion.div>
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-1">
+        <div className="relative flex w-full flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1 basis-full space-y-1 sm:basis-auto">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400">
               Operations
             </p>
-            <h1 className="font-serif text-3xl tracking-tight text-foreground">Operations Dashboard</h1>
+            <h1 className="font-serif text-3xl tracking-tight text-foreground">Dashboard</h1>
             <p className="max-w-2xl text-sm text-muted-foreground">
               See ticket status, SLA deadlines, and priorities in one place.
             </p>
@@ -493,7 +500,7 @@ export function DashboardPage() {
           <motion.div
             layout
             transition={shouldReduceMotion ? { duration: 0 } : headerActionsLayoutTransition}
-            className="flex min-h-9 items-center justify-end gap-2"
+            className="flex min-h-9 w-full shrink-0 items-center justify-end gap-2 sm:w-auto"
           >
             <AnimatePresence mode="wait" initial={false}>
               {isTicketSearchOpen ? (
@@ -574,9 +581,9 @@ export function DashboardPage() {
             </AnimatePresence>
           </motion.div>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-stretch overflow-hidden rounded-full border border-border bg-card/90 text-xs shadow-sm ring-1 ring-black/[0.03] dark:ring-white/[0.04]">
-            <span className="flex items-center gap-1.5 border-r border-border px-3 py-1.5 font-medium text-muted-foreground">
+        <div className="mt-4 flex w-full flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
+          <div className={dashboardMetaPillClass}>
+            <span className={dashboardMetaLabelClass}>
               <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
               Period
             </span>
@@ -586,7 +593,7 @@ export function DashboardPage() {
             >
               <SelectTrigger
                 aria-label="Reporting period"
-                className="h-auto min-w-[8.25rem] gap-1 rounded-none border-0 bg-transparent py-1.5 pl-2.5 pr-2 text-xs font-semibold text-foreground shadow-none transition-colors hover:bg-muted/60 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/60"
+                className="h-auto min-w-0 flex-1 gap-1 rounded-none border-0 bg-transparent py-1.5 pl-2.5 pr-2 text-xs font-semibold text-foreground shadow-none transition-colors hover:bg-muted/60 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/60 sm:min-w-[8.25rem] sm:flex-none"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -600,20 +607,20 @@ export function DashboardPage() {
             </Select>
           </div>
 
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm ring-1 ring-black/[0.03] dark:ring-white/[0.04]">
-            {isFetching ? (
-              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-sky-600 dark:text-sky-400" aria-hidden />
-            ) : (
-              <Clock3 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-            )}
-            <span>
+          <div className={dashboardMetaPillClass}>
+            <span className={dashboardMetaLabelClass}>
               {isFetching ? (
-                <span className="text-muted-foreground">Updating metrics…</span>
+                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-sky-600 dark:text-sky-400" aria-hidden />
               ) : (
-                <>
-                  Updated{' '}
-                  <span className="font-medium text-foreground">{formatDateTime(summary.meta.generatedAt)}</span>
-                </>
+                <Clock3 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+              )}
+              Updated
+            </span>
+            <span className={dashboardMetaValueClass}>
+              {isFetching ? (
+                <span className="font-normal text-muted-foreground">Updating metrics…</span>
+              ) : (
+                formatDateTime(summary.meta.generatedAt)
               )}
             </span>
           </div>
