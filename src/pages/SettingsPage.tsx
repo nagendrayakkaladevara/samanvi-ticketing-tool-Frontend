@@ -3,6 +3,7 @@ import { Check, MoonStar, SunMedium, UserRound } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PwaInstallSettingsSection } from '@/features/pwa/components/PwaInstallSettingsSection'
 import { useProfileQuery } from '@/features/profile/hooks/use-profile-query'
 
 type ThemeMode = 'light' | 'dark'
@@ -11,7 +12,7 @@ const THEME_STORAGE_KEY = 'samanvi.theme.mode'
 
 function getInitialTheme(): ThemeMode {
   if (typeof window === 'undefined') {
-    return 'dark'
+    return 'light'
   }
 
   const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
@@ -19,7 +20,7 @@ function getInitialTheme(): ThemeMode {
     return stored
   }
 
-  return 'dark'
+  return 'light'
 }
 
 function formatDate(dateString: string): string {
@@ -201,6 +202,8 @@ export function SettingsPage() {
             </button>
           </CardContent>
         </Card>
+
+        <PwaInstallSettingsSection />
       </div>
     </section>
   )

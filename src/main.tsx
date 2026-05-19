@@ -10,10 +10,9 @@ const THEME_STORAGE_KEY = 'samanvi.theme.mode'
 
 try {
   const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
-  document.documentElement.classList.toggle('dark', storedTheme !== 'light')
+  document.documentElement.classList.toggle('dark', storedTheme === 'dark')
 } catch {
-  // Ignore storage errors (private mode, quota, etc.) — default to dark
-  document.documentElement.classList.add('dark')
+  // Ignore storage errors (private mode, quota, etc.) and keep the light default.
 }
 
 createRoot(document.getElementById('root')!).render(

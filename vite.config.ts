@@ -14,7 +14,7 @@ export default defineConfig({
         name: 'Samanvi Ticketing Tool',
         short_name: 'Samanvi',
         description: 'Issue reporting and ticket management for your team',
-        theme_color: '#863bff',
+        theme_color: '#ffffff',
         background_color: '#09090b',
         display: 'standalone',
         orientation: 'portrait',

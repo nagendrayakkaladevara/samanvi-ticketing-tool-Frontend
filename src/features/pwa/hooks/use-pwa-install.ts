@@ -5,6 +5,11 @@ import type { BeforeInstallPromptEvent } from '@/features/pwa/types/before-insta
 const DISMISS_STORAGE_KEY = 'samanvi.pwa.installDismissedUntil'
 const DISMISS_MS = 14 * 24 * 60 * 60 * 1000
 
+export type UsePwaInstallOptions = {
+  /** When false (e.g. Settings), listeners always run and dismiss does not hide install hints. Default true. */
+  respectDismiss?: boolean
+}
+
 function isStandaloneDisplay(): boolean {
   if (typeof window === 'undefined') {
     return false
@@ -18,7 +23,7 @@ function isStandaloneDisplay(): boolean {
   )
 }
 
-function isIosSafari(): boolean {
+export function isIosSafari(): boolean {
   if (typeof window === 'undefined') {
     return false
   }
@@ -49,19 +54,26 @@ function dismissBanner() {
   }
 }
 
-export function usePwaInstall() {
+export function usePwaInstall(options?: UsePwaInstallOptions) {
+  const respectDismiss = options?.respectDismiss !== false
+
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isInstalling, setIsInstalling] = useState(false)
   const [isInstalled, setIsInstalled] = useState(isStandaloneDisplay)
-  const [dismissed, setDismissed] = useState(isDismissed)
+  const [dismissed, setDismissed] = useState(() => (respectDismiss ? isDismissed() : false))
   const [showIosGuide, setShowIosGuide] = useState(false)
 
   useEffect(() => {
-    if (isStandaloneDisplay() || isDismissed()) {
+    if (isStandaloneDisplay()) {
+      setIsInstalled(true)
+      setShowIosGuide(false)
+      setDeferredPrompt(null)
       return
     }
 
-    if (isIosSafari()) {
+    const dismissedNow = respectDismiss && isDismissed()
+
+    if (isIosSafari() && !dismissedNow) {
       setShowIosGuide(true)
     }
 
@@ -84,14 +96,16 @@ export function usePwaInstall() {
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
       window.removeEventListener('appinstalled', onAppInstalled)
     }
-  }, [])
+  }, [respectDismiss])
 
   const dismiss = useCallback(() => {
-    dismissBanner()
-    setDismissed(true)
-    setDeferredPrompt(null)
-    setShowIosGuide(false)
-  }, [])
+    if (respectDismiss) {
+      dismissBanner()
+      setDismissed(true)
+      setDeferredPrompt(null)
+      setShowIosGuide(false)
+    }
+  }, [respectDismiss])
 
   const install = useCallback(async () => {
     if (!deferredPrompt) {
@@ -111,14 +125,16 @@ export function usePwaInstall() {
     }
   }, [deferredPrompt])
 
-  const canShow = !isInstalled && !dismissed && (deferredPrompt !== null || showIosGuide)
+  const canShowBanner =
+    respectDismiss && !isInstalled && !dismissed && (deferredPrompt !== null || showIosGuide)
 
   return {
-    canShow,
+    canShow: canShowBanner,
     showIosGuide,
     install,
     dismiss,
     isInstalling,
     canInstall: deferredPrompt !== null,
+    isInstalled,
   }
 }
