@@ -225,6 +225,12 @@ function formatDateTime(iso?: string) {
   }).format(date)
 }
 
+function formatWindowLabel(days: number): string {
+  if (days === 0) return 'today'
+  if (days === 1) return 'the last 1 day'
+  return `the last ${days} days`
+}
+
 function SummaryCard({
   title,
   value,
@@ -320,7 +326,7 @@ function DashboardSkeleton() {
 export function DashboardPage() {
   const navigate = useNavigate()
   const shouldReduceMotion = useReducedMotion()
-  const [windowDays, setWindowDays] = useState(14)
+  const [windowDays, setWindowDays] = useState(2)
   const [isTicketSearchOpen, setIsTicketSearchOpen] = useState(false)
   const [ticketNumberQuery, setTicketNumberQuery] = useState('')
   const { data, isLoading, isError, error, refetch, isFetching } = useDashboardSummaryQuery(windowDays)
@@ -483,7 +489,7 @@ export function DashboardPage() {
   }
 
   return (
-    <section className="space-y-6 pb-4">
+    <section className={`space-y-6 pb-4 transition-opacity duration-200${isFetching && !isLoading ? ' opacity-60' : ''}`}>
       <header className="relative isolate rounded-xl border border-border bg-gradient-to-br from-sky-500/10 via-background to-slate-500/10 p-5 shadow-sm">
         <motion.div
           aria-hidden
@@ -811,15 +817,15 @@ export function DashboardPage() {
               <Gauge className="h-4 w-4 text-sky-600 dark:text-sky-400" />
               Ticket Activity
             </CardTitle>
-            <CardDescription>New tickets, resolved tickets, and average resolution time</CardDescription>
+            <CardDescription>New and resolved tickets in {formatWindowLabel(windowDays)}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">New in Window</span>
+              <span className="text-muted-foreground">New in period</span>
               <span className="font-semibold">{formatNumber(summary.snapshot.newTicketsInWindow)}</span>
             </div>
             <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">Resolved in Window</span>
+              <span className="text-muted-foreground">Resolved in period</span>
               <span className="font-semibold">{formatNumber(summary.snapshot.resolvedTicketsInWindow)}</span>
             </div>
             <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
@@ -916,7 +922,7 @@ export function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Agent Leaderboard</CardTitle>
-            <CardDescription>Open assigned vs resolved in window</CardDescription>
+            <CardDescription>Open assigned vs resolved in {formatWindowLabel(windowDays)}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {summary.leaderboard.length === 0 ? (
@@ -930,7 +936,7 @@ export function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <p>Open: {formatNumber(agent.openAssignedCount)}</p>
-                    <p className="text-xs text-muted-foreground">Resolved: {formatNumber(agent.resolvedInWindow)}</p>
+                    <p className="text-xs text-muted-foreground">Resolved ({windowDays === 0 ? 'today' : `${windowDays}d`}): {formatNumber(agent.resolvedInWindow)}</p>
                   </div>
                 </div>
               ))
