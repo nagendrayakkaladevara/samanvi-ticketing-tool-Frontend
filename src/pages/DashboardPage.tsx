@@ -91,6 +91,10 @@ function getHeaderActionsPanelVariantsReverse(reduceMotion: boolean | null) {
 }
 
 const WINDOW_DAYS_OPTIONS = [
+  { value: 0, label: 'Today' },
+  { value: 1, label: 'Last 1 day' },
+  { value: 2, label: 'Last 2 days' },
+  { value: 6, label: 'Last 6 days' },
   { value: 14, label: 'Last 14 days' },
   { value: 30, label: 'Last 30 days' },
   { value: 60, label: 'Last 60 days' },
