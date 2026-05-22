@@ -3,6 +3,11 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
+  dashboardSummaryCardToFilter,
+  getTicketsByStatusPath,
+  queueStatusToTicketListFilter,
+} from '@/features/tickets/utils/ticket-list-filter'
+import {
   AlertTriangle,
   ArrowRight,
   CalendarDays,
@@ -237,6 +242,7 @@ function SummaryCard({
   helper,
   trendPercent,
   lowerIsBetter,
+  onClick,
 }: {
   title: string
   value: number
@@ -245,6 +251,7 @@ function SummaryCard({
   helper: string
   trendPercent?: number
   lowerIsBetter?: boolean
+  onClick?: () => void
 }) {
   const hasTrend = typeof trendPercent === 'number' && Number.isFinite(trendPercent)
   const isPositive = (trendPercent ?? 0) >= 0
@@ -253,9 +260,29 @@ function SummaryCard({
     ? 'text-emerald-700 dark:text-emerald-400'
     : 'text-rose-700 dark:text-rose-400'
   const TrendIcon = isPositive ? TrendingUp : TrendingDown
+  const isInteractive = typeof onClick === 'function'
 
   return (
-    <Card className="relative overflow-hidden border-border/80 bg-card/95 shadow-sm">
+    <Card
+      className={cn(
+        'relative overflow-hidden border-border/80 bg-card/95 shadow-sm',
+        isInteractive &&
+          'cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+      )}
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={
+        isInteractive
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
+    >
       <div className={`absolute inset-x-0 top-0 h-1 ${toneClass}`} />
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardDescription className="text-xs uppercase tracking-[0.18em]">{title}</CardDescription>
@@ -641,6 +668,10 @@ export function DashboardPage() {
           toneClass="bg-sky-500/80"
           helper="Awaiting assignment or work"
           trendPercent={summary.trends?.openTicketsPct}
+          onClick={() => {
+            const filter = dashboardSummaryCardToFilter('Open Tickets')
+            if (filter) navigate(getTicketsByStatusPath(filter))
+          }}
         />
         <SummaryCard
           title="Unassigned"
@@ -649,6 +680,10 @@ export function DashboardPage() {
           toneClass="bg-orange-500/90"
           helper="Open tickets without assignee"
           lowerIsBetter
+          onClick={() => {
+            const filter = dashboardSummaryCardToFilter('Unassigned')
+            if (filter) navigate(getTicketsByStatusPath(filter))
+          }}
         />
         <SummaryCard
           title="In Progress"
@@ -657,6 +692,10 @@ export function DashboardPage() {
           toneClass="bg-amber-500/90"
           helper="Actively being resolved"
           trendPercent={summary.trends?.inProgressTicketsPct}
+          onClick={() => {
+            const filter = dashboardSummaryCardToFilter('In Progress')
+            if (filter) navigate(getTicketsByStatusPath(filter))
+          }}
         />
         <SummaryCard
           title="Closed / Resolved"
@@ -665,6 +704,10 @@ export function DashboardPage() {
           toneClass="bg-emerald-500/90"
           helper="Healthy completion trend"
           trendPercent={summary.trends?.closedResolvedTicketsPct}
+          onClick={() => {
+            const filter = dashboardSummaryCardToFilter('Closed / Resolved')
+            if (filter) navigate(getTicketsByStatusPath(filter))
+          }}
         />
         <SummaryCard
           title="Overdue"
@@ -674,6 +717,10 @@ export function DashboardPage() {
           helper="Needs immediate action"
           trendPercent={summary.trends?.overdueTicketsPct}
           lowerIsBetter
+          onClick={() => {
+            const filter = dashboardSummaryCardToFilter('Overdue')
+            if (filter) navigate(getTicketsByStatusPath(filter))
+          }}
         />
       </div>
 
@@ -712,20 +759,49 @@ export function DashboardPage() {
             {statusRows.length === 0 ? (
               <p className="text-sm text-muted-foreground sm:col-span-2">No status data available.</p>
             ) : (
-              statusRows.map((row) => (
-                <div key={row.status} className={`rounded-lg border px-3 py-2.5 ${row.style.rowClass}`}>
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className="capitalize">{row.label}</span>
-                    <span className="font-semibold tabular-nums">{formatNumber(row.value)}</span>
+              statusRows.map((row) => {
+                const listFilter = queueStatusToTicketListFilter(row.status)
+                const isRowInteractive = listFilter !== null
+
+                return (
+                  <div
+                    key={row.status}
+                    role={isRowInteractive ? 'button' : undefined}
+                    tabIndex={isRowInteractive ? 0 : undefined}
+                    className={cn(
+                      `rounded-lg border px-3 py-2.5 ${row.style.rowClass}`,
+                      isRowInteractive &&
+                        'cursor-pointer transition-shadow hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    )}
+                    onClick={
+                      isRowInteractive
+                        ? () => navigate(getTicketsByStatusPath(listFilter))
+                        : undefined
+                    }
+                    onKeyDown={
+                      isRowInteractive
+                        ? (event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              navigate(getTicketsByStatusPath(listFilter))
+                            }
+                          }
+                        : undefined
+                    }
+                  >
+                    <div className="mb-2 flex items-center justify-between text-sm">
+                      <span className="capitalize">{row.label}</span>
+                      <span className="font-semibold tabular-nums">{formatNumber(row.value)}</span>
+                    </div>
+                    <div className={`h-2 rounded-full xl:h-2.5 ${row.style.trackClass}`}>
+                      <div
+                        className={`h-full rounded-full transition-[width] duration-500 ${row.style.barClass}`}
+                        style={{ width: `${(row.value / statusPeak) * 100}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className={`h-2 rounded-full xl:h-2.5 ${row.style.trackClass}`}>
-                    <div
-                      className={`h-full rounded-full transition-[width] duration-500 ${row.style.barClass}`}
-                      style={{ width: `${(row.value / statusPeak) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))
+                )
+              })
             )}
           </CardContent>
         </Card>

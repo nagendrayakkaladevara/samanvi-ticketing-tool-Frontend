@@ -1,4 +1,5 @@
-import { Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
 
 import { AppSidebar } from '@/components/app-sidebar'
 import { NotificationBell } from '@/features/notifications/components/NotificationBell'
@@ -9,6 +10,13 @@ import { Separator } from '@/components/ui/separator'
 
 export function AppShell() {
   const currentUser = useCurrentUser()
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+  }, [pathname])
 
   return (
     <SidebarProvider defaultOpen={false}>

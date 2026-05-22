@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api/client'
+import type { TicketListApiStatus } from '@/features/tickets/utils/ticket-list-filter'
 import type { AssignableUser, Ticket, TicketCategory, TicketPriority, TicketTimelineEntry } from '@/features/tickets/types/ticket'
 
 const endpoint = '/tickets'
@@ -64,6 +65,7 @@ function normalizeTicketStatus(rawStatus: unknown): Ticket['status'] {
     normalized === 'CREATED' ||
     normalized === 'ASSIGNED' ||
     normalized === 'IN_PROGRESS' ||
+    normalized === 'BLOCKED' ||
     normalized === 'RESOLVED' ||
     normalized === 'CLOSED' ||
     normalized === 'REOPENED'
@@ -367,9 +369,15 @@ function extractTicketArrayPayload(raw: unknown): unknown[] {
   return []
 }
 
+type ListTicketsOptions = {
+  status?: TicketListApiStatus
+}
+
 export const ticketsService = {
-  async list(): Promise<Ticket[]> {
-    const { data } = await apiClient.get<unknown>(endpoint)
+  async list(options?: ListTicketsOptions): Promise<Ticket[]> {
+    const { data } = await apiClient.get<unknown>(endpoint, {
+      ...(options?.status ? { params: { status: options.status } } : {}),
+    })
     return extractTicketArrayPayload(data).map(normalizeTicket).filter((ticket): ticket is Ticket => Boolean(ticket))
   },
 

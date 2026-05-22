@@ -12,7 +12,7 @@ type UseTicketsQueryOptions = {
 export function useTicketsQuery(options?: UseTicketsQueryOptions) {
   return useQuery({
     queryKey: ['tickets'],
-    queryFn: ticketsService.list,
+    queryFn: () => ticketsService.list(),
     refetchInterval: options?.poll ? TICKETS_POLL_INTERVAL_MS : false,
     refetchIntervalInBackground: false,
   })
