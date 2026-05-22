@@ -471,7 +471,7 @@ export function DashboardPage() {
 
   return (
     <section className="space-y-6 pb-4">
-      <header className="relative isolate rounded-xl border border-border bg-gradient-to-br from-sky-500/10 via-background to-slate-500/10 p-5 shadow-sm">
+      <header className="relative isolate overflow-hidden rounded-xl border border-border bg-gradient-to-br from-sky-500/10 via-background to-slate-500/10 p-5 shadow-sm">
         <motion.div
           aria-hidden
           className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl"
@@ -491,7 +491,7 @@ export function DashboardPage() {
           <motion.div
             layout
             transition={shouldReduceMotion ? { duration: 0 } : headerActionsLayoutTransition}
-            className="flex min-h-9 w-full shrink-0 items-center justify-end gap-2 sm:w-auto"
+            className="flex min-h-9 w-full min-w-0 max-w-full shrink-0 items-center justify-end gap-2 sm:w-auto"
           >
             <AnimatePresence mode="wait" initial={false}>
               {isTicketSearchOpen ? (
@@ -500,7 +500,7 @@ export function DashboardPage() {
                   role="search"
                   aria-label="Search ticket by number"
                   {...getHeaderActionsPanelVariants(shouldReduceMotion)}
-                  className="flex items-center gap-2"
+                  className="flex w-full min-w-0 max-w-full flex-wrap items-center justify-end gap-2 sm:flex-nowrap"
                 >
                   <Input
                     value={ticketNumberQuery}
@@ -516,7 +516,7 @@ export function DashboardPage() {
                     maxLength={4}
                     placeholder="Search ticket # (4 digits)"
                     aria-label="Search ticket by number"
-                    className="w-44 border-input bg-background shadow-sm sm:w-52"
+                    className="min-w-0 flex-1 border-input bg-background shadow-sm sm:w-44 sm:flex-none md:w-52"
                     autoFocus
                   />
                   <Button
@@ -524,14 +524,15 @@ export function DashboardPage() {
                     variant="outline"
                     onClick={handleTicketSearch}
                     disabled={searchTicketMutation.isPending}
-                    className="gap-2"
+                    aria-label="Search ticket"
+                    className="shrink-0 gap-2 px-2.5 sm:px-4"
                   >
                     {searchTicketMutation.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <Search className="h-4 w-4" />
                     )}
-                    Search
+                    <span className="hidden sm:inline">Search</span>
                   </Button>
                   <Button
                     type="button"
@@ -539,6 +540,7 @@ export function DashboardPage() {
                     size="icon"
                     onClick={closeTicketSearch}
                     aria-label="Close ticket search"
+                    className="shrink-0"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -547,7 +549,7 @@ export function DashboardPage() {
                 <motion.div
                   key="ticket-actions"
                   {...getHeaderActionsPanelVariantsReverse(shouldReduceMotion)}
-                  className="flex items-center gap-2"
+                  className="flex w-full min-w-0 max-w-full flex-wrap items-center justify-end gap-2"
                 >
                   <Button
                     type="button"
@@ -555,15 +557,20 @@ export function DashboardPage() {
                     size="icon"
                     onClick={() => setIsTicketSearchOpen(true)}
                     aria-label="Search ticket by number"
+                    className="shrink-0"
                   >
                     <Search className="h-4 w-4" />
                   </Button>
-                  <Button asChild variant="outline">
-                    <Link to="/tickets/create">Create Ticket</Link>
+                  <Button asChild variant="outline" size="sm" className="shrink-0 sm:h-9 sm:px-4 sm:text-sm">
+                    <Link to="/tickets/create">
+                      <span className="sm:hidden">Create</span>
+                      <span className="hidden sm:inline">Create Ticket</span>
+                    </Link>
                   </Button>
-                  <Button asChild>
+                  <Button asChild size="sm" className="shrink-0 sm:h-9 sm:px-4 sm:text-sm">
                     <Link to="/tickets">
-                      View All Tickets
+                      <span className="sm:hidden">Tickets</span>
+                      <span className="hidden sm:inline">View All Tickets</span>
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
