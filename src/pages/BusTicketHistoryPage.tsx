@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useBusTicketHistoryQuery } from '@/features/buses/hooks/use-bus-ticket-history-query'
 import { ShareTicketButton } from '@/features/tickets/components/share-ticket-button'
+import '@/features/tickets/styles/tickets-grid.css'
 
 function formatDateTime(rawDate?: string): string {
   if (!rawDate) return 'Unknown'
@@ -76,33 +77,59 @@ export function BusTicketHistoryPage() {
 
       {!isLoading && !isError && tickets.length > 0 ? (
         <>
-          <div className="grid gap-3 md:hidden">
-            {tickets.map((ticket) => (
-              <Card key={ticket.id} className="space-y-3 p-4">
-                <h3 className="text-sm font-semibold">{ticket.title}</h3>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-muted-foreground">
-                  <span>Status</span>
-                  <span className="text-foreground">{ticket.status.replaceAll('_', ' ')}</span>
-                  <span>Severity</span>
-                  <span className="text-foreground">{ticket.severity}</span>
-                  <span>Priority</span>
-                  <span className="text-foreground">{ticket.priority}</span>
-                  <span>Assigned</span>
-                  <span className="text-foreground">{ticket.assignedToName ?? 'Unassigned'}</span>
-                </div>
-                <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <CalendarDays className="h-3.5 w-3.5" />
-                  {formatDateTime(ticket.createdAt)}
-                </div>
-                <div className="flex gap-2">
-                  <ShareTicketButton ticketId={ticket.id} title={ticket.title} className="flex-1" />
-                  <Button size="sm" className="flex-1" onClick={() => navigate(`/tickets/${ticket.id}`)}>
-                    View Ticket
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </Card>
-            ))}
+          <div className="ticket-mobile-list md:hidden">
+            {tickets.map((ticket) => {
+              const severity = ticket.severity.toUpperCase()
+
+              return (
+                <Card key={ticket.id} className="ticket-mobile-card">
+                  <div className="ticket-mobile-card__header">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <span
+                        className={`ticket-grid__severity-badge ticket-grid__severity-badge--${severity.toLowerCase()}`}
+                      >
+                        {severity}
+                      </span>
+                      <h3 className="ticket-mobile-card__title">{ticket.title}</h3>
+                    </div>
+                  </div>
+                  <dl className="ticket-mobile-card__meta">
+                    <div className="ticket-mobile-card__meta-item">
+                      <dt>Status</dt>
+                      <dd>{ticket.status.replaceAll('_', ' ')}</dd>
+                    </div>
+                    <div className="ticket-mobile-card__meta-item">
+                      <dt>Priority</dt>
+                      <dd>{ticket.priority}</dd>
+                    </div>
+                    <div className="ticket-mobile-card__meta-item">
+                      <dt>Assigned</dt>
+                      <dd className={!ticket.assignedToName ? 'ticket-mobile-card__meta-value--muted' : ''}>
+                        {ticket.assignedToName ?? 'Unassigned'}
+                      </dd>
+                    </div>
+                    <div className="ticket-mobile-card__meta-item">
+                      <dt>Created</dt>
+                      <dd className="inline-flex items-center gap-1.5">
+                        <CalendarDays className="ticket-mobile-card__meta-icon" aria-hidden />
+                        {formatDateTime(ticket.createdAt)}
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className="ticket-mobile-card__actions">
+                    <Button
+                      size="sm"
+                      className="ticket-mobile-card__action-primary flex-1"
+                      onClick={() => navigate(`/tickets/${ticket.id}`)}
+                    >
+                      View
+                      <ArrowRight className="ticket-grid__action-icon" aria-hidden />
+                    </Button>
+                    <ShareTicketButton ticketId={ticket.id} title={ticket.title} className="flex-1" />
+                  </div>
+                </Card>
+              )
+            })}
           </div>
 
           <Card className="hidden overflow-hidden md:block">

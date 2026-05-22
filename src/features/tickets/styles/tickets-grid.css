@@ -127,6 +127,152 @@
   animation: spin 1.2s linear infinite;
 }
 
+/* ========================================
+   MOBILE TICKET CARDS
+   ======================================== */
+
+.ticket-mobile-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.ticket-mobile-card {
+  overflow: hidden;
+  padding: 0;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.04), 0 2px 8px hsl(var(--foreground) / 0.03);
+  transition: box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.ticket-mobile-card--overdue {
+  border-color: hsl(0 72% 51% / 0.35);
+  background: hsl(0 70% 50% / 0.03);
+}
+
+.ticket-mobile-card__body {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.ticket-mobile-card__body:hover,
+.ticket-mobile-card__body:focus-visible {
+  background: hsl(var(--muted) / 0.25);
+  outline: none;
+}
+
+.ticket-mobile-card__body:focus-visible {
+  box-shadow: inset 0 0 0 2px hsl(var(--ring) / 0.4);
+}
+
+.ticket-mobile-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.75rem;
+}
+
+.ticket-mobile-card__title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: hsl(var(--foreground));
+  word-break: break-word;
+}
+
+.ticket-mobile-card__bus-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-right: 0.25rem;
+  opacity: 0.7;
+}
+
+.ticket-mobile-card__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.625rem 1rem;
+  margin: 0;
+  padding: 0 1rem 1rem;
+}
+
+.ticket-mobile-card__meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.ticket-mobile-card__meta-item--full {
+  grid-column: 1 / -1;
+}
+
+.ticket-mobile-card__meta dt {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground) / 0.85);
+}
+
+.ticket-mobile-card__meta dd {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: hsl(var(--foreground));
+}
+
+.ticket-mobile-card__meta-value--muted {
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+.ticket-mobile-card__meta-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  color: hsl(var(--muted-foreground) / 0.55);
+}
+
+.ticket-mobile-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid hsl(var(--border) / 0.8);
+  background: hsl(var(--muted) / 0.18);
+}
+
+.ticket-mobile-card__action-primary {
+  gap: 0.375rem;
+}
+
+.ticket-mobile-card__action-secondary {
+  min-width: 0;
+}
+
+.ticket-mobile-card--skeleton {
+  pointer-events: none;
+}
+
+.ticket-mobile-card--skeleton .ticket-mobile-card__actions {
+  gap: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .ticket-mobile-list {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
   .ticket-page__header {
     flex-direction: column;
@@ -163,6 +309,14 @@
 
   .ticket-page__create-btn {
     width: 100%;
+  }
+
+  .ticket-page__title {
+    font-size: 1.5rem;
+  }
+
+  .ticket-grid-wrapper {
+    display: none;
   }
 }
 
