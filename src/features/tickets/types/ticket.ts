@@ -2,6 +2,7 @@ export type TicketStatus =
   | 'CREATED'
   | 'ASSIGNED'
   | 'IN_PROGRESS'
+  | 'BLOCKED'
   | 'RESOLVED'
   | 'CLOSED'
   | 'REOPENED'

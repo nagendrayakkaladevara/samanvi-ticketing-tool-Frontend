@@ -9,6 +9,7 @@ import { useCurrentUser } from '@/hooks/use-current-user'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { TicketsPage } from '@/pages/TicketsPage'
+import { TicketsByStatusPage } from '@/pages/TicketsByStatusPage'
 import { TicketDetailsPage } from '@/pages/TicketDetailsPage'
 import { CreateTicketPage } from '@/pages/CreateTicketPage'
 import { BusesPage } from '@/pages/BusesPage'
@@ -54,6 +55,14 @@ export const appRouter = createBrowserRouter([
         children: [
           { index: true, element: <RoleHomeRedirect /> },
           { path: 'tickets', element: <TicketsPage /> },
+          {
+            path: 'tickets/by-status/:statusFilter',
+            element: (
+              <RoleGuard allowedRoles={['ADMIN']}>
+                <TicketsByStatusPage />
+              </RoleGuard>
+            ),
+          },
           {
             path: 'tickets/create',
             element: (
