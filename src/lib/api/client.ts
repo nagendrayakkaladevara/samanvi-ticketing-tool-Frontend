@@ -6,7 +6,7 @@ import { getAccessToken, useAuthStore } from '@/store/auth-store'
 
 export const apiClient = axios.create({
   baseURL: env.apiBaseUrl,
-  timeout: 15_000,
+  timeout: 20_000,
 })
 
 function hasAuthorizationHeader(config: { headers?: unknown }): boolean {

@@ -452,9 +452,13 @@ export const ticketsService = {
   },
 
   async enhanceDescription(description: string): Promise<string> {
-    const { data } = await apiClient.post<EnhanceTicketDescriptionResponse>('/ai/enhance-ticket-description', {
-      description: description.trim(),
-    })
+    const { data } = await apiClient.post<EnhanceTicketDescriptionResponse>(
+      '/ai/enhance-ticket-description',
+      {
+        description: description.trim(),
+      },
+      { timeout: 30_000 },
+    )
 
     const enhancedText = data?.data?.enhancedText
     if (!enhancedText || !enhancedText.trim()) {
