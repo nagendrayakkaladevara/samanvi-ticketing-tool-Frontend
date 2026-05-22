@@ -752,16 +752,16 @@ export function DashboardPage() {
 
         <Card className={cn(dashboardPanelCardClass, 'lg:col-span-2 xl:col-span-8')}>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base xl:text-lg">Agent Leaderboard</CardTitle>
-            <CardDescription>Open assigned vs resolved in the selected period</CardDescription>
+            <CardTitle className="text-base xl:text-lg">Team Performance</CardTitle>
+            <CardDescription>Open tickets and resolved count for each team member</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 space-y-2">
             {summary.leaderboard.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No leaderboard data available.</p>
+              <p className="text-sm text-muted-foreground">No team performance data available.</p>
             ) : (
               <>
                 <div className="mb-1 hidden border-b border-border/80 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground xl:grid xl:grid-cols-[minmax(0,1fr)_4.5rem_5rem] xl:gap-4">
-                  <span>Agent</span>
+                  <span>Team member</span>
                   <span className="text-right">Open</span>
                   <span className="text-right">Resolved</span>
                 </div>
