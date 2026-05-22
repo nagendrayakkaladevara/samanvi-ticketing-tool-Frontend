@@ -234,6 +234,12 @@ function formatDateTime(iso?: string) {
   }).format(date)
 }
 
+function formatWindowLabel(days: number): string {
+  if (days === 0) return 'today'
+  if (days === 1) return 'the last 1 day'
+  return `the last ${days} days`
+}
+
 function SummaryCard({
   title,
   value,
@@ -373,7 +379,7 @@ function DashboardSkeleton() {
 export function DashboardPage() {
   const navigate = useNavigate()
   const shouldReduceMotion = useReducedMotion()
-  const [windowDays, setWindowDays] = useState(14)
+  const [windowDays, setWindowDays] = useState(2)
   const [isTicketSearchOpen, setIsTicketSearchOpen] = useState(false)
   const [ticketNumberQuery, setTicketNumberQuery] = useState('')
   const { data, isLoading, isError, error, refetch, isFetching } = useDashboardSummaryQuery(windowDays)
@@ -497,7 +503,9 @@ export function DashboardPage() {
   }
 
   return (
-    <section className="space-y-6 pb-4">
+    <section
+      className={`space-y-6 pb-4 transition-opacity duration-200${isFetching && !isLoading ? ' opacity-60' : ''}`}
+    >
       <header className="relative isolate overflow-hidden rounded-xl border border-border bg-gradient-to-br from-sky-500/10 via-background to-slate-500/10 p-5 shadow-sm">
         <motion.div
           aria-hidden
@@ -836,7 +844,9 @@ export function DashboardPage() {
         <Card className={cn(dashboardPanelCardClass, 'lg:col-span-2 xl:col-span-8')}>
           <CardHeader className="pb-3">
             <CardTitle className="text-base xl:text-lg">Team Performance</CardTitle>
-            <CardDescription>Open tickets and resolved count for each team member</CardDescription>
+            <CardDescription>
+              Open tickets and resolved in {formatWindowLabel(windowDays)} for each team member
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 space-y-2">
             {summary.leaderboard.length === 0 ? (
@@ -869,7 +879,8 @@ export function DashboardPage() {
                           {formatNumber(agent.openAssignedCount)}
                         </p>
                         <p className="text-xs tabular-nums text-muted-foreground xl:hidden">
-                          Resolved {formatNumber(agent.resolvedInWindow)}
+                          Resolved ({windowDays === 0 ? 'today' : `${windowDays}d`}){' '}
+                          {formatNumber(agent.resolvedInWindow)}
                         </p>
                       </div>
                       <p className="hidden font-semibold tabular-nums xl:block xl:text-right">
