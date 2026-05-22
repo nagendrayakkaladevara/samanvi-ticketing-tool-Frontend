@@ -412,20 +412,28 @@ export function TicketDetailsPage() {
       </div>
 
       <header className="space-y-3 border-b pb-4 print:border-slate-300 print:pb-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight print:text-2xl">{ticket.title}</h1>
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            <h1 className="text-xl font-semibold leading-snug tracking-tight sm:text-2xl print:text-2xl">
+              {ticket.title}
+            </h1>
             <p className="text-sm text-muted-foreground print-muted">
               Ticket ID: {ticket.id} {!canEditAnyAction ? '- Read only access' : ''}
             </p>
           </div>
-          <div className="no-print flex flex-wrap items-center gap-2">
+          <div className="no-print flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
             <ShareTicketButton
               ticketId={ticket.id}
               ticketNumber={ticket.ticketNumber}
               title={ticket.title}
+              className="w-full sm:w-auto"
             />
-            <Button size="sm" variant="outline" className="gap-2" onClick={handlePrintTicket}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full gap-2 sm:w-auto"
+              onClick={handlePrintTicket}
+            >
               <Printer className="h-4 w-4" />
               Print Ticket
             </Button>
@@ -437,7 +445,7 @@ export function TicketDetailsPage() {
         <Card className="print-card space-y-4 p-4">
           <div className="space-y-3 border-b pb-4">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Ticket Details</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
             <div className="rounded-md border bg-muted/20 p-3 print-card">
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Ticket Number</p>
               <p className="mt-1 text-sm font-semibold">{ticket.ticketNumber || ticket.id}</p>
@@ -492,16 +500,18 @@ export function TicketDetailsPage() {
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Created By</p>
               <p className="mt-1 text-sm font-semibold">{ticket.createdByName || 'Unknown'}</p>
             </div>
-            <div className="rounded-md border bg-background p-3 print-card">
+            <div className="col-span-2 rounded-md border bg-background p-3 print-card">
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Ticket QR</p>
-              <div className="mt-2 flex items-start gap-3">
-                <div className="rounded-md border bg-white p-2">
+              <div className="mt-2 flex flex-col items-center gap-3 sm:flex-row sm:items-start">
+                <div className="shrink-0 rounded-md border bg-white p-2">
                   <QRCodeSVG value={ticketRouteUrl} size={76} />
                 </div>
-                <p className="break-all text-xs text-muted-foreground">{ticketRouteUrl}</p>
+                <p className="w-full break-all text-center text-xs text-muted-foreground sm:text-left">
+                  {ticketRouteUrl}
+                </p>
               </div>
             </div>
-            <div className="rounded-md border bg-background p-3 lg:col-span-4 print-card">
+            <div className="col-span-2 rounded-md border bg-background p-3 lg:col-span-4 print-card">
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Description</p>
               <p className="mt-1 text-sm leading-6">{ticket.description || 'No description'}</p>
             </div>
@@ -677,9 +687,9 @@ export function TicketDetailsPage() {
         ) : (
           <ul className="space-y-4">
             {sortedTimeline.map((entry) => (
-              <li key={entry.id} className="relative pl-14 text-sm">
-                <span className="absolute left-5 top-0 h-full w-px bg-border" aria-hidden />
-                <span className="absolute left-0 top-0.5 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-xs font-semibold tracking-wide text-foreground shadow-sm">
+              <li key={entry.id} className="relative pl-11 text-sm sm:pl-14">
+                <span className="absolute left-4 top-0 h-full w-px bg-border sm:left-5" aria-hidden />
+                <span className="absolute left-0 top-0.5 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-[10px] font-semibold tracking-wide text-foreground shadow-sm sm:h-10 sm:w-10 sm:text-xs">
                   {getActorInitials(entry.actorName, entry.actorUsername)}
                 </span>
                 <div className="print-card rounded-md border border-border bg-card p-3 shadow-sm">

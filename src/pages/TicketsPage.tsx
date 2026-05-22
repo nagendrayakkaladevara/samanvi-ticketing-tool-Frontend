@@ -30,6 +30,7 @@ import { ticketsService } from '@/features/tickets/api/tickets.service'
 import { useTicketsQuery } from '@/features/tickets/hooks/use-tickets-query'
 import type { Ticket } from '@/features/tickets/types/ticket'
 import { ShareTicketButton } from '@/features/tickets/components/share-ticket-button'
+import { TicketMobileCard, TicketMobileCardSkeleton } from '@/features/tickets/components/ticket-mobile-card'
 import { getCreateTicketPath, getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useDarkMode } from '@/hooks/use-dark-mode'
@@ -527,7 +528,18 @@ export function TicketsPage() {
         </div>
       </header>
 
-      {isLoading ? <TableSkeleton /> : null}
+      {isLoading ? (
+        <>
+          <div className="ticket-mobile-list md:hidden">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <TicketMobileCardSkeleton key={index} />
+            ))}
+          </div>
+          <div className="hidden md:block">
+            <TableSkeleton />
+          </div>
+        </>
+      ) : null}
 
       {isError ? (
         <Card className="ticket-page__error">
@@ -542,40 +554,62 @@ export function TicketsPage() {
       {!isLoading && !isError && rowData.length === 0 ? <EmptyState /> : null}
 
       {!isLoading && !isError && rowData.length > 0 ? (
-        <Card className="ticket-grid-wrapper">
-          <div
-            className={cn(isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'ticket-grid')}
-            style={gridStyle}
-          >
-            <AgGridReact<TicketGridRow>
-              rowData={rowData}
-              columnDefs={columnDefs}
-              defaultColDef={{
-                sortable: true,
-                filter: true,
-                resizable: true,
-                floatingFilter: true,
-              }}
-              rowSelection="single"
-              animateRows
-              suppressCellFocus
-              domLayout="autoHeight"
-              rowHeight={52}
-              headerHeight={44}
-              floatingFiltersHeight={44}
-              getRowClass={(params) => (params.data?.isOverdue ? 'ticket-grid__row--overdue' : '')}
-              onRowClicked={(event) => {
-                const clickTarget = event.event?.target as HTMLElement | null
-                if (clickTarget?.closest('button')) {
-                  return
-                }
-                if (event.data?.id) {
-                  navigate(getTicketDetailsPath(event.data.id))
-                }
-              }}
-            />
+        <>
+          <div className="ticket-mobile-list md:hidden">
+            {rowData.map((row) => (
+              <TicketMobileCard
+                key={row.id}
+                ticketId={row.id}
+                ticketNumber={row.ticketNumber}
+                title={row.title}
+                busNumber={row.busNumber}
+                createdBy={row.createdBy}
+                assignedTo={row.assignedTo}
+                severity={row.severity}
+                slaLabel={formatSlaDueAt(row.slaDueAt)}
+                isOverdue={row.isOverdue}
+                showDelete={canDeleteTicket}
+                onView={() => navigate(getTicketDetailsPath(row.id))}
+                onDelete={(event) => openDeleteDialog(row, event)}
+              />
+            ))}
           </div>
-        </Card>
+
+          <Card className="ticket-grid-wrapper hidden md:block">
+            <div
+              className={cn(isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'ticket-grid')}
+              style={gridStyle}
+            >
+              <AgGridReact<TicketGridRow>
+                rowData={rowData}
+                columnDefs={columnDefs}
+                defaultColDef={{
+                  sortable: true,
+                  filter: true,
+                  resizable: true,
+                  floatingFilter: true,
+                }}
+                rowSelection="single"
+                animateRows
+                suppressCellFocus
+                domLayout="autoHeight"
+                rowHeight={52}
+                headerHeight={44}
+                floatingFiltersHeight={44}
+                getRowClass={(params) => (params.data?.isOverdue ? 'ticket-grid__row--overdue' : '')}
+                onRowClicked={(event) => {
+                  const clickTarget = event.event?.target as HTMLElement | null
+                  if (clickTarget?.closest('button')) {
+                    return
+                  }
+                  if (event.data?.id) {
+                    navigate(getTicketDetailsPath(event.data.id))
+                  }
+                }}
+              />
+            </div>
+          </Card>
+        </>
       ) : null}
 
       <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
