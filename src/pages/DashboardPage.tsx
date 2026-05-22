@@ -26,6 +26,7 @@ import { ticketsService } from '@/features/tickets/api/tickets.service'
 import { getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
 import { useDashboardSummaryQuery } from '@/features/dashboard/hooks/use-dashboard-summary-query'
 import { toast } from '@/lib/toast'
+import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -168,6 +169,48 @@ function buildQueueStatusRows(openByStatus: Record<string, number>) {
   }))
 }
 
+type SeverityStyle = {
+  rowClass: string
+  trackClass: string
+  barClass: string
+}
+
+const SEVERITY_STYLES: Record<string, SeverityStyle> = {
+  critical: {
+    rowClass: 'border-rose-200/80 bg-rose-50/40 dark:border-rose-800/50 dark:bg-rose-950/30',
+    trackClass: 'bg-rose-100 dark:bg-rose-950/50',
+    barClass: 'bg-rose-500/85',
+  },
+  high: {
+    rowClass: 'border-orange-200/80 bg-orange-50/40 dark:border-orange-800/50 dark:bg-orange-950/30',
+    trackClass: 'bg-orange-100 dark:bg-orange-950/50',
+    barClass: 'bg-orange-500/85',
+  },
+  medium: {
+    rowClass: 'border-amber-200/80 bg-amber-50/40 dark:border-amber-800/50 dark:bg-amber-950/30',
+    trackClass: 'bg-amber-100 dark:bg-amber-950/50',
+    barClass: 'bg-amber-500/85',
+  },
+  low: {
+    rowClass: 'border-emerald-200/80 bg-emerald-50/40 dark:border-emerald-800/50 dark:bg-emerald-950/30',
+    trackClass: 'bg-emerald-100 dark:bg-emerald-950/50',
+    barClass: 'bg-emerald-500/80',
+  },
+}
+
+const DEFAULT_SEVERITY_STYLE: SeverityStyle = {
+  rowClass: 'border-border/80 bg-muted/30',
+  trackClass: 'bg-muted',
+  barClass: 'bg-muted-foreground/70',
+}
+
+function getSeverityStyle(label: string): SeverityStyle {
+  return SEVERITY_STYLES[label.toLowerCase()] ?? DEFAULT_SEVERITY_STYLE
+}
+
+const dashboardPanelCardClass =
+  'flex h-full flex-col border-border/80 bg-card/95 shadow-sm'
+
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-IN').format(value)
 }
@@ -254,8 +297,8 @@ function DashboardSkeleton() {
           </Card>
         ))}
       </div>
-      <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-2">
+      <div className="grid gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-12 xl:gap-6">
+        <Card className={`${dashboardPanelCardClass} xl:col-span-4`}>
           <CardHeader>
             <Skeleton className="h-5 w-40" />
           </CardHeader>
@@ -265,23 +308,33 @@ function DashboardSkeleton() {
             ))}
           </CardContent>
         </Card>
-        <Card className="lg:col-span-2">
+        <Card className={`${dashboardPanelCardClass} xl:col-span-8`}>
           <CardHeader>
             <Skeleton className="h-5 w-48" />
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-11 w-full" />
             ))}
           </CardContent>
         </Card>
-        <Card className="lg:col-span-1">
+        <Card className={`${dashboardPanelCardClass} xl:col-span-4`}>
           <CardHeader>
             <Skeleton className="h-5 w-32" />
           </CardHeader>
           <CardContent className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-11 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+        <Card className={`${dashboardPanelCardClass} lg:col-span-2 xl:col-span-8`}>
+          <CardHeader>
+            <Skeleton className="h-5 w-44" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
             ))}
           </CardContent>
         </Card>
@@ -382,6 +435,7 @@ export function DashboardPage() {
   const severityRows = Object.entries(summary.queue.openBySeverity).map(([label, value]) => ({
     label,
     value,
+    style: getSeverityStyle(label),
   }))
   const statusPeak = Math.max(...statusRows.map((row) => row.value), 1)
   const severityPeak = Math.max(...severityRows.map((row) => row.value), 1)
@@ -616,20 +670,20 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Priority Breakdown</CardTitle>
-            <CardDescription>Bar chart for high, medium, and low urgency</CardDescription>
+      <div className="grid gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-12 xl:gap-6">
+        <Card className={cn(dashboardPanelCardClass, 'xl:col-span-4')}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base xl:text-lg">Priority Breakdown</CardTitle>
+            <CardDescription>High, medium, and low urgency tickets</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex flex-1 flex-col justify-center space-y-4 xl:space-y-5">
             {priorityRows.map((item) => (
-              <div key={item.label} className="space-y-1.5">
+              <div key={item.label} className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium text-foreground">{item.label}</span>
-                  <span className="text-muted-foreground">{formatNumber(item.value)}</span>
+                  <span className="tabular-nums text-muted-foreground">{formatNumber(item.value)}</span>
                 </div>
-                <div className="h-2.5 rounded-full bg-muted">
+                <div className="h-2.5 rounded-full bg-muted xl:h-3">
                   <div
                     className={`h-full rounded-full transition-[width] duration-500 ${item.barClass}`}
                     style={{
@@ -642,22 +696,22 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Open Tickets by Status</CardTitle>
+        <Card className={cn(dashboardPanelCardClass, 'xl:col-span-8')}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base xl:text-lg">Open Tickets by Status</CardTitle>
             <CardDescription>How many open tickets are in each status</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="flex-1 space-y-2 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0 xl:gap-4">
             {statusRows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No status data available.</p>
+              <p className="text-sm text-muted-foreground sm:col-span-2">No status data available.</p>
             ) : (
               statusRows.map((row) => (
-                <div key={row.status} className={`rounded border px-3 py-2 ${row.style.rowClass}`}>
-                  <div className="mb-1.5 flex items-center justify-between text-sm">
+                <div key={row.status} className={`rounded-lg border px-3 py-2.5 ${row.style.rowClass}`}>
+                  <div className="mb-2 flex items-center justify-between text-sm">
                     <span className="capitalize">{row.label}</span>
-                    <span className="font-semibold">{formatNumber(row.value)}</span>
+                    <span className="font-semibold tabular-nums">{formatNumber(row.value)}</span>
                   </div>
-                  <div className={`h-2 rounded-full ${row.style.trackClass}`}>
+                  <div className={`h-2 rounded-full xl:h-2.5 ${row.style.trackClass}`}>
                     <div
                       className={`h-full rounded-full transition-[width] duration-500 ${row.style.barClass}`}
                       style={{ width: `${(row.value / statusPeak) * 100}%` }}
@@ -669,24 +723,24 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>By Severity</CardTitle>
+        <Card className={cn(dashboardPanelCardClass, 'xl:col-span-4')}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base xl:text-lg">By Severity</CardTitle>
             <CardDescription>Open issues by severity level</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="flex-1 space-y-2">
             {severityRows.length === 0 ? (
               <p className="text-sm text-muted-foreground">No severity data.</p>
             ) : (
               severityRows.map((row) => (
-                <div key={row.label} className="rounded border px-3 py-2">
-                  <div className="mb-1.5 flex items-center justify-between text-sm">
+                <div key={row.label} className={`rounded-lg border px-3 py-2.5 ${row.style.rowClass}`}>
+                  <div className="mb-2 flex items-center justify-between text-sm">
                     <span className="capitalize">{row.label}</span>
-                    <span className="font-semibold">{formatNumber(row.value)}</span>
+                    <span className="font-semibold tabular-nums">{formatNumber(row.value)}</span>
                   </div>
-                  <div className="h-2 rounded-full bg-amber-100 dark:bg-amber-950/50">
+                  <div className={`h-2 rounded-full xl:h-2.5 ${row.style.trackClass}`}>
                     <div
-                      className="h-full rounded-full bg-amber-500/85 transition-[width] duration-500"
+                      className={`h-full rounded-full transition-[width] duration-500 ${row.style.barClass}`}
                       style={{ width: `${(row.value / severityPeak) * 100}%` }}
                     />
                   </div>
@@ -696,27 +750,52 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Agent Leaderboard</CardTitle>
-            <CardDescription>Open assigned vs resolved in window</CardDescription>
+        <Card className={cn(dashboardPanelCardClass, 'lg:col-span-2 xl:col-span-8')}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base xl:text-lg">Agent Leaderboard</CardTitle>
+            <CardDescription>Open assigned vs resolved in the selected period</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="flex-1 space-y-2">
             {summary.leaderboard.length === 0 ? (
               <p className="text-sm text-muted-foreground">No leaderboard data available.</p>
             ) : (
-              summary.leaderboard.slice(0, 6).map((agent) => (
-                <div key={agent.userId} className="flex items-center justify-between rounded border px-3 py-2 text-sm">
-                  <div>
-                    <p className="font-medium">{agent.displayName}</p>
-                    <p className="text-xs text-muted-foreground">@{agent.username}</p>
-                  </div>
-                  <div className="text-right">
-                    <p>Open: {formatNumber(agent.openAssignedCount)}</p>
-                    <p className="text-xs text-muted-foreground">Resolved: {formatNumber(agent.resolvedInWindow)}</p>
-                  </div>
+              <>
+                <div className="mb-1 hidden border-b border-border/80 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground xl:grid xl:grid-cols-[minmax(0,1fr)_4.5rem_5rem] xl:gap-4">
+                  <span>Agent</span>
+                  <span className="text-right">Open</span>
+                  <span className="text-right">Resolved</span>
                 </div>
-              ))
+                <div className="space-y-2 xl:space-y-1.5">
+                  {summary.leaderboard.slice(0, 6).map((agent, index) => (
+                    <div
+                      key={agent.userId}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-background/80 px-3 py-2.5 text-sm transition-colors hover:bg-muted/40 xl:grid xl:grid-cols-[minmax(0,1fr)_4.5rem_5rem] xl:items-center xl:gap-4 xl:px-4 xl:py-3"
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold tabular-nums text-muted-foreground">
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{agent.displayName}</p>
+                          <p className="truncate text-xs text-muted-foreground">@{agent.username}</p>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right xl:text-center">
+                        <p className="font-semibold tabular-nums">
+                          <span className="mr-1 text-xs font-normal text-muted-foreground xl:hidden">Open</span>
+                          {formatNumber(agent.openAssignedCount)}
+                        </p>
+                        <p className="text-xs tabular-nums text-muted-foreground xl:hidden">
+                          Resolved {formatNumber(agent.resolvedInWindow)}
+                        </p>
+                      </div>
+                      <p className="hidden font-semibold tabular-nums xl:block xl:text-right">
+                        {formatNumber(agent.resolvedInWindow)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
