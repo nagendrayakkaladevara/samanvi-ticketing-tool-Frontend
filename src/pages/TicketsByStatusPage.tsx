@@ -2,6 +2,7 @@ import { ArrowLeft } from 'lucide-react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
+import { useScrollToTop } from '@/hooks/use-scroll-to-top'
 import { TicketsListView } from '@/features/tickets/components/tickets-list-view'
 import { useFilteredTicketsQuery } from '@/features/tickets/hooks/use-filtered-tickets-query'
 import {
@@ -17,6 +18,8 @@ export function TicketsByStatusPage() {
   const { data: tickets = [], isLoading, isError, error } = useFilteredTicketsQuery(filter, {
     enabled: isValidFilter,
   })
+
+  useScrollToTop([statusFilter, isLoading])
 
   if (!isValidFilter) {
     return <Navigate to="/dashboard" replace />
