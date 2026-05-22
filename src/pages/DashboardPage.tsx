@@ -2,7 +2,6 @@ import { useMutation } from '@tanstack/react-query'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Label, Pie, PieChart } from 'recharts'
 import {
   AlertTriangle,
   ArrowRight,
@@ -10,11 +9,8 @@ import {
   CircleCheckBig,
   Clock3,
   FolderOpen,
-  Gauge,
   Loader2,
   Search,
-  ShieldCheck,
-  Siren,
   Ticket,
   X,
   TrendingDown,
@@ -30,12 +26,7 @@ import { ticketsService } from '@/features/tickets/api/tickets.service'
 import { getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
 import { useDashboardSummaryQuery } from '@/features/dashboard/hooks/use-dashboard-summary-query'
 import { toast } from '@/lib/toast'
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from '@/components/ui/chart'
+import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -178,34 +169,47 @@ function buildQueueStatusRows(openByStatus: Record<string, number>) {
   }))
 }
 
-type StatusSegment = {
-  status: keyof typeof STATUS_CHART_CONFIG
-  label: string
-  value: number
-  trailClass: string
+type SeverityStyle = {
+  rowClass: string
+  trackClass: string
+  barClass: string
 }
 
-const STATUS_CHART_CONFIG = {
-  tickets: {
-    label: 'Tickets',
+const SEVERITY_STYLES: Record<string, SeverityStyle> = {
+  critical: {
+    rowClass: 'border-rose-200/80 bg-rose-50/40 dark:border-rose-800/50 dark:bg-rose-950/30',
+    trackClass: 'bg-rose-100 dark:bg-rose-950/50',
+    barClass: 'bg-rose-500/85',
   },
-  open: {
-    label: 'Open',
-    color: 'hsl(var(--chart-1))',
+  high: {
+    rowClass: 'border-orange-200/80 bg-orange-50/40 dark:border-orange-800/50 dark:bg-orange-950/30',
+    trackClass: 'bg-orange-100 dark:bg-orange-950/50',
+    barClass: 'bg-orange-500/85',
   },
-  inProgress: {
-    label: 'In Progress',
-    color: 'hsl(var(--chart-2))',
+  medium: {
+    rowClass: 'border-amber-200/80 bg-amber-50/40 dark:border-amber-800/50 dark:bg-amber-950/30',
+    trackClass: 'bg-amber-100 dark:bg-amber-950/50',
+    barClass: 'bg-amber-500/85',
   },
-  closedResolved: {
-    label: 'Closed / Resolved',
-    color: 'hsl(var(--chart-3))',
+  low: {
+    rowClass: 'border-emerald-200/80 bg-emerald-50/40 dark:border-emerald-800/50 dark:bg-emerald-950/30',
+    trackClass: 'bg-emerald-100 dark:bg-emerald-950/50',
+    barClass: 'bg-emerald-500/80',
   },
-  overdue: {
-    label: 'Overdue',
-    color: 'hsl(var(--chart-4))',
-  },
-} satisfies ChartConfig
+}
+
+const DEFAULT_SEVERITY_STYLE: SeverityStyle = {
+  rowClass: 'border-border/80 bg-muted/30',
+  trackClass: 'bg-muted',
+  barClass: 'bg-muted-foreground/70',
+}
+
+function getSeverityStyle(label: string): SeverityStyle {
+  return SEVERITY_STYLES[label.toLowerCase()] ?? DEFAULT_SEVERITY_STYLE
+}
+
+const dashboardPanelCardClass =
+  'flex h-full flex-col border-border/80 bg-card/95 shadow-sm'
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-IN').format(value)
@@ -293,22 +297,44 @@ function DashboardSkeleton() {
           </Card>
         ))}
       </div>
-      <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <Skeleton className="h-5 w-48" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="mx-auto h-52 w-52 rounded-full" />
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-2">
+      <div className="grid gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-12 xl:gap-6">
+        <Card className={`${dashboardPanelCardClass} xl:col-span-4`}>
           <CardHeader>
             <Skeleton className="h-5 w-40" />
           </CardHeader>
           <CardContent className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-11 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+        <Card className={`${dashboardPanelCardClass} xl:col-span-8`}>
+          <CardHeader>
+            <Skeleton className="h-5 w-48" />
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-11 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+        <Card className={`${dashboardPanelCardClass} xl:col-span-4`}>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-11 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+        <Card className={`${dashboardPanelCardClass} lg:col-span-2 xl:col-span-8`}>
+          <CardHeader>
+            <Skeleton className="h-5 w-44" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
             ))}
           </CardContent>
         </Card>
@@ -388,45 +414,6 @@ export function DashboardPage() {
     leaderboard: [],
   }
 
-  const statusSegments = useMemo<StatusSegment[]>(() => {
-    return [
-      {
-        status: 'open',
-        label: 'Open',
-        value: summary.openTickets,
-        trailClass: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
-      },
-      {
-        status: 'inProgress',
-        label: 'In Progress',
-        value: summary.inProgressTickets,
-        trailClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
-      },
-      {
-        status: 'closedResolved',
-        label: 'Closed / Resolved',
-        value: summary.closedResolvedTickets,
-        trailClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
-      },
-      {
-        status: 'overdue',
-        label: 'Overdue',
-        value: summary.overdueTickets,
-        trailClass: 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300',
-      },
-    ]
-  }, [summary.closedResolvedTickets, summary.inProgressTickets, summary.openTickets, summary.overdueTickets])
-
-  const statusChartData = useMemo(
-    () =>
-      statusSegments.map((segment) => ({
-        status: segment.status,
-        tickets: segment.value,
-        fill: `var(--color-${segment.status})`,
-      })),
-    [statusSegments],
-  )
-
   const priorityRows = useMemo(
     () => [
       { label: 'High', value: summary.priority.high, barClass: 'bg-rose-500/85' },
@@ -436,7 +423,6 @@ export function DashboardPage() {
     [summary.priority.high, summary.priority.low, summary.priority.medium],
   )
 
-  const totalStatus = statusSegments.reduce((acc, item) => acc + item.value, 0)
   const priorityPeak = Math.max(...priorityRows.map((item) => item.value), 1)
   const statusRows = useMemo(
     () => buildQueueStatusRows(summary.queue.openByStatus),
@@ -449,6 +435,7 @@ export function DashboardPage() {
   const severityRows = Object.entries(summary.queue.openBySeverity).map(([label, value]) => ({
     label,
     value,
+    style: getSeverityStyle(label),
   }))
   const statusPeak = Math.max(...statusRows.map((row) => row.value), 1)
   const severityPeak = Math.max(...severityRows.map((row) => row.value), 1)
@@ -683,87 +670,20 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Ticket Distribution by Status</CardTitle>
-            <CardDescription>Donut chart of current status split</CardDescription>
+      <div className="grid gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-12 xl:gap-6">
+        <Card className={cn(dashboardPanelCardClass, 'xl:col-span-4')}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base xl:text-lg">Priority Breakdown</CardTitle>
+            <CardDescription>High, medium, and low urgency tickets</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-6 md:grid-cols-[220px_minmax(0,1fr)] md:items-center">
-            <ChartContainer
-              config={STATUS_CHART_CONFIG}
-              className="mx-auto aspect-square h-56 w-full max-w-[14rem]"
-            >
-              <PieChart>
-                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                <Pie
-                  data={statusChartData}
-                  dataKey="tickets"
-                  nameKey="status"
-                  innerRadius={58}
-                  outerRadius={84}
-                  strokeWidth={4}
-                >
-                  <Label
-                    content={({ viewBox }) => {
-                      if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
-                        return (
-                          <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                            <tspan
-                              x={viewBox.cx}
-                              y={(viewBox.cy ?? 0) - 8}
-                              className="fill-muted-foreground text-[10px] font-medium uppercase tracking-wider"
-                            >
-                              Total
-                            </tspan>
-                            <tspan
-                              x={viewBox.cx}
-                              y={(viewBox.cy ?? 0) + 14}
-                              className="fill-foreground text-xl font-semibold"
-                            >
-                              {formatNumber(totalStatus)}
-                            </tspan>
-                          </text>
-                        )
-                      }
-                      return null
-                    }}
-                  />
-                </Pie>
-              </PieChart>
-            </ChartContainer>
-            <div className="space-y-3">
-              {statusSegments.map((segment) => (
-                <div key={segment.label} className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="inline-block h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: `var(--color-${segment.status})` }}
-                    />
-                    <span className="text-sm">{segment.label}</span>
-                  </div>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${segment.trailClass}`}>
-                    {formatNumber(segment.value)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Priority Breakdown</CardTitle>
-            <CardDescription>Bar chart for high, medium, and low urgency</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex flex-1 flex-col justify-center space-y-4 xl:space-y-5">
             {priorityRows.map((item) => (
-              <div key={item.label} className="space-y-1.5">
+              <div key={item.label} className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium text-foreground">{item.label}</span>
-                  <span className="text-muted-foreground">{formatNumber(item.value)}</span>
+                  <span className="tabular-nums text-muted-foreground">{formatNumber(item.value)}</span>
                 </div>
-                <div className="h-2.5 rounded-full bg-muted">
+                <div className="h-2.5 rounded-full bg-muted xl:h-3">
                   <div
                     className={`h-full rounded-full transition-[width] duration-500 ${item.barClass}`}
                     style={{
@@ -775,106 +695,23 @@ export function DashboardPage() {
             ))}
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              SLA Health
-            </CardTitle>
-            <CardDescription>Compliance and risk indicators</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">SLA Compliance</span>
-              <span className="font-semibold">{summary.sla.slaCompliancePercent.toFixed(1)}%</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="inline-flex items-center gap-1 text-muted-foreground">
-                <Siren className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
-                Overdue Open
-              </span>
-              <span className="font-semibold">{formatNumber(summary.sla.overdueOpenCount)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">At Risk Open</span>
-              <span className="font-semibold">{formatNumber(summary.sla.atRiskOpenCount)}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Gauge className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-              Ticket Activity
-            </CardTitle>
-            <CardDescription>New tickets, resolved tickets, and average resolution time</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">New in Window</span>
-              <span className="font-semibold">{formatNumber(summary.snapshot.newTicketsInWindow)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">Resolved in Window</span>
-              <span className="font-semibold">{formatNumber(summary.snapshot.resolvedTicketsInWindow)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">Avg Resolution Time</span>
-              <span className="font-semibold">{summary.speed.averageResolutionTimeHours.toFixed(1)}h</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserX className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              Open Tickets to Watch
-            </CardTitle>
-            <CardDescription>Unassigned tickets and the oldest open ticket</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">Unassigned Open</span>
-              <span className="font-semibold">{formatNumber(unassignedOpenCount)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">Oldest Open Age</span>
-              <span className="font-semibold">{summary.snapshot.oldestOpenTicketAgeHours.toFixed(1)}h</span>
-            </div>
-            <div className="rounded-lg border bg-background px-3 py-2">
-              <p className="text-xs text-muted-foreground">Oldest Ticket</p>
-              <p className="text-sm font-medium">
-                #{summary.snapshot.oldestOpenTicket?.ticketNumber ?? '-'} ·{' '}
-                {(summary.snapshot.oldestOpenTicket?.priority ?? '-').toUpperCase()} ·{' '}
-                {(summary.snapshot.oldestOpenTicket?.status ?? '-').replaceAll('_', ' ')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Open Tickets by Status</CardTitle>
+        <Card className={cn(dashboardPanelCardClass, 'xl:col-span-8')}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base xl:text-lg">Open Tickets by Status</CardTitle>
             <CardDescription>How many open tickets are in each status</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="flex-1 space-y-2 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0 xl:gap-4">
             {statusRows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No status data available.</p>
+              <p className="text-sm text-muted-foreground sm:col-span-2">No status data available.</p>
             ) : (
               statusRows.map((row) => (
-                <div key={row.status} className={`rounded border px-3 py-2 ${row.style.rowClass}`}>
-                  <div className="mb-1.5 flex items-center justify-between text-sm">
+                <div key={row.status} className={`rounded-lg border px-3 py-2.5 ${row.style.rowClass}`}>
+                  <div className="mb-2 flex items-center justify-between text-sm">
                     <span className="capitalize">{row.label}</span>
-                    <span className="font-semibold">{formatNumber(row.value)}</span>
+                    <span className="font-semibold tabular-nums">{formatNumber(row.value)}</span>
                   </div>
-                  <div className={`h-2 rounded-full ${row.style.trackClass}`}>
+                  <div className={`h-2 rounded-full xl:h-2.5 ${row.style.trackClass}`}>
                     <div
                       className={`h-full rounded-full transition-[width] duration-500 ${row.style.barClass}`}
                       style={{ width: `${(row.value / statusPeak) * 100}%` }}
@@ -886,24 +723,24 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>By Severity</CardTitle>
+        <Card className={cn(dashboardPanelCardClass, 'xl:col-span-4')}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base xl:text-lg">By Severity</CardTitle>
             <CardDescription>Open issues by severity level</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="flex-1 space-y-2">
             {severityRows.length === 0 ? (
               <p className="text-sm text-muted-foreground">No severity data.</p>
             ) : (
               severityRows.map((row) => (
-                <div key={row.label} className="rounded border px-3 py-2">
-                  <div className="mb-1.5 flex items-center justify-between text-sm">
+                <div key={row.label} className={`rounded-lg border px-3 py-2.5 ${row.style.rowClass}`}>
+                  <div className="mb-2 flex items-center justify-between text-sm">
                     <span className="capitalize">{row.label}</span>
-                    <span className="font-semibold">{formatNumber(row.value)}</span>
+                    <span className="font-semibold tabular-nums">{formatNumber(row.value)}</span>
                   </div>
-                  <div className="h-2 rounded-full bg-amber-100 dark:bg-amber-950/50">
+                  <div className={`h-2 rounded-full xl:h-2.5 ${row.style.trackClass}`}>
                     <div
-                      className="h-full rounded-full bg-amber-500/85 transition-[width] duration-500"
+                      className={`h-full rounded-full transition-[width] duration-500 ${row.style.barClass}`}
                       style={{ width: `${(row.value / severityPeak) * 100}%` }}
                     />
                   </div>
@@ -913,27 +750,52 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Agent Leaderboard</CardTitle>
-            <CardDescription>Open assigned vs resolved in window</CardDescription>
+        <Card className={cn(dashboardPanelCardClass, 'lg:col-span-2 xl:col-span-8')}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base xl:text-lg">Team Performance</CardTitle>
+            <CardDescription>Open tickets and resolved count for each team member</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="flex-1 space-y-2">
             {summary.leaderboard.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No leaderboard data available.</p>
+              <p className="text-sm text-muted-foreground">No team performance data available.</p>
             ) : (
-              summary.leaderboard.slice(0, 6).map((agent) => (
-                <div key={agent.userId} className="flex items-center justify-between rounded border px-3 py-2 text-sm">
-                  <div>
-                    <p className="font-medium">{agent.displayName}</p>
-                    <p className="text-xs text-muted-foreground">@{agent.username}</p>
-                  </div>
-                  <div className="text-right">
-                    <p>Open: {formatNumber(agent.openAssignedCount)}</p>
-                    <p className="text-xs text-muted-foreground">Resolved: {formatNumber(agent.resolvedInWindow)}</p>
-                  </div>
+              <>
+                <div className="mb-1 hidden border-b border-border/80 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground xl:grid xl:grid-cols-[minmax(0,1fr)_4.5rem_5rem] xl:gap-4">
+                  <span>Team member</span>
+                  <span className="text-right">Open</span>
+                  <span className="text-right">Resolved</span>
                 </div>
-              ))
+                <div className="space-y-2 xl:space-y-1.5">
+                  {summary.leaderboard.slice(0, 6).map((agent, index) => (
+                    <div
+                      key={agent.userId}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-background/80 px-3 py-2.5 text-sm transition-colors hover:bg-muted/40 xl:grid xl:grid-cols-[minmax(0,1fr)_4.5rem_5rem] xl:items-center xl:gap-4 xl:px-4 xl:py-3"
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold tabular-nums text-muted-foreground">
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{agent.displayName}</p>
+                          <p className="truncate text-xs text-muted-foreground">@{agent.username}</p>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right xl:text-center">
+                        <p className="font-semibold tabular-nums">
+                          <span className="mr-1 text-xs font-normal text-muted-foreground xl:hidden">Open</span>
+                          {formatNumber(agent.openAssignedCount)}
+                        </p>
+                        <p className="text-xs tabular-nums text-muted-foreground xl:hidden">
+                          Resolved {formatNumber(agent.resolvedInWindow)}
+                        </p>
+                      </div>
+                      <p className="hidden font-semibold tabular-nums xl:block xl:text-right">
+                        {formatNumber(agent.resolvedInWindow)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
