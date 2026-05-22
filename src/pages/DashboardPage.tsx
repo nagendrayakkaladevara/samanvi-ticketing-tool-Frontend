@@ -2,7 +2,6 @@ import { useMutation } from '@tanstack/react-query'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Label, Pie, PieChart } from 'recharts'
 import {
   AlertTriangle,
   ArrowRight,
@@ -10,11 +9,8 @@ import {
   CircleCheckBig,
   Clock3,
   FolderOpen,
-  Gauge,
   Loader2,
   Search,
-  ShieldCheck,
-  Siren,
   Ticket,
   X,
   TrendingDown,
@@ -30,12 +26,6 @@ import { ticketsService } from '@/features/tickets/api/tickets.service'
 import { getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
 import { useDashboardSummaryQuery } from '@/features/dashboard/hooks/use-dashboard-summary-query'
 import { toast } from '@/lib/toast'
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from '@/components/ui/chart'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -178,35 +168,6 @@ function buildQueueStatusRows(openByStatus: Record<string, number>) {
   }))
 }
 
-type StatusSegment = {
-  status: keyof typeof STATUS_CHART_CONFIG
-  label: string
-  value: number
-  trailClass: string
-}
-
-const STATUS_CHART_CONFIG = {
-  tickets: {
-    label: 'Tickets',
-  },
-  open: {
-    label: 'Open',
-    color: 'hsl(var(--chart-1))',
-  },
-  inProgress: {
-    label: 'In Progress',
-    color: 'hsl(var(--chart-2))',
-  },
-  closedResolved: {
-    label: 'Closed / Resolved',
-    color: 'hsl(var(--chart-3))',
-  },
-  overdue: {
-    label: 'Overdue',
-    color: 'hsl(var(--chart-4))',
-  },
-} satisfies ChartConfig
-
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-IN').format(value)
 }
@@ -294,17 +255,29 @@ function DashboardSkeleton() {
         ))}
       </div>
       <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
+        <Card className="lg:col-span-2">
           <CardHeader>
-            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-5 w-40" />
           </CardHeader>
-          <CardContent>
-            <Skeleton className="mx-auto h-52 w-52 rounded-full" />
+          <CardContent className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-11 w-full" />
+            ))}
           </CardContent>
         </Card>
         <Card className="lg:col-span-2">
           <CardHeader>
-            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-5 w-48" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-11 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
           </CardHeader>
           <CardContent className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -388,45 +361,6 @@ export function DashboardPage() {
     leaderboard: [],
   }
 
-  const statusSegments = useMemo<StatusSegment[]>(() => {
-    return [
-      {
-        status: 'open',
-        label: 'Open',
-        value: summary.openTickets,
-        trailClass: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
-      },
-      {
-        status: 'inProgress',
-        label: 'In Progress',
-        value: summary.inProgressTickets,
-        trailClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
-      },
-      {
-        status: 'closedResolved',
-        label: 'Closed / Resolved',
-        value: summary.closedResolvedTickets,
-        trailClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
-      },
-      {
-        status: 'overdue',
-        label: 'Overdue',
-        value: summary.overdueTickets,
-        trailClass: 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300',
-      },
-    ]
-  }, [summary.closedResolvedTickets, summary.inProgressTickets, summary.openTickets, summary.overdueTickets])
-
-  const statusChartData = useMemo(
-    () =>
-      statusSegments.map((segment) => ({
-        status: segment.status,
-        tickets: segment.value,
-        fill: `var(--color-${segment.status})`,
-      })),
-    [statusSegments],
-  )
-
   const priorityRows = useMemo(
     () => [
       { label: 'High', value: summary.priority.high, barClass: 'bg-rose-500/85' },
@@ -436,7 +370,6 @@ export function DashboardPage() {
     [summary.priority.high, summary.priority.low, summary.priority.medium],
   )
 
-  const totalStatus = statusSegments.reduce((acc, item) => acc + item.value, 0)
   const priorityPeak = Math.max(...priorityRows.map((item) => item.value), 1)
   const statusRows = useMemo(
     () => buildQueueStatusRows(summary.queue.openByStatus),
@@ -684,73 +617,6 @@ export function DashboardPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Ticket Distribution by Status</CardTitle>
-            <CardDescription>Donut chart of current status split</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-6 md:grid-cols-[220px_minmax(0,1fr)] md:items-center">
-            <ChartContainer
-              config={STATUS_CHART_CONFIG}
-              className="mx-auto aspect-square h-56 w-full max-w-[14rem]"
-            >
-              <PieChart>
-                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                <Pie
-                  data={statusChartData}
-                  dataKey="tickets"
-                  nameKey="status"
-                  innerRadius={58}
-                  outerRadius={84}
-                  strokeWidth={4}
-                >
-                  <Label
-                    content={({ viewBox }) => {
-                      if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
-                        return (
-                          <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                            <tspan
-                              x={viewBox.cx}
-                              y={(viewBox.cy ?? 0) - 8}
-                              className="fill-muted-foreground text-[10px] font-medium uppercase tracking-wider"
-                            >
-                              Total
-                            </tspan>
-                            <tspan
-                              x={viewBox.cx}
-                              y={(viewBox.cy ?? 0) + 14}
-                              className="fill-foreground text-xl font-semibold"
-                            >
-                              {formatNumber(totalStatus)}
-                            </tspan>
-                          </text>
-                        )
-                      }
-                      return null
-                    }}
-                  />
-                </Pie>
-              </PieChart>
-            </ChartContainer>
-            <div className="space-y-3">
-              {statusSegments.map((segment) => (
-                <div key={segment.label} className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="inline-block h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: `var(--color-${segment.status})` }}
-                    />
-                    <span className="text-sm">{segment.label}</span>
-                  </div>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${segment.trailClass}`}>
-                    {formatNumber(segment.value)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Priority Breakdown</CardTitle>
@@ -775,90 +641,7 @@ export function DashboardPage() {
             ))}
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              SLA Health
-            </CardTitle>
-            <CardDescription>Compliance and risk indicators</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">SLA Compliance</span>
-              <span className="font-semibold">{summary.sla.slaCompliancePercent.toFixed(1)}%</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="inline-flex items-center gap-1 text-muted-foreground">
-                <Siren className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
-                Overdue Open
-              </span>
-              <span className="font-semibold">{formatNumber(summary.sla.overdueOpenCount)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">At Risk Open</span>
-              <span className="font-semibold">{formatNumber(summary.sla.atRiskOpenCount)}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Gauge className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-              Ticket Activity
-            </CardTitle>
-            <CardDescription>New tickets, resolved tickets, and average resolution time</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">New in Window</span>
-              <span className="font-semibold">{formatNumber(summary.snapshot.newTicketsInWindow)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">Resolved in Window</span>
-              <span className="font-semibold">{formatNumber(summary.snapshot.resolvedTicketsInWindow)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">Avg Resolution Time</span>
-              <span className="font-semibold">{summary.speed.averageResolutionTimeHours.toFixed(1)}h</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserX className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              Open Tickets to Watch
-            </CardTitle>
-            <CardDescription>Unassigned tickets and the oldest open ticket</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">Unassigned Open</span>
-              <span className="font-semibold">{formatNumber(unassignedOpenCount)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-              <span className="text-muted-foreground">Oldest Open Age</span>
-              <span className="font-semibold">{summary.snapshot.oldestOpenTicketAgeHours.toFixed(1)}h</span>
-            </div>
-            <div className="rounded-lg border bg-background px-3 py-2">
-              <p className="text-xs text-muted-foreground">Oldest Ticket</p>
-              <p className="text-sm font-medium">
-                #{summary.snapshot.oldestOpenTicket?.ticketNumber ?? '-'} ·{' '}
-                {(summary.snapshot.oldestOpenTicket?.priority ?? '-').toUpperCase()} ·{' '}
-                {(summary.snapshot.oldestOpenTicket?.status ?? '-').replaceAll('_', ' ')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Open Tickets by Status</CardTitle>
