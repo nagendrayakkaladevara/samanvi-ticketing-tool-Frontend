@@ -127,7 +127,7 @@ function NotificationItem({
 export function NotificationBell() {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
-  const [unreadOnly, setUnreadOnly] = useState(false)
+  const [unreadOnly, setUnreadOnly] = useState(true)
 
   const { data: unreadCount = 0 } = useNotificationsUnreadCountQuery()
   useNotificationSound(unreadCount)
@@ -197,9 +197,9 @@ export function NotificationBell() {
         align="end"
         sideOffset={8}
         collisionPadding={16}
-        className="w-[calc(100vw-2rem)] max-w-[360px] border-border/80 bg-muted p-0 shadow-xl ring-1 ring-border/50"
+        className="flex w-[calc(100vw-2rem)] max-w-[360px] flex-col overflow-hidden border-border/80 bg-muted p-0 shadow-xl ring-1 ring-border/50"
       >
-        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-border/60 bg-background/80 px-3 py-2.5">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-border/60 bg-background px-3 py-2.5">
           <DropdownMenuLabel className="p-0 text-sm font-semibold">Notifications</DropdownMenuLabel>
           <Button
             variant="ghost"
@@ -219,25 +219,39 @@ export function NotificationBell() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-1 border-b border-border/60 bg-background/50 px-3 py-2">
-          <Button
-            type="button"
-            variant={unreadOnly ? 'ghost' : 'secondary'}
-            size="sm"
-            className="h-8 flex-1 px-2.5 text-xs sm:h-7 sm:flex-none"
-            onClick={() => setUnreadOnly(false)}
+        <div className="shrink-0 border-b border-border/60 bg-background px-3 py-2">
+          <div
+            className="flex rounded-md border border-border bg-muted p-0.5"
+            role="group"
+            aria-label="Notification filter"
           >
-            All
-          </Button>
-          <Button
-            type="button"
-            variant={unreadOnly ? 'secondary' : 'ghost'}
-            size="sm"
-            className="h-8 flex-1 px-2.5 text-xs sm:h-7 sm:flex-none"
-            onClick={() => setUnreadOnly(true)}
-          >
-            Unread only
-          </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'h-8 flex-1 px-2.5 text-xs font-medium text-muted-foreground sm:h-7',
+                unreadOnly && 'bg-background text-foreground shadow-sm hover:bg-background',
+              )}
+              aria-pressed={unreadOnly}
+              onClick={() => setUnreadOnly(true)}
+            >
+              Unread only
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'h-8 flex-1 px-2.5 text-xs font-medium text-muted-foreground sm:h-7',
+                !unreadOnly && 'bg-background text-foreground shadow-sm hover:bg-background',
+              )}
+              aria-pressed={!unreadOnly}
+              onClick={() => setUnreadOnly(false)}
+            >
+              All
+            </Button>
+          </div>
         </div>
 
         <div className="max-h-[min(20rem,70dvh)] overflow-y-auto bg-muted py-1 sm:max-h-80">
