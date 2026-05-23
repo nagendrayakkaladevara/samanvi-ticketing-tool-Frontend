@@ -2,11 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { ticketsService } from '@/features/tickets/api/tickets.service'
 import type { Ticket } from '@/features/tickets/types/ticket'
-import {
-  applyTicketListVirtualFilter,
-  isTicketListApiStatus,
-  type TicketListFilter,
-} from '@/features/tickets/utils/ticket-list-filter'
+import type { TicketListFilter } from '@/features/tickets/utils/ticket-list-filter'
 
 function compareTicketsNewestFirst(a: Ticket, b: Ticket): number {
   const dateA = a.createdAt ? new Date(a.createdAt).getTime() || 0 : 0
@@ -35,12 +31,9 @@ async function fetchTicketsForFilter(
     return [...resolved, ...closed].sort(compareTicketsNewestFirst)
   }
 
-  if (isTicketListApiStatus(filter)) {
-    return ticketsService.list({ status: filter, ...listOptions })
-  }
-
-  const allTickets = await ticketsService.list(listOptions)
-  return applyTicketListVirtualFilter(allTickets, filter).sort(compareTicketsNewestFirst)
+  return ticketsService.list({ status: filter, ...listOptions }).then((tickets) =>
+    tickets.sort(compareTicketsNewestFirst),
+  )
 }
 
 type UseFilteredTicketsQueryOptions = {

@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api/client'
-import type { TicketListApiStatus } from '@/features/tickets/utils/ticket-list-filter'
+import type { TicketListQueryStatus } from '@/features/tickets/utils/ticket-list-filter'
 import type { AssignableUser, Ticket, TicketCategory, TicketPriority, TicketTimelineEntry } from '@/features/tickets/types/ticket'
 
 const endpoint = '/tickets'
@@ -370,7 +370,7 @@ function extractTicketArrayPayload(raw: unknown): unknown[] {
 }
 
 type ListTicketsOptions = {
-  status?: TicketListApiStatus
+  status?: TicketListQueryStatus
   days?: number
 }
 

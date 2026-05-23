@@ -1,5 +1,3 @@
-import type { Ticket } from '@/features/tickets/types/ticket'
-
 /** Stored ticket statuses accepted by GET /tickets?status= */
 export const TICKET_LIST_API_STATUSES = [
   'created',
@@ -13,17 +11,25 @@ export const TICKET_LIST_API_STATUSES = [
 
 export type TicketListApiStatus = (typeof TICKET_LIST_API_STATUSES)[number]
 
-/** Dashboard-only filters that are not stored API status values. */
-export const TICKET_LIST_VIRTUAL_FILTERS = [
-  'open',
-  'unassigned',
-  'closed_resolved',
-  'overdue',
+/** Aggregate statuses accepted by GET /tickets?status= (not stored ticket rows). */
+export const TICKET_LIST_AGGREGATE_STATUSES = ['open', 'unassigned', 'overdue'] as const
+
+export type TicketListAggregateStatus = (typeof TICKET_LIST_AGGREGATE_STATUSES)[number]
+
+/** Status values sent to GET /tickets?status= */
+export const TICKET_LIST_QUERY_STATUSES = [
+  ...TICKET_LIST_API_STATUSES,
+  ...TICKET_LIST_AGGREGATE_STATUSES,
 ] as const
 
-export type TicketListVirtualFilter = (typeof TICKET_LIST_VIRTUAL_FILTERS)[number]
+export type TicketListQueryStatus = (typeof TICKET_LIST_QUERY_STATUSES)[number]
 
-export type TicketListFilter = TicketListApiStatus | TicketListVirtualFilter
+/** Filters that require multiple API calls or a dedicated route segment. */
+export const TICKET_LIST_SPECIAL_FILTERS = ['closed_resolved'] as const
+
+export type TicketListSpecialFilter = (typeof TICKET_LIST_SPECIAL_FILTERS)[number]
+
+export type TicketListFilter = TicketListQueryStatus | TicketListSpecialFilter
 
 const API_STATUS_LABELS: Record<TicketListApiStatus, string> = {
   created: 'Created',
@@ -35,32 +41,44 @@ const API_STATUS_LABELS: Record<TicketListApiStatus, string> = {
   reopened: 'Reopened',
 }
 
-const VIRTUAL_FILTER_LABELS: Record<TicketListVirtualFilter, string> = {
+const AGGREGATE_STATUS_LABELS: Record<TicketListAggregateStatus, string> = {
   open: 'Open Tickets',
   unassigned: 'Unassigned',
-  closed_resolved: 'Closed / Resolved',
   overdue: 'Overdue',
 }
 
-const CLOSED_STATUSES = new Set<Ticket['status']>(['CLOSED', 'RESOLVED'])
+const SPECIAL_FILTER_LABELS: Record<TicketListSpecialFilter, string> = {
+  closed_resolved: 'Closed / Resolved',
+}
 
 export function isTicketListApiStatus(value: string): value is TicketListApiStatus {
   return (TICKET_LIST_API_STATUSES as readonly string[]).includes(value)
 }
 
-export function isTicketListVirtualFilter(value: string): value is TicketListVirtualFilter {
-  return (TICKET_LIST_VIRTUAL_FILTERS as readonly string[]).includes(value)
+export function isTicketListAggregateStatus(value: string): value is TicketListAggregateStatus {
+  return (TICKET_LIST_AGGREGATE_STATUSES as readonly string[]).includes(value)
+}
+
+export function isTicketListQueryStatus(value: string): value is TicketListQueryStatus {
+  return (TICKET_LIST_QUERY_STATUSES as readonly string[]).includes(value)
+}
+
+export function isTicketListSpecialFilter(value: string): value is TicketListSpecialFilter {
+  return (TICKET_LIST_SPECIAL_FILTERS as readonly string[]).includes(value)
 }
 
 export function isTicketListFilter(value: string): value is TicketListFilter {
-  return isTicketListApiStatus(value) || isTicketListVirtualFilter(value)
+  return isTicketListQueryStatus(value) || isTicketListSpecialFilter(value)
 }
 
 export function getTicketListFilterLabel(filter: TicketListFilter): string {
   if (isTicketListApiStatus(filter)) {
     return API_STATUS_LABELS[filter]
   }
-  return VIRTUAL_FILTER_LABELS[filter]
+  if (isTicketListAggregateStatus(filter)) {
+    return AGGREGATE_STATUS_LABELS[filter]
+  }
+  return SPECIAL_FILTER_LABELS[filter]
 }
 
 /** Allowed dashboard period values (must match DashboardPage WINDOW_DAYS_OPTIONS). */
@@ -97,34 +115,6 @@ export function getTicketsByStatusPath(
 ): string {
   const windowDays = parseTicketListWindowDays(String(days))
   return `/tickets/by-status/${filter}?days=${windowDays}`
-}
-
-function isSlaOverdue(rawSlaDueAt: string): boolean {
-  if (!rawSlaDueAt) {
-    return false
-  }
-
-  const parsed = new Date(rawSlaDueAt)
-  if (Number.isNaN(parsed.getTime())) {
-    return false
-  }
-
-  return parsed.getTime() < Date.now()
-}
-
-export function applyTicketListVirtualFilter(tickets: Ticket[], filter: TicketListVirtualFilter): Ticket[] {
-  switch (filter) {
-    case 'open':
-      return tickets.filter((ticket) => !CLOSED_STATUSES.has(ticket.status))
-    case 'unassigned':
-      return tickets.filter(
-        (ticket) => !CLOSED_STATUSES.has(ticket.status) && !ticket.assignedToUserId?.trim(),
-      )
-    case 'closed_resolved':
-      return tickets.filter((ticket) => CLOSED_STATUSES.has(ticket.status))
-    case 'overdue':
-      return tickets.filter((ticket) => ticket.status !== 'CLOSED' && isSlaOverdue(ticket.slaDueAt))
-  }
 }
 
 /** Maps dashboard queue status keys to list filters. */
