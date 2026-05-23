@@ -1,6 +1,7 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent, type MouseEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Eye, EyeOff, Loader2, Pencil, Trash2, UserPlus, Users } from 'lucide-react'
+import { Eye, EyeOff, LineChart, Loader2, Pencil, Trash2, UserPlus, Users } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from '@/lib/toast'
 
 import { Button } from '@/components/ui/button'
@@ -31,8 +32,10 @@ import { UserMobileCard, UserMobileCardSkeleton } from '@/features/users/compone
 import { usersService } from '@/features/users/api/users.service'
 import { useUsersQuery } from '@/features/users/hooks/use-users-query'
 import type { AppUser, CreateUserInput, UpdateUserInput } from '@/features/users/types/user'
+import { getUserHistoryPath } from '@/features/user-history/utils/user-history-routes'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { queryClient } from '@/lib/query/query-client'
+import { cn } from '@/lib/utils'
 
 type UserFormMode = 'create' | 'edit'
 type RoleOption = CreateUserInput['roleCode']
@@ -86,6 +89,7 @@ function validateUserForm(values: UserFormValues, mode: UserFormMode): string | 
 }
 
 export function UsersPage() {
+  const navigate = useNavigate()
   const currentUser = useCurrentUser()
   const { data: users = [], isLoading, isError, isFetching, error } = useUsersQuery()
 
@@ -200,6 +204,16 @@ export function UsersPage() {
     deleteMutation.mutate(deleteTarget.id)
   }
 
+  const openUserHistory = (user: AppUser) => {
+    navigate(getUserHistoryPath(user.id), {
+      state: { displayName: user.displayName, username: user.username },
+    })
+  }
+
+  const stopRowNavigation = (event: MouseEvent) => {
+    event.stopPropagation()
+  }
+
   if (currentUser?.role !== 'ADMIN') {
     return (
       <section className="space-y-2">
@@ -264,6 +278,7 @@ export function UsersPage() {
               <UserMobileCard
                 key={user.id}
                 user={user}
+                onViewHistory={() => openUserHistory(user)}
                 onEdit={() => openEditForm(user)}
                 onDelete={() => setDeleteTarget(user)}
               />
@@ -284,7 +299,13 @@ export function UsersPage() {
               </thead>
               <tbody>
                 {sortedUsers.map((user) => (
-                  <tr key={user.id} className="border-b last:border-b-0">
+                  <tr
+                    key={user.id}
+                    className={cn(
+                      'cursor-pointer border-b transition-colors last:border-b-0 hover:bg-muted/40',
+                    )}
+                    onClick={() => openUserHistory(user)}
+                  >
                     <td className="px-4 py-3 font-medium">{user.displayName}</td>
                     <td className="px-4 py-3">{user.username}</td>
                     <td className="px-4 py-3 text-muted-foreground">{user.email ?? '-'}</td>
@@ -298,8 +319,12 @@ export function UsersPage() {
                         {user.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={stopRowNavigation}>
                       <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => openUserHistory(user)}>
+                          <LineChart className="h-3.5 w-3.5" />
+                          Analytics
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => openEditForm(user)}>
                           <Pencil className="h-3.5 w-3.5" />
                           Edit

@@ -16,6 +16,7 @@ import { BusesPage } from '@/pages/BusesPage'
 import { BusTicketHistoryPage } from '@/pages/BusTicketHistoryPage'
 import { BoardPage } from '@/pages/BoardPage'
 import { UsersPage } from '@/pages/UsersPage'
+import { UserHistoryPage } from '@/pages/UserHistoryPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
@@ -94,6 +95,14 @@ export const appRouter = createBrowserRouter([
             element: (
               <RoleGuard allowedRoles={['ADMIN']}>
                 <UsersPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'users/:userId/history',
+            element: (
+              <RoleGuard allowedRoles={['ADMIN']}>
+                <UserHistoryPage />
               </RoleGuard>
             ),
           },

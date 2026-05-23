@@ -1,4 +1,4 @@
-import { AtSign, Mail, Pencil, Shield, Trash2 } from 'lucide-react'
+import { AtSign, LineChart, Mail, Pencil, Shield, Trash2 } from 'lucide-react'
 
 import '@/features/tickets/styles/tickets-grid.css'
 
@@ -39,11 +39,12 @@ function RoleBadge({ role }: { role: AppUser['role'] }) {
 
 export type UserMobileCardProps = {
   user: AppUser
+  onViewHistory?: () => void
   onEdit: () => void
   onDelete: () => void
 }
 
-export function UserMobileCard({ user, onEdit, onDelete }: UserMobileCardProps) {
+export function UserMobileCard({ user, onViewHistory, onEdit, onDelete }: UserMobileCardProps) {
   const email = user.email?.trim()
 
   return (
@@ -87,20 +88,38 @@ export function UserMobileCard({ user, onEdit, onDelete }: UserMobileCardProps) 
         </div>
       </dl>
 
-      <div className="ticket-mobile-card__actions">
-        <Button size="sm" variant="outline" className="ticket-mobile-card__action-primary flex-1" onClick={onEdit}>
-          <Pencil className="h-4 w-4" aria-hidden />
-          Edit
-        </Button>
-        <Button
-          size="sm"
-          variant="destructive"
-          className="ticket-mobile-card__action-delete shrink-0 border-red-600 bg-red-600 text-white hover:bg-red-700"
-          onClick={onDelete}
-          aria-label={`Delete user ${user.displayName}`}
-        >
-          <Trash2 className="h-4 w-4" aria-hidden />
-        </Button>
+      <div className="ticket-mobile-card__actions flex-col gap-2 min-[420px]:flex-row">
+        {onViewHistory ? (
+          <Button
+            size="sm"
+            variant="default"
+            className="ticket-mobile-card__action-primary w-full min-[420px]:flex-1"
+            onClick={onViewHistory}
+          >
+            <LineChart className="h-4 w-4" aria-hidden />
+            Analytics
+          </Button>
+        ) : null}
+        <div className="flex w-full gap-2 min-[420px]:contents">
+          <Button
+            size="sm"
+            variant="outline"
+            className="ticket-mobile-card__action-primary min-w-0 flex-1"
+            onClick={onEdit}
+          >
+            <Pencil className="h-4 w-4" aria-hidden />
+            Edit
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="ticket-mobile-card__action-delete shrink-0 border-red-600 bg-red-600 text-white hover:bg-red-700"
+            onClick={onDelete}
+            aria-label={`Delete user ${user.displayName}`}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+          </Button>
+        </div>
       </div>
     </Card>
   )
