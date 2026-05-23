@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { UserMobileCard, UserMobileCardSkeleton } from '@/features/users/components/user-mobile-card'
 import { usersService } from '@/features/users/api/users.service'
 import { useUsersQuery } from '@/features/users/hooks/use-users-query'
 import type { AppUser, CreateUserInput, UpdateUserInput } from '@/features/users/types/user'
@@ -225,11 +226,18 @@ export function UsersPage() {
       </header>
 
       {isLoading ? (
-        <Card className="space-y-3 p-4">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Skeleton key={index} className="h-10 w-full" />
-          ))}
-        </Card>
+        <>
+          <div className="ticket-mobile-list md:hidden">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <UserMobileCardSkeleton key={index} />
+            ))}
+          </div>
+          <Card className="hidden space-y-3 p-4 md:block">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Skeleton key={index} className="h-10 w-full" />
+            ))}
+          </Card>
+        </>
       ) : null}
 
       {isError ? (
@@ -250,56 +258,69 @@ export function UsersPage() {
       ) : null}
 
       {!isLoading && !isError && sortedUsers.length > 0 ? (
-        <Card className="overflow-x-auto">
-          <table className="w-full min-w-[760px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b bg-muted/30 text-left">
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Username</th>
-                <th className="hidden px-4 py-3 font-medium md:table-cell">Email</th>
-                <th className="px-4 py-3 font-medium">Role</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedUsers.map((user) => (
-                <tr key={user.id} className="border-b last:border-b-0">
-                  <td className="px-4 py-3 font-medium">{user.displayName}</td>
-                  <td className="px-4 py-3">{user.username}</td>
-                  <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">{user.email ?? '-'}</td>
-                  <td className="px-4 py-3">{user.role}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        user.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'
-                      }`}
-                    >
-                      {user.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => openEditForm(user)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                        onClick={() => setDeleteTarget(user)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </Button>
-                    </div>
-                  </td>
+        <>
+          <div className="ticket-mobile-list md:hidden">
+            {sortedUsers.map((user) => (
+              <UserMobileCard
+                key={user.id}
+                user={user}
+                onEdit={() => openEditForm(user)}
+                onDelete={() => setDeleteTarget(user)}
+              />
+            ))}
+          </div>
+
+          <Card className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[760px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b bg-muted/30 text-left">
+                  <th className="px-4 py-3 font-medium">Name</th>
+                  <th className="px-4 py-3 font-medium">Username</th>
+                  <th className="px-4 py-3 font-medium">Email</th>
+                  <th className="px-4 py-3 font-medium">Role</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+              </thead>
+              <tbody>
+                {sortedUsers.map((user) => (
+                  <tr key={user.id} className="border-b last:border-b-0">
+                    <td className="px-4 py-3 font-medium">{user.displayName}</td>
+                    <td className="px-4 py-3">{user.username}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{user.email ?? '-'}</td>
+                    <td className="px-4 py-3">{user.role}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                          user.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {user.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => openEditForm(user)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                          onClick={() => setDeleteTarget(user)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </>
       ) : null}
 
       <Sheet open={isFormOpen} onOpenChange={setIsFormOpen}>
