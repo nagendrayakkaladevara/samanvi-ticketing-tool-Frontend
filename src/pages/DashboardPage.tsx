@@ -21,6 +21,7 @@ import {
   TrendingDown,
   TrendingUp,
   UserX,
+  Users,
   Wrench,
 } from 'lucide-react'
 
@@ -29,6 +30,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { ticketsService } from '@/features/tickets/api/tickets.service'
 import { getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
+import type { DashboardLeaderboardAgent } from '@/features/dashboard/api/dashboard.service'
 import { useDashboardSummaryQuery } from '@/features/dashboard/hooks/use-dashboard-summary-query'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
@@ -240,6 +242,140 @@ function formatWindowLabel(days: number): string {
   return `the last ${days} days`
 }
 
+function getAgentInitials(displayName: string, username: string): string {
+  const parts = displayName
+    .split(' ')
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+  }
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase()
+  }
+
+  return username.slice(0, 2).toUpperCase()
+}
+
+function TeamPerformanceLeaderboard({
+  agents,
+  windowDays,
+}: {
+  agents: DashboardLeaderboardAgent[]
+  windowDays: number
+}) {
+  const visibleAgents = useMemo(
+    () =>
+      [...agents]
+        .sort((left, right) => {
+          if (right.resolvedInWindow !== left.resolvedInWindow) {
+            return right.resolvedInWindow - left.resolvedInWindow
+          }
+          if (left.openAssignedCount !== right.openAssignedCount) {
+            return left.openAssignedCount - right.openAssignedCount
+          }
+          return left.displayName.localeCompare(right.displayName)
+        })
+        .slice(0, 6),
+    [agents],
+  )
+  const totals = useMemo(() => {
+    const totalOpen = visibleAgents.reduce((sum, agent) => sum + agent.openAssignedCount, 0)
+    const totalResolved = visibleAgents.reduce((sum, agent) => sum + agent.resolvedInWindow, 0)
+
+    return { totalOpen, totalResolved }
+  }, [visibleAgents])
+
+  const resolvedHeader =
+    windowDays === 0 ? 'Resolved today' : windowDays === 1 ? 'Resolved (1d)' : `Resolved (${windowDays}d)`
+
+  if (visibleAgents.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 px-4 py-8 text-center sm:py-10">
+        <Users className="mx-auto h-7 w-7 text-muted-foreground/70" aria-hidden />
+        <p className="mt-2 text-sm font-medium">No team data for this period</p>
+        <p className="mt-1 text-xs text-muted-foreground">Assign tickets to see member workload here.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3 md:space-y-2.5">
+      <div className="hidden grid-cols-[minmax(0,1fr)_4rem_5rem] gap-x-4 px-1 text-xs font-medium text-muted-foreground md:grid">
+        <span>Member</span>
+        <span className="text-right">Open</span>
+        <span className="text-right">{resolvedHeader}</span>
+      </div>
+
+      <ul className="space-y-3 md:space-y-2" role="list">
+        {visibleAgents.map((agent) => (
+          <li
+            key={agent.userId}
+            className="rounded-xl border border-border/70 bg-muted/20 p-4 transition-colors hover:bg-muted/35 md:grid md:grid-cols-[minmax(0,1fr)_4rem_5rem] md:items-center md:gap-x-4 md:p-3"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-background text-sm font-semibold text-foreground ring-1 ring-border/80"
+                aria-hidden
+              >
+                {getAgentInitials(agent.displayName, agent.username)}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium leading-snug">{agent.displayName}</p>
+                <p className="truncate text-xs text-muted-foreground">@{agent.username}</p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3 md:mt-0 md:contents">
+              <div className="rounded-lg border border-border/60 bg-background/80 px-3 py-3 text-center md:rounded-none md:border-0 md:bg-transparent md:px-0 md:py-0 md:text-right">
+                <p className="text-xs font-medium text-muted-foreground md:sr-only">Open</p>
+                <p className="mt-1 text-xl font-semibold tabular-nums leading-none md:mt-0 md:text-base">
+                  {formatNumber(agent.openAssignedCount)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-3 text-center md:rounded-none md:border-0 md:bg-transparent md:px-0 md:py-0 md:text-right">
+                <p className="text-xs font-medium text-muted-foreground md:sr-only">Resolved</p>
+                <p className="mt-1 text-xl font-semibold tabular-nums leading-none text-emerald-700 dark:text-emerald-400 md:mt-0 md:text-base">
+                  {formatNumber(agent.resolvedInWindow)}
+                </p>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="space-y-1 text-xs leading-relaxed text-muted-foreground md:space-y-0">
+        <p className="md:hidden">
+          <span className="font-medium text-foreground">{formatNumber(totals.totalOpen)}</span> open ·{' '}
+          <span className="font-medium text-emerald-700 dark:text-emerald-400">
+            {formatNumber(totals.totalResolved)}
+          </span>{' '}
+          resolved ({formatWindowLabel(windowDays)})
+        </p>
+        <p className="md:hidden">
+          {visibleAgents.length} team member{visibleAgents.length === 1 ? '' : 's'}
+          {agents.length > visibleAgents.length ? ` · top ${visibleAgents.length} shown` : null}
+        </p>
+        <p className="hidden md:block">
+          <span className="font-medium text-foreground">{formatNumber(totals.totalOpen)}</span> open across{' '}
+          {visibleAgents.length} member{visibleAgents.length === 1 ? '' : 's'}
+          <span className="mx-1.5 text-border">·</span>
+          <span className="font-medium text-emerald-700 dark:text-emerald-400">{formatNumber(totals.totalResolved)}</span>{' '}
+          resolved in {formatWindowLabel(windowDays)}
+          {agents.length > visibleAgents.length ? (
+            <>
+              <span className="mx-1.5 text-border">·</span>
+              Top {visibleAgents.length} shown
+            </>
+          ) : null}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function SummaryCard({
   title,
   value,
@@ -364,10 +500,11 @@ function DashboardSkeleton() {
         <Card className={`${dashboardPanelCardClass} lg:col-span-2 xl:col-span-8`}>
           <CardHeader>
             <Skeleton className="h-5 w-44" />
+            <Skeleton className="mt-2 h-3 w-72 max-w-full" />
           </CardHeader>
           <CardContent className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-[7.25rem] w-full rounded-xl md:h-14" />
             ))}
           </CardContent>
         </Card>
@@ -844,53 +981,10 @@ export function DashboardPage() {
         <Card className={cn(dashboardPanelCardClass, 'lg:col-span-2 xl:col-span-8')}>
           <CardHeader className="pb-3">
             <CardTitle className="text-base xl:text-lg">Team Performance</CardTitle>
-            <CardDescription>
-              Open tickets and resolved in {formatWindowLabel(windowDays)} for each team member
-            </CardDescription>
+            <CardDescription>Open workload and tickets resolved in {formatWindowLabel(windowDays)}</CardDescription>
           </CardHeader>
-          <CardContent className="flex-1 space-y-2">
-            {summary.leaderboard.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No team performance data available.</p>
-            ) : (
-              <>
-                <div className="mb-1 hidden border-b border-border/80 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground xl:grid xl:grid-cols-[minmax(0,1fr)_4.5rem_5rem] xl:gap-4">
-                  <span>Team member</span>
-                  <span className="text-right">Open</span>
-                  <span className="text-right">Resolved</span>
-                </div>
-                <div className="space-y-2 xl:space-y-1.5">
-                  {summary.leaderboard.slice(0, 6).map((agent, index) => (
-                    <div
-                      key={agent.userId}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-background/80 px-3 py-2.5 text-sm transition-colors hover:bg-muted/40 xl:grid xl:grid-cols-[minmax(0,1fr)_4.5rem_5rem] xl:items-center xl:gap-4 xl:px-4 xl:py-3"
-                    >
-                      <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold tabular-nums text-muted-foreground">
-                          {index + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">{agent.displayName}</p>
-                          <p className="truncate text-xs text-muted-foreground">@{agent.username}</p>
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right xl:text-center">
-                        <p className="font-semibold tabular-nums">
-                          <span className="mr-1 text-xs font-normal text-muted-foreground xl:hidden">Open</span>
-                          {formatNumber(agent.openAssignedCount)}
-                        </p>
-                        <p className="text-xs tabular-nums text-muted-foreground xl:hidden">
-                          Resolved ({windowDays === 0 ? 'today' : `${windowDays}d`}){' '}
-                          {formatNumber(agent.resolvedInWindow)}
-                        </p>
-                      </div>
-                      <p className="hidden font-semibold tabular-nums xl:block xl:text-right">
-                        {formatNumber(agent.resolvedInWindow)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+          <CardContent className="flex-1">
+            <TeamPerformanceLeaderboard agents={summary.leaderboard} windowDays={windowDays} />
           </CardContent>
         </Card>
       </div>
