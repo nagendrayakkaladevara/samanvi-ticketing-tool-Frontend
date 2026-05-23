@@ -17,31 +17,43 @@ function compareTicketsNewestFirst(a: Ticket, b: Ticket): number {
   return b.id.localeCompare(a.id)
 }
 
-async function fetchTicketsForFilter(filter: TicketListFilter): Promise<Ticket[]> {
+type FetchTicketsForFilterOptions = {
+  days?: number
+}
+
+async function fetchTicketsForFilter(
+  filter: TicketListFilter,
+  options?: FetchTicketsForFilterOptions,
+): Promise<Ticket[]> {
+  const listOptions = options?.days !== undefined ? { days: options.days } : undefined
+
   if (filter === 'closed_resolved') {
     const [resolved, closed] = await Promise.all([
-      ticketsService.list({ status: 'resolved' }),
-      ticketsService.list({ status: 'closed' }),
+      ticketsService.list({ status: 'resolved', ...listOptions }),
+      ticketsService.list({ status: 'closed', ...listOptions }),
     ])
     return [...resolved, ...closed].sort(compareTicketsNewestFirst)
   }
 
   if (isTicketListApiStatus(filter)) {
-    return ticketsService.list({ status: filter })
+    return ticketsService.list({ status: filter, ...listOptions })
   }
 
-  const allTickets = await ticketsService.list()
+  const allTickets = await ticketsService.list(listOptions)
   return applyTicketListVirtualFilter(allTickets, filter).sort(compareTicketsNewestFirst)
 }
 
 type UseFilteredTicketsQueryOptions = {
+  days?: number
   enabled?: boolean
 }
 
 export function useFilteredTicketsQuery(filter: TicketListFilter, options?: UseFilteredTicketsQueryOptions) {
+  const days = options?.days
+
   return useQuery({
-    queryKey: ['tickets', 'filtered', filter],
-    queryFn: () => fetchTicketsForFilter(filter),
+    queryKey: ['tickets', 'filtered', filter, days],
+    queryFn: () => fetchTicketsForFilter(filter, { days }),
     enabled: options?.enabled ?? true,
   })
 }

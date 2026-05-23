@@ -63,8 +63,40 @@ export function getTicketListFilterLabel(filter: TicketListFilter): string {
   return VIRTUAL_FILTER_LABELS[filter]
 }
 
-export function getTicketsByStatusPath(filter: TicketListFilter): string {
-  return `/tickets/by-status/${filter}`
+/** Allowed dashboard period values (must match DashboardPage WINDOW_DAYS_OPTIONS). */
+export const TICKET_LIST_WINDOW_DAYS = [0, 1, 2, 6, 14, 30, 60, 90] as const
+
+export const DEFAULT_TICKET_LIST_WINDOW_DAYS = 2
+
+export function parseTicketListWindowDays(raw: string | null): number {
+  if (raw === null || raw === '') {
+    return DEFAULT_TICKET_LIST_WINDOW_DAYS
+  }
+
+  const parsed = Number(raw)
+  if (!Number.isInteger(parsed) || !(TICKET_LIST_WINDOW_DAYS as readonly number[]).includes(parsed)) {
+    return DEFAULT_TICKET_LIST_WINDOW_DAYS
+  }
+
+  return parsed
+}
+
+export function formatTicketListWindowLabel(days: number): string {
+  if (days === 0) {
+    return 'today'
+  }
+  if (days === 1) {
+    return 'the last 1 day'
+  }
+  return `the last ${days} days`
+}
+
+export function getTicketsByStatusPath(
+  filter: TicketListFilter,
+  days: number = DEFAULT_TICKET_LIST_WINDOW_DAYS,
+): string {
+  const windowDays = parseTicketListWindowDays(String(days))
+  return `/tickets/by-status/${filter}?days=${windowDays}`
 }
 
 function isSlaOverdue(rawSlaDueAt: string): boolean {
