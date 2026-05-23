@@ -8,7 +8,7 @@ export function TicketsAutoRefreshSettingsSection() {
   const { autoRefresh, toggleAutoRefresh } = useTicketsAutoRefresh()
 
   return (
-    <Card className="xl:col-span-2">
+    <Card>
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-base">
           <RefreshCw className="h-4 w-4" />

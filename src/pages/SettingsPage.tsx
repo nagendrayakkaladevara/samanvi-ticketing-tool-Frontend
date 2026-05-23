@@ -158,53 +158,55 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="xl:col-span-2">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base">Appearance</CardTitle>
-            <p className="text-sm text-muted-foreground">Switch between dark and light theme.</p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <button
-              type="button"
-              onClick={() => setTheme('light')}
-              className={`flex w-full items-start justify-between rounded-lg border p-3 text-left transition-colors ${
-                theme === 'light'
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/40 hover:bg-accent/30'
-              }`}
-            >
-              <span>
-                <span className="flex items-center gap-2 font-medium">
-                  <SunMedium className="h-4 w-4" />
-                  Light
-                </span>
-                <span className="mt-1 block text-xs text-muted-foreground">Bright workspace for daytime usage.</span>
-              </span>
-              {theme === 'light' ? <Check className="h-4 w-4 text-primary" /> : null}
-            </button>
+        <div className="flex flex-col gap-4 xl:col-span-2">
+          <TicketsAutoRefreshSettingsSection />
 
-            <button
-              type="button"
-              onClick={() => setTheme('dark')}
-              className={`flex w-full items-start justify-between rounded-lg border p-3 text-left transition-colors ${
-                theme === 'dark'
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/40 hover:bg-accent/30'
-              }`}
-            >
-              <span>
-                <span className="flex items-center gap-2 font-medium">
-                  <MoonStar className="h-4 w-4" />
-                  Dark
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base">Appearance</CardTitle>
+              <p className="text-sm text-muted-foreground">Switch between dark and light theme.</p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <button
+                type="button"
+                onClick={() => setTheme('light')}
+                className={`flex w-full items-start justify-between rounded-lg border p-3 text-left transition-colors ${
+                  theme === 'light'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/40 hover:bg-accent/30'
+                }`}
+              >
+                <span>
+                  <span className="flex items-center gap-2 font-medium">
+                    <SunMedium className="h-4 w-4" />
+                    Light
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">Bright workspace for daytime usage.</span>
                 </span>
-                <span className="mt-1 block text-xs text-muted-foreground">Low-glare workspace for long sessions.</span>
-              </span>
-              {theme === 'dark' ? <Check className="h-4 w-4 text-primary" /> : null}
-            </button>
-          </CardContent>
-        </Card>
+                {theme === 'light' ? <Check className="h-4 w-4 text-primary" /> : null}
+              </button>
 
-        <TicketsAutoRefreshSettingsSection />
+              <button
+                type="button"
+                onClick={() => setTheme('dark')}
+                className={`flex w-full items-start justify-between rounded-lg border p-3 text-left transition-colors ${
+                  theme === 'dark'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/40 hover:bg-accent/30'
+                }`}
+              >
+                <span>
+                  <span className="flex items-center gap-2 font-medium">
+                    <MoonStar className="h-4 w-4" />
+                    Dark
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">Low-glare workspace for long sessions.</span>
+                </span>
+                {theme === 'dark' ? <Check className="h-4 w-4 text-primary" /> : null}
+              </button>
+            </CardContent>
+          </Card>
+        </div>
 
         <PwaInstallSettingsSection />
       </div>
