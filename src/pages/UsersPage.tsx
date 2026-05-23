@@ -372,7 +372,9 @@ export function UsersPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">{formMode === 'create' ? 'Password' : 'Password (Optional)'}</Label>
+              <Label htmlFor="password">
+                {formMode === 'create' ? 'Password' : 'Change Password (Optional)'}
+              </Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -382,7 +384,7 @@ export function UsersPage() {
                   disabled={isSaving}
                   autoComplete="new-password"
                   className="pr-10"
-                  placeholder={formMode === 'create' ? 'Enter password' : 'Leave blank to keep unchanged'}
+                  placeholder={formMode === 'create' ? 'Enter password' : 'Enter new password'}
                   required={formMode === 'create'}
                 />
                 <button
