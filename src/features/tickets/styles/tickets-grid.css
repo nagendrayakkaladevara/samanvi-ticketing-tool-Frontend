@@ -267,6 +267,18 @@
   gap: 0.5rem;
 }
 
+/* ========================================
+   USER MOBILE CARDS
+   ======================================== */
+
+.user-mobile-card {
+  border: 1px solid hsl(var(--border));
+}
+
+.user-mobile-card--inactive {
+  border-style: dashed;
+}
+
 @media (min-width: 768px) {
   .ticket-mobile-list {
     display: none;
