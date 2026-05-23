@@ -48,7 +48,10 @@ export function UserMobileCard({ user, onEdit, onDelete }: UserMobileCardProps) 
 
   return (
     <Card
-      className={cn('ticket-mobile-card', !user.isActive && 'border-dashed opacity-95')}
+      className={cn(
+        'ticket-mobile-card user-mobile-card',
+        !user.isActive && 'user-mobile-card--inactive opacity-95',
+      )}
       role="article"
       aria-label={`User ${user.displayName}`}
     >
@@ -105,7 +108,7 @@ export function UserMobileCard({ user, onEdit, onDelete }: UserMobileCardProps) 
 
 export function UserMobileCardSkeleton() {
   return (
-    <Card className="ticket-mobile-card ticket-mobile-card--skeleton" aria-hidden>
+    <Card className="ticket-mobile-card user-mobile-card ticket-mobile-card--skeleton" aria-hidden>
       <div className="ticket-mobile-card__header">
         <div className="min-w-0 flex-1 space-y-2">
           <div className="h-5 w-36 rounded-md bg-muted" />
