@@ -40,10 +40,10 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN'] },
-  { to: '/board', label: 'Board', icon: Clipboard, roles: ['ADMIN'] },
   { to: '/tickets', label: 'Tickets', icon: Ticket },
-  { to: '/buses', label: 'Buses', icon: Bus, roles: ['ADMIN', 'SUPERVISOR'] },
   { to: '/users', label: 'Users', icon: Users, roles: ['ADMIN'] },
+  { to: '/buses', label: 'Buses', icon: Bus, roles: ['ADMIN', 'SUPERVISOR'] },
+  { to: '/board', label: 'Board', icon: Clipboard, roles: ['ADMIN'] },
   {
     to: 'https://samanvidashboard.netlify.app/voice-app-access',
     label: 'Voice app access',
