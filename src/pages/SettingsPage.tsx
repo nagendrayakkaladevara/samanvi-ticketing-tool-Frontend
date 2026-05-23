@@ -4,6 +4,7 @@ import { Check, MoonStar, SunMedium, UserRound } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PwaInstallSettingsSection } from '@/features/pwa/components/PwaInstallSettingsSection'
+import { TicketsAutoRefreshSettingsSection } from '@/features/tickets/components/tickets-auto-refresh-settings-section'
 import { useProfileQuery } from '@/features/profile/hooks/use-profile-query'
 
 type ThemeMode = 'light' | 'dark'
@@ -202,6 +203,8 @@ export function SettingsPage() {
             </button>
           </CardContent>
         </Card>
+
+        <TicketsAutoRefreshSettingsSection />
 
         <PwaInstallSettingsSection />
       </div>
