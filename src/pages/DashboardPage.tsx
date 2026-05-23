@@ -259,9 +259,6 @@ function getAgentInitials(displayName: string, username: string): string {
   return username.slice(0, 2).toUpperCase()
 }
 
-const teamPerformanceRowGridClass =
-  'grid grid-cols-[minmax(0,1fr)_3rem_3.5rem] items-center gap-x-2.5 sm:grid-cols-[minmax(0,1fr)_3.5rem_4rem] sm:gap-x-3'
-
 function TeamPerformanceLeaderboard({
   agents,
   windowDays,
@@ -305,28 +302,22 @@ function TeamPerformanceLeaderboard({
   }
 
   return (
-    <div className="space-y-3">
-      <div className={cn(teamPerformanceRowGridClass, 'px-1 text-[11px] font-medium text-muted-foreground')}>
+    <div className="space-y-3 md:space-y-2.5">
+      <div className="hidden grid-cols-[minmax(0,1fr)_4rem_5rem] gap-x-4 px-1 text-xs font-medium text-muted-foreground md:grid">
         <span>Member</span>
         <span className="text-right">Open</span>
-        <span className="text-right leading-tight">
-          <span className="hidden min-[420px]:inline">{resolvedHeader}</span>
-          <span className="min-[420px]:hidden">Res.</span>
-        </span>
+        <span className="text-right">{resolvedHeader}</span>
       </div>
 
-      <ul className="space-y-2" role="list">
+      <ul className="space-y-3 md:space-y-2" role="list">
         {visibleAgents.map((agent) => (
           <li
             key={agent.userId}
-            className={cn(
-              teamPerformanceRowGridClass,
-              'rounded-xl border border-border/70 bg-muted/20 px-2.5 py-2.5 transition-colors hover:bg-muted/35 sm:px-3 sm:py-3',
-            )}
+            className="rounded-xl border border-border/70 bg-muted/20 p-4 transition-colors hover:bg-muted/35 md:grid md:grid-cols-[minmax(0,1fr)_4rem_5rem] md:items-center md:gap-x-4 md:p-3"
           >
-            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <div
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-background text-xs font-semibold text-foreground ring-1 ring-border/80 sm:h-10 sm:w-10 sm:text-sm"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-background text-sm font-semibold text-foreground ring-1 ring-border/80"
                 aria-hidden
               >
                 {getAgentInitials(agent.displayName, agent.username)}
@@ -337,29 +328,50 @@ function TeamPerformanceLeaderboard({
               </div>
             </div>
 
-            <p className="text-right text-sm font-semibold tabular-nums text-foreground sm:text-base">
-              {formatNumber(agent.openAssignedCount)}
-            </p>
-            <p className="text-right text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-400 sm:text-base">
-              {formatNumber(agent.resolvedInWindow)}
-            </p>
+            <div className="mt-4 grid grid-cols-2 gap-3 md:mt-0 md:contents">
+              <div className="rounded-lg border border-border/60 bg-background/80 px-3 py-3 text-center md:rounded-none md:border-0 md:bg-transparent md:px-0 md:py-0 md:text-right">
+                <p className="text-xs font-medium text-muted-foreground md:sr-only">Open</p>
+                <p className="mt-1 text-xl font-semibold tabular-nums leading-none md:mt-0 md:text-base">
+                  {formatNumber(agent.openAssignedCount)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-3 text-center md:rounded-none md:border-0 md:bg-transparent md:px-0 md:py-0 md:text-right">
+                <p className="text-xs font-medium text-muted-foreground md:sr-only">Resolved</p>
+                <p className="mt-1 text-xl font-semibold tabular-nums leading-none text-emerald-700 dark:text-emerald-400 md:mt-0 md:text-base">
+                  {formatNumber(agent.resolvedInWindow)}
+                </p>
+              </div>
+            </div>
           </li>
         ))}
       </ul>
 
-      <p className="text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">{formatNumber(totals.totalOpen)}</span> open across{' '}
-        {visibleAgents.length} member{visibleAgents.length === 1 ? '' : 's'}
-        <span className="mx-1.5 text-border">·</span>
-        <span className="font-medium text-emerald-700 dark:text-emerald-400">{formatNumber(totals.totalResolved)}</span>{' '}
-        resolved in {formatWindowLabel(windowDays)}
-        {agents.length > visibleAgents.length ? (
-          <>
-            <span className="mx-1.5 text-border">·</span>
-            Top {visibleAgents.length} shown
-          </>
-        ) : null}
-      </p>
+      <div className="space-y-1 text-xs leading-relaxed text-muted-foreground md:space-y-0">
+        <p className="md:hidden">
+          <span className="font-medium text-foreground">{formatNumber(totals.totalOpen)}</span> open ·{' '}
+          <span className="font-medium text-emerald-700 dark:text-emerald-400">
+            {formatNumber(totals.totalResolved)}
+          </span>{' '}
+          resolved ({formatWindowLabel(windowDays)})
+        </p>
+        <p className="md:hidden">
+          {visibleAgents.length} team member{visibleAgents.length === 1 ? '' : 's'}
+          {agents.length > visibleAgents.length ? ` · top ${visibleAgents.length} shown` : null}
+        </p>
+        <p className="hidden md:block">
+          <span className="font-medium text-foreground">{formatNumber(totals.totalOpen)}</span> open across{' '}
+          {visibleAgents.length} member{visibleAgents.length === 1 ? '' : 's'}
+          <span className="mx-1.5 text-border">·</span>
+          <span className="font-medium text-emerald-700 dark:text-emerald-400">{formatNumber(totals.totalResolved)}</span>{' '}
+          resolved in {formatWindowLabel(windowDays)}
+          {agents.length > visibleAgents.length ? (
+            <>
+              <span className="mx-1.5 text-border">·</span>
+              Top {visibleAgents.length} shown
+            </>
+          ) : null}
+        </p>
+      </div>
     </div>
   )
 }
@@ -491,9 +503,8 @@ function DashboardSkeleton() {
             <Skeleton className="mt-2 h-3 w-72 max-w-full" />
           </CardHeader>
           <CardContent className="space-y-3">
-            <Skeleton className="h-4 w-full max-w-xs" />
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 w-full rounded-xl" />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-[7.25rem] w-full rounded-xl md:h-14" />
             ))}
           </CardContent>
         </Card>
