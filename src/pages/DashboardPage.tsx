@@ -242,12 +242,6 @@ function formatWindowLabel(days: number): string {
   return `the last ${days} days`
 }
 
-function formatResolvedWindowShort(days: number): string {
-  if (days === 0) return 'Today'
-  if (days === 1) return '1 day'
-  return `${days} days`
-}
-
 function getAgentInitials(displayName: string, username: string): string {
   const parts = displayName
     .split(' ')
@@ -265,26 +259,8 @@ function getAgentInitials(displayName: string, username: string): string {
   return username.slice(0, 2).toUpperCase()
 }
 
-const LEADERBOARD_RANK_ACCENT = [
-  'border-amber-300/80 bg-amber-50 text-amber-900 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-100',
-  'border-slate-300/80 bg-slate-100 text-slate-800 dark:border-slate-600/50 dark:bg-slate-800/70 dark:text-slate-100',
-  'border-orange-300/80 bg-orange-50 text-orange-900 dark:border-orange-800/50 dark:bg-orange-950/40 dark:text-orange-100',
-] as const
-
-const LEADERBOARD_AVATAR_ACCENT = [
-  'border-amber-400/50 bg-amber-500/15 text-amber-800 dark:text-amber-100',
-  'border-slate-400/50 bg-slate-500/15 text-slate-700 dark:text-slate-100',
-  'border-orange-400/50 bg-orange-500/15 text-orange-800 dark:text-orange-100',
-  'border-primary/35 bg-primary/10 text-primary',
-] as const
-
-function getLeaderboardRankClass(index: number): string {
-  return LEADERBOARD_RANK_ACCENT[index] ?? 'border-border/80 bg-muted/60 text-muted-foreground'
-}
-
-function getLeaderboardAvatarClass(index: number): string {
-  return LEADERBOARD_AVATAR_ACCENT[Math.min(index, LEADERBOARD_AVATAR_ACCENT.length - 1)]
-}
+const teamPerformanceRowGridClass =
+  'grid grid-cols-[minmax(0,1fr)_3rem_3.5rem] items-center gap-x-2.5 sm:grid-cols-[minmax(0,1fr)_3.5rem_4rem] sm:gap-x-3'
 
 function TeamPerformanceLeaderboard({
   agents,
@@ -308,132 +284,81 @@ function TeamPerformanceLeaderboard({
         .slice(0, 6),
     [agents],
   )
-  const metrics = useMemo(() => {
+  const totals = useMemo(() => {
     const totalOpen = visibleAgents.reduce((sum, agent) => sum + agent.openAssignedCount, 0)
     const totalResolved = visibleAgents.reduce((sum, agent) => sum + agent.resolvedInWindow, 0)
-    const peakResolved = Math.max(...visibleAgents.map((agent) => agent.resolvedInWindow), 1)
-    const peakOpen = Math.max(...visibleAgents.map((agent) => agent.openAssignedCount), 1)
 
-    return { totalOpen, totalResolved, peakResolved, peakOpen }
+    return { totalOpen, totalResolved }
   }, [visibleAgents])
 
-  const resolvedColumnLabel = formatResolvedWindowShort(windowDays)
+  const resolvedHeader =
+    windowDays === 0 ? 'Resolved today' : windowDays === 1 ? 'Resolved (1d)' : `Resolved (${windowDays}d)`
 
   if (visibleAgents.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/80 bg-muted/20 px-6 py-10 text-center">
-        <Users className="h-8 w-8 text-muted-foreground/70" aria-hidden />
-        <p className="text-sm font-medium text-foreground">No team performance data yet</p>
-        <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
-          Assign tickets to team members to track open workload and resolutions for the selected period.
-        </p>
+      <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 px-4 py-8 text-center sm:py-10">
+        <Users className="mx-auto h-7 w-7 text-muted-foreground/70" aria-hidden />
+        <p className="mt-2 text-sm font-medium">No team data for this period</p>
+        <p className="mt-1 text-xs text-muted-foreground">Assign tickets to see member workload here.</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        {[
-          { label: 'Members', value: visibleAgents.length },
-          { label: 'Open assigned', value: metrics.totalOpen },
-          { label: `Resolved (${resolvedColumnLabel.toLowerCase()})`, value: metrics.totalResolved },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-lg border border-border/80 bg-muted/25 px-3 py-2.5 text-center sm:px-4 sm:py-3 sm:text-left"
+    <div className="space-y-3">
+      <div className={cn(teamPerformanceRowGridClass, 'px-1 text-[11px] font-medium text-muted-foreground')}>
+        <span>Member</span>
+        <span className="text-right">Open</span>
+        <span className="text-right leading-tight">
+          <span className="hidden min-[420px]:inline">{resolvedHeader}</span>
+          <span className="min-[420px]:hidden">Res.</span>
+        </span>
+      </div>
+
+      <ul className="space-y-2" role="list">
+        {visibleAgents.map((agent) => (
+          <li
+            key={agent.userId}
+            className={cn(
+              teamPerformanceRowGridClass,
+              'rounded-xl border border-border/70 bg-muted/20 px-2.5 py-2.5 transition-colors hover:bg-muted/35 sm:px-3 sm:py-3',
+            )}
           >
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{stat.label}</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums tracking-tight sm:text-xl">
-              {formatNumber(stat.value)}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="overflow-hidden rounded-xl border border-border/80 bg-background/50">
-        <div className="hidden border-b border-border/80 bg-muted/30 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_5.5rem_7.5rem] sm:gap-4 sm:px-5">
-          <span>Team member</span>
-          <span className="text-right">Open</span>
-          <span className="text-right">Resolved</span>
-        </div>
-
-        <ul className="divide-y divide-border/70">
-          {visibleAgents.map((agent, index) => {
-            const resolvedPercent = (agent.resolvedInWindow / metrics.peakResolved) * 100
-            const openPercent = (agent.openAssignedCount / metrics.peakOpen) * 100
-
-            return (
-              <li
-                key={agent.userId}
-                className="px-3 py-3 transition-colors hover:bg-muted/30 sm:grid sm:grid-cols-[minmax(0,1fr)_5.5rem_7.5rem] sm:items-center sm:gap-4 sm:px-5 sm:py-3.5"
+            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+              <div
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-background text-xs font-semibold text-foreground ring-1 ring-border/80 sm:h-10 sm:w-10 sm:text-sm"
+                aria-hidden
               >
-                <div className="flex min-w-0 items-center gap-3">
-                  <span
-                    className={cn(
-                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold tabular-nums',
-                      getLeaderboardRankClass(index),
-                    )}
-                  >
-                    {index + 1}
-                  </span>
-                  <div
-                    className={cn(
-                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tracking-wide',
-                      getLeaderboardAvatarClass(index),
-                    )}
-                  >
-                    {getAgentInitials(agent.displayName, agent.username)}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium leading-tight">{agent.displayName}</p>
-                    <p className="truncate text-xs text-muted-foreground">@{agent.username}</p>
-                  </div>
-                </div>
+                {getAgentInitials(agent.displayName, agent.username)}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium leading-snug">{agent.displayName}</p>
+                <p className="truncate text-xs text-muted-foreground">@{agent.username}</p>
+              </div>
+            </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-3 sm:mt-0 sm:block">
-                  <div className="sm:text-right">
-                    <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:sr-only">
-                      Open
-                    </p>
-                    <p className="text-base font-semibold tabular-nums sm:text-lg">
-                      {formatNumber(agent.openAssignedCount)}
-                    </p>
-                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-sky-100 dark:bg-sky-950/60">
-                      <div
-                        className="h-full rounded-full bg-sky-500/85 transition-[width] duration-500"
-                        style={{ width: `${openPercent}%` }}
-                      />
-                    </div>
-                  </div>
+            <p className="text-right text-sm font-semibold tabular-nums text-foreground sm:text-base">
+              {formatNumber(agent.openAssignedCount)}
+            </p>
+            <p className="text-right text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-400 sm:text-base">
+              {formatNumber(agent.resolvedInWindow)}
+            </p>
+          </li>
+        ))}
+      </ul>
 
-                  <div className="sm:text-right">
-                    <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:sr-only">
-                      Resolved
-                    </p>
-                    <p className="text-base font-semibold tabular-nums sm:text-lg">
-                      {formatNumber(agent.resolvedInWindow)}
-                    </p>
-                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-950/50">
-                      <div
-                        className="h-full rounded-full bg-emerald-500/85 transition-[width] duration-500"
-                        style={{ width: `${resolvedPercent}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      </div>
-
-      <p className="text-center text-[11px] text-muted-foreground sm:text-left">
-        {agents.length > visibleAgents.length
-          ? `Showing top ${visibleAgents.length} of ${agents.length} team members`
-          : `${agents.length} team member${agents.length === 1 ? '' : 's'} in this period`}
-        {' · '}
-        Bars compare relative workload within this list
+      <p className="text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">{formatNumber(totals.totalOpen)}</span> open across{' '}
+        {visibleAgents.length} member{visibleAgents.length === 1 ? '' : 's'}
+        <span className="mx-1.5 text-border">·</span>
+        <span className="font-medium text-emerald-700 dark:text-emerald-400">{formatNumber(totals.totalResolved)}</span>{' '}
+        resolved in {formatWindowLabel(windowDays)}
+        {agents.length > visibleAgents.length ? (
+          <>
+            <span className="mx-1.5 text-border">·</span>
+            Top {visibleAgents.length} shown
+          </>
+        ) : null}
       </p>
     </div>
   )
@@ -565,13 +490,11 @@ function DashboardSkeleton() {
             <Skeleton className="h-5 w-44" />
             <Skeleton className="mt-2 h-3 w-72 max-w-full" />
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full rounded-lg" />
-              ))}
-            </div>
-            <Skeleton className="h-64 w-full rounded-xl" />
+          <CardContent className="space-y-3">
+            <Skeleton className="h-4 w-full max-w-xs" />
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full rounded-xl" />
+            ))}
           </CardContent>
         </Card>
       </div>
@@ -1046,13 +969,8 @@ export function DashboardPage() {
 
         <Card className={cn(dashboardPanelCardClass, 'lg:col-span-2 xl:col-span-8')}>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base xl:text-lg">
-              <Users className="h-4 w-4 text-primary" aria-hidden />
-              Team Performance
-            </CardTitle>
-            <CardDescription>
-              Workload and resolutions in {formatWindowLabel(windowDays)} — ranked by resolved tickets
-            </CardDescription>
+            <CardTitle className="text-base xl:text-lg">Team Performance</CardTitle>
+            <CardDescription>Open workload and tickets resolved in {formatWindowLabel(windowDays)}</CardDescription>
           </CardHeader>
           <CardContent className="flex-1">
             <TeamPerformanceLeaderboard agents={summary.leaderboard} windowDays={windowDays} />
