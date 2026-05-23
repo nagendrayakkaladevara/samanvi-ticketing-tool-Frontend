@@ -127,7 +127,7 @@ function NotificationItem({
 export function NotificationBell() {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
-  const [unreadOnly, setUnreadOnly] = useState(false)
+  const [unreadOnly, setUnreadOnly] = useState(true)
 
   const { data: unreadCount = 0 } = useNotificationsUnreadCountQuery()
   useNotificationSound(unreadCount)
