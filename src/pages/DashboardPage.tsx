@@ -104,6 +104,10 @@ const dashboardMetaLabelClass =
 const dashboardMetaValueClass =
   'flex min-w-0 flex-1 items-center py-1.5 pl-2.5 pr-2 text-xs font-semibold text-foreground'
 
+const dashboardHeaderIconBtnClass = 'h-8 w-8 shrink-0 sm:h-9 sm:w-9'
+const dashboardHeaderActionBtnClass =
+  'h-8 w-auto shrink-0 px-2.5 text-xs sm:h-9 sm:px-4 sm:text-sm'
+
 const QUEUE_STATUS_ORDER = ['created', 'unassigned', 'assigned', 'in_progress', 'reopened', 'blocked'] as const
 
 type QueueStatusStyle = {
@@ -557,10 +561,11 @@ export function DashboardPage() {
                   <Button
                     type="button"
                     variant="outline"
+                    size="sm"
                     onClick={handleTicketSearch}
                     disabled={searchTicketMutation.isPending}
                     aria-label="Search ticket"
-                    className="shrink-0 gap-2 px-2.5 sm:px-4"
+                    className={cn(dashboardHeaderActionBtnClass, 'gap-2')}
                   >
                     {searchTicketMutation.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -575,7 +580,7 @@ export function DashboardPage() {
                     size="icon"
                     onClick={closeTicketSearch}
                     aria-label="Close ticket search"
-                    className="shrink-0"
+                    className={dashboardHeaderIconBtnClass}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -592,21 +597,21 @@ export function DashboardPage() {
                     size="icon"
                     onClick={() => setIsTicketSearchOpen(true)}
                     aria-label="Search ticket by number"
-                    className="shrink-0"
+                    className={dashboardHeaderIconBtnClass}
                   >
                     <Search className="h-4 w-4" />
                   </Button>
-                  <Button asChild variant="outline" size="sm" className="shrink-0 sm:h-9 sm:px-4 sm:text-sm">
+                  <Button asChild variant="outline" size="sm" className={dashboardHeaderActionBtnClass}>
                     <Link to="/tickets/create">
                       <span className="sm:hidden">Create</span>
                       <span className="hidden sm:inline">Create Ticket</span>
                     </Link>
                   </Button>
-                  <Button asChild size="sm" className="shrink-0 sm:h-9 sm:px-4 sm:text-sm">
+                  <Button asChild size="sm" className={dashboardHeaderActionBtnClass}>
                     <Link to="/tickets">
                       <span className="sm:hidden">Tickets</span>
                       <span className="hidden sm:inline">View All Tickets</span>
-                      <ArrowRight className="h-4 w-4" />
+                      <ArrowRight className="hidden h-4 w-4 sm:block" />
                     </Link>
                   </Button>
                 </motion.div>
