@@ -45,13 +45,7 @@ type NavItem = {
 }
 
 /** Temporarily hidden from sidebar; remove paths to restore. */
-const temporarilyHiddenNavPaths = new Set([
-  '/dashboard',
-  '/tickets',
-  '/users',
-  '/buses',
-  '/board',
-])
+const temporarilyHiddenNavPaths = new Set(['/users', '/buses', '/board'])
 
 const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN'] },
