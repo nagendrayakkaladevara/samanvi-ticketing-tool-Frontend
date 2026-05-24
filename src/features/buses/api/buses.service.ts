@@ -86,10 +86,60 @@ function extractEntityPayload(raw: unknown): unknown {
   return record.bus ?? raw
 }
 
+function extractBusNumbersPayload(raw: unknown): string[] {
+  const items = extractArrayPayload(raw)
+  if (items.length === 0 && raw && typeof raw === 'object') {
+    const record = raw as Record<string, unknown>
+    const nested = record.data
+    if (Array.isArray(nested)) {
+      return nested.map(normalizeBusNumberValue).filter((value): value is string => Boolean(value))
+    }
+    if (nested && typeof nested === 'object') {
+      const nestedRecord = nested as Record<string, unknown>
+      if (Array.isArray(nestedRecord.busNumbers)) {
+        return nestedRecord.busNumbers
+          .map(normalizeBusNumberValue)
+          .filter((value): value is string => Boolean(value))
+      }
+    }
+    if (Array.isArray(record.busNumbers)) {
+      return record.busNumbers.map(normalizeBusNumberValue).filter((value): value is string => Boolean(value))
+    }
+  }
+
+  return items.map(normalizeBusNumberValue).filter((value): value is string => Boolean(value))
+}
+
+function normalizeBusNumberValue(raw: unknown): string | null {
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
+
+  if (!raw || typeof raw !== 'object') {
+    return null
+  }
+
+  const value = raw as Record<string, unknown>
+  return (
+    normalizeString(value.busNumber) ??
+    normalizeString(value.bus_no) ??
+    normalizeString(value.busNo) ??
+    normalizeString(value.number) ??
+    null
+  )
+}
+
 export const busesService = {
   async list(): Promise<Bus[]> {
     const { data } = await apiClient.get<unknown>(endpoint)
     return extractArrayPayload(data).map(normalizeBus).filter((bus): bus is Bus => Boolean(bus))
+  },
+
+  async listBusNumbers(): Promise<string[]> {
+    const { data } = await apiClient.get<unknown>(`${endpoint}/bus-numbers`)
+    const busNumbers = extractBusNumbersPayload(data)
+    return [...new Set(busNumbers)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   },
 
   async create(input: CreateBusInput): Promise<Bus> {

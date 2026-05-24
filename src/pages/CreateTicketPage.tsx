@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { notificationQueryKeys } from '@/features/notifications/hooks/notification-query-keys'
+import { BusNumberAutocomplete } from '@/features/tickets/components/bus-number-autocomplete'
 import { ticketsService } from '@/features/tickets/api/tickets.service'
 import { useCreateTicketForm } from '@/features/tickets/hooks/use-create-ticket-form'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -253,12 +254,12 @@ export function CreateTicketPage() {
                 Bus Number
                 <RequiredBadge />
               </Label>
-              <Input
+              <BusNumberAutocomplete
                 id="busNumber"
                 placeholder="e.g., AP09AB1234"
                 className={cn(form.errors.busNumber && invalidFieldClass)}
                 value={form.values.busNumber}
-                onChange={(event) => form.setField('busNumber', event.target.value)}
+                onChange={(nextValue) => form.setField('busNumber', nextValue)}
                 aria-invalid={Boolean(form.errors.busNumber)}
                 disabled={createTicketMutation.isPending}
               />
