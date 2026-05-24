@@ -117,28 +117,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {filteredNavItems.map((item) => (
-                <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton asChild tooltip={item.label}>
-                    {item.external ? (
-                      <a
-                        href={item.to}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={handleMobileItemClick}
-                      >
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </a>
-                    ) : (
-                      <NavLink to={item.to} end={item.end} onClick={handleMobileItemClick}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </NavLink>
-                    )}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
               {showMastersNav ? (
                 <Collapsible asChild defaultOpen={isMastersRouteActive} className="group/collapsible">
                   <SidebarMenuItem>
@@ -165,6 +143,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuItem>
                 </Collapsible>
               ) : null}
+              {filteredNavItems.map((item) => (
+                <SidebarMenuItem key={item.to}>
+                  <SidebarMenuButton asChild tooltip={item.label}>
+                    {item.external ? (
+                      <a
+                        href={item.to}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={handleMobileItemClick}
+                      >
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </a>
+                    ) : (
+                      <NavLink to={item.to} end={item.end} onClick={handleMobileItemClick}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </NavLink>
+                    )}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
