@@ -815,7 +815,7 @@ export function DashboardPage() {
           trendPercent={summary.trends?.openTicketsPct}
           onClick={() => {
             const filter = dashboardSummaryCardToFilter('Open Tickets')
-            if (filter) navigate(getTicketsByStatusPath(filter))
+            if (filter) navigate(getTicketsByStatusPath(filter, windowDays))
           }}
         />
         <SummaryCard
@@ -827,7 +827,7 @@ export function DashboardPage() {
           lowerIsBetter
           onClick={() => {
             const filter = dashboardSummaryCardToFilter('Unassigned')
-            if (filter) navigate(getTicketsByStatusPath(filter))
+            if (filter) navigate(getTicketsByStatusPath(filter, windowDays))
           }}
         />
         <SummaryCard
@@ -839,7 +839,7 @@ export function DashboardPage() {
           trendPercent={summary.trends?.inProgressTicketsPct}
           onClick={() => {
             const filter = dashboardSummaryCardToFilter('In Progress')
-            if (filter) navigate(getTicketsByStatusPath(filter))
+            if (filter) navigate(getTicketsByStatusPath(filter, windowDays))
           }}
         />
         <SummaryCard
@@ -851,7 +851,7 @@ export function DashboardPage() {
           trendPercent={summary.trends?.closedResolvedTicketsPct}
           onClick={() => {
             const filter = dashboardSummaryCardToFilter('Closed / Resolved')
-            if (filter) navigate(getTicketsByStatusPath(filter))
+            if (filter) navigate(getTicketsByStatusPath(filter, windowDays))
           }}
         />
         <SummaryCard
@@ -864,7 +864,7 @@ export function DashboardPage() {
           lowerIsBetter
           onClick={() => {
             const filter = dashboardSummaryCardToFilter('Overdue')
-            if (filter) navigate(getTicketsByStatusPath(filter))
+            if (filter) navigate(getTicketsByStatusPath(filter, windowDays))
           }}
         />
       </div>
@@ -920,7 +920,7 @@ export function DashboardPage() {
                     )}
                     onClick={
                       isRowInteractive
-                        ? () => navigate(getTicketsByStatusPath(listFilter))
+                        ? () => navigate(getTicketsByStatusPath(listFilter, windowDays))
                         : undefined
                     }
                     onKeyDown={
@@ -928,7 +928,7 @@ export function DashboardPage() {
                         ? (event) => {
                             if (event.key === 'Enter' || event.key === ' ') {
                               event.preventDefault()
-                              navigate(getTicketsByStatusPath(listFilter))
+                              navigate(getTicketsByStatusPath(listFilter, windowDays))
                             }
                           }
                         : undefined

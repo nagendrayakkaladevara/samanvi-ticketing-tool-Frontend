@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api/client'
-import type { TicketListApiStatus } from '@/features/tickets/utils/ticket-list-filter'
+import type { TicketListQueryStatus } from '@/features/tickets/utils/ticket-list-filter'
 import type { AssignableUser, Ticket, TicketCategory, TicketPriority, TicketTimelineEntry } from '@/features/tickets/types/ticket'
 
 const endpoint = '/tickets'
@@ -370,13 +370,22 @@ function extractTicketArrayPayload(raw: unknown): unknown[] {
 }
 
 type ListTicketsOptions = {
-  status?: TicketListApiStatus
+  status?: TicketListQueryStatus
+  days?: number
 }
 
 export const ticketsService = {
   async list(options?: ListTicketsOptions): Promise<Ticket[]> {
+    const params: Record<string, string | number> = {}
+    if (options?.status) {
+      params.status = options.status
+    }
+    if (options?.days !== undefined) {
+      params.days = options.days
+    }
+
     const { data } = await apiClient.get<unknown>(endpoint, {
-      ...(options?.status ? { params: { status: options.status } } : {}),
+      ...(Object.keys(params).length > 0 ? { params } : {}),
     })
     return extractTicketArrayPayload(data).map(normalizeTicket).filter((ticket): ticket is Ticket => Boolean(ticket))
   },
