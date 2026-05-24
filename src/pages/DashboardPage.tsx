@@ -32,6 +32,7 @@ import { ticketsService } from '@/features/tickets/api/tickets.service'
 import { getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
 import type { DashboardLeaderboardAgent } from '@/features/dashboard/api/dashboard.service'
 import { useDashboardSummaryQuery } from '@/features/dashboard/hooks/use-dashboard-summary-query'
+import { useDashboardWindowDays } from '@/features/dashboard/hooks/use-dashboard-window-days'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -516,7 +517,7 @@ function DashboardSkeleton() {
 export function DashboardPage() {
   const navigate = useNavigate()
   const shouldReduceMotion = useReducedMotion()
-  const [windowDays, setWindowDays] = useState(2)
+  const { windowDays, setWindowDays } = useDashboardWindowDays()
   const [isTicketSearchOpen, setIsTicketSearchOpen] = useState(false)
   const [ticketNumberQuery, setTicketNumberQuery] = useState('')
   const { data, isLoading, isError, error, refetch, isFetching } = useDashboardSummaryQuery(windowDays)
