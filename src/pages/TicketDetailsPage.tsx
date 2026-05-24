@@ -9,6 +9,7 @@ import { toast } from '@/lib/toast'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
   DialogContent,
@@ -208,6 +209,49 @@ function EditableDetailValue({
   )
 }
 
+function TicketDetailsSkeleton() {
+  return (
+    <section className="space-y-4" aria-busy="true" aria-label="Loading ticket details">
+      <header className="space-y-3 border-b pb-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            <Skeleton className="h-8 w-full max-w-md" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <div className="flex w-full gap-2 sm:w-auto">
+            <Skeleton className="h-9 w-full rounded-md sm:w-28" />
+            <Skeleton className="h-9 w-full rounded-md sm:w-28" />
+          </div>
+        </div>
+      </header>
+
+      <Card className="space-y-4 p-4">
+        <Skeleton className="h-4 w-28" />
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+          {Array.from({ length: 10 }).map((_, index) => (
+            <Skeleton key={index} className="h-16 rounded-md" />
+          ))}
+          <Skeleton className="col-span-2 h-24 rounded-md" />
+          <Skeleton className="col-span-2 h-20 rounded-md lg:col-span-4" />
+        </div>
+      </Card>
+
+      <Card className="space-y-3 p-4">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-20 w-full rounded-md" />
+        <Skeleton className="h-9 w-28 rounded-md" />
+      </Card>
+
+      <Card className="space-y-4 p-4">
+        <Skeleton className="h-4 w-32" />
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-20 w-full rounded-md" />
+        ))}
+      </Card>
+    </section>
+  )
+}
+
 export function TicketDetailsPage() {
   const { ticketId } = useParams<{ ticketId: string }>()
   const currentUser = useCurrentUser()
@@ -362,7 +406,7 @@ export function TicketDetailsPage() {
   }
 
   if (isLoading) {
-    return <Card className="p-4 text-sm text-muted-foreground">Loading ticket details...</Card>
+    return <TicketDetailsSkeleton />
   }
 
   if (isError || !ticket) {
@@ -681,7 +725,11 @@ export function TicketDetailsPage() {
       <Card className="print-card space-y-3 p-4">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Activity Timeline</h2>
         {isTimelineLoading ? (
-          <p className="text-sm text-muted-foreground">Loading timeline...</p>
+          <div className="space-y-4" aria-busy="true" aria-label="Loading activity timeline">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} className="h-20 w-full rounded-md" />
+            ))}
+          </div>
         ) : sortedTimeline.length === 0 ? (
           <p className="text-sm text-muted-foreground">No activity available.</p>
         ) : (
