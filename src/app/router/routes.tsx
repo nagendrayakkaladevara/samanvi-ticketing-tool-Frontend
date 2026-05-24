@@ -19,6 +19,10 @@ import { UsersPage } from '@/pages/UsersPage'
 import { UserHistoryPage } from '@/pages/UserHistoryPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { BusNoPage } from '@/pages/masters/BusNoPage'
+import { EmployeesPage } from '@/pages/masters/EmployeesPage'
+import { ServiceForPage } from '@/pages/masters/ServiceForPage'
+import { ServiceNoPage } from '@/pages/masters/ServiceNoPage'
 
 function RoleHomeRedirect() {
   const currentUser = useCurrentUser()
@@ -119,6 +123,38 @@ export const appRouter = createBrowserRouter([
             element: (
               <RoleGuard allowedRoles={['ADMIN', 'SUPERVISOR']}>
                 <BusTicketHistoryPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'masters/service-for',
+            element: (
+              <RoleGuard allowedRoles={['ADMIN']}>
+                <ServiceForPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'masters/bus-no',
+            element: (
+              <RoleGuard allowedRoles={['ADMIN']}>
+                <BusNoPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'masters/service-no',
+            element: (
+              <RoleGuard allowedRoles={['ADMIN']}>
+                <ServiceNoPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'masters/employees',
+            element: (
+              <RoleGuard allowedRoles={['ADMIN']}>
+                <EmployeesPage />
               </RoleGuard>
             ),
           },

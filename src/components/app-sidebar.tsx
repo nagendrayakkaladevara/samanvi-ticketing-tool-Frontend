@@ -1,7 +1,9 @@
 import * as React from 'react'
 import {
   Bus,
+  ChevronRight,
   Clipboard,
+  Database,
   LayoutDashboard,
   LogOut,
   Mic,
@@ -9,8 +11,9 @@ import {
   Ticket,
   Users,
 } from 'lucide-react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +25,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar'
@@ -54,8 +60,16 @@ const navItems: NavItem[] = [
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
+const mastersNavItems = [
+  { to: '/masters/service-for', label: 'Service For' },
+  { to: '/masters/bus-no', label: 'Bus No' },
+  { to: '/masters/service-no', label: 'Service No' },
+  { to: '/masters/employees', label: 'Employees' },
+] as const
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const currentUser = useCurrentUser()
+  const location = useLocation()
   const { isMobile, setOpenMobile } = useSidebar()
   const logout = useAuthStore((state) => state.logout)
   const isMobileRef = React.useRef(isMobile)
@@ -75,6 +89,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
     return currentUser ? item.roles.includes(currentUser.role) : false
   })
+  const showMastersNav = currentUser?.role === 'ADMIN'
+  const isMastersRouteActive = location.pathname.startsWith('/masters')
 
   return (
     <Sidebar collapsible="icon" className="no-print" {...props}>
@@ -123,14 +139,40 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {showMastersNav ? (
+                <Collapsible asChild defaultOpen={isMastersRouteActive} className="group/collapsible">
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton tooltip="Masters" isActive={isMastersRouteActive}>
+                        <Database />
+                        <span>Masters</span>
+                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {mastersNavItems.map((item) => (
+                          <SidebarMenuSubItem key={item.to}>
+                            <SidebarMenuSubButton asChild isActive={location.pathname === item.to}>
+                              <NavLink to={item.to} onClick={handleMobileItemClick}>
+                                <span>{item.label}</span>
+                              </NavLink>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              ) : null}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         <div className="px-2 pb-2 text-xs text-muted-foreground group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:text-center">
-          <span className="group-data-[collapsible=icon]:hidden">Version 2.1.0</span>
-          <span className="hidden group-data-[collapsible=icon]:inline">v2.1.0</span>
+          <span className="group-data-[collapsible=icon]:hidden">Version 3.0.0</span>
+          <span className="hidden group-data-[collapsible=icon]:inline">v3.0.0</span>
         </div>
         <SidebarMenu>
           <SidebarMenuItem>
