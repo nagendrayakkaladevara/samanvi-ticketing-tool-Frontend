@@ -734,7 +734,7 @@ export function DashboardPage() {
                   >
                     <Search className="h-4 w-4" />
                   </Button>
-                  <Button asChild variant="outline" size="sm" className="shrink-0 sm:h-9 sm:px-4 sm:text-sm">
+                  <Button asChild variant="outline" className="shrink-0 sm:h-9 sm:px-4 sm:text-sm">
                     <Link to="/tickets/create">
                       <span className="sm:hidden">Create</span>
                       <span className="hidden sm:inline">Create Ticket</span>
