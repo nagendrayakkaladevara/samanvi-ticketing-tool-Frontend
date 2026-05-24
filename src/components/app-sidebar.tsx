@@ -44,6 +44,15 @@ type NavItem = {
   roles?: CurrentUser['role'][]
 }
 
+/** Temporarily hidden from sidebar; remove paths to restore. */
+const temporarilyHiddenNavPaths = new Set([
+  '/dashboard',
+  '/tickets',
+  '/users',
+  '/buses',
+  '/board',
+])
+
 const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN'] },
   { to: '/tickets', label: 'Tickets', icon: Ticket },
@@ -83,6 +92,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   }, [setOpenMobile])
   const filteredNavItems = navItems.filter((item) => {
+    if (temporarilyHiddenNavPaths.has(item.to)) {
+      return false
+    }
+
     if (!('roles' in item) || !item.roles) {
       return true
     }
@@ -165,32 +178,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              {showMastersNav ? (
-                <Collapsible asChild defaultOpen={isMastersRouteActive} className="group/collapsible">
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip="Masters" isActive={isMastersRouteActive}>
-                        <Database />
-                        <span>Masters</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {mastersNavItems.map((item) => (
-                          <SidebarMenuSubItem key={item.to}>
-                            <SidebarMenuSubButton asChild isActive={location.pathname === item.to}>
-                              <NavLink to={item.to} onClick={handleMobileItemClick}>
-                                <span>{item.label}</span>
-                              </NavLink>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
-              ) : null}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
