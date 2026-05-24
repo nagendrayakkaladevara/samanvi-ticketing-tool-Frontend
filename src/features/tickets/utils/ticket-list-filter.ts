@@ -81,19 +81,23 @@ export function getTicketListFilterLabel(filter: TicketListFilter): string {
   return SPECIAL_FILTER_LABELS[filter]
 }
 
+import { readReportingPeriodDefaultDays } from '@/features/preferences/reporting-period'
+
 /** Allowed dashboard period values (must match DashboardPage WINDOW_DAYS_OPTIONS). */
 export const TICKET_LIST_WINDOW_DAYS = [0, 1, 2, 6, 14, 30, 60, 90] as const
 
 export const DEFAULT_TICKET_LIST_WINDOW_DAYS = 2
 
 export function parseTicketListWindowDays(raw: string | null): number {
+  const fallback = readReportingPeriodDefaultDays()
+
   if (raw === null || raw === '') {
-    return DEFAULT_TICKET_LIST_WINDOW_DAYS
+    return fallback
   }
 
   const parsed = Number(raw)
   if (!Number.isInteger(parsed) || !(TICKET_LIST_WINDOW_DAYS as readonly number[]).includes(parsed)) {
-    return DEFAULT_TICKET_LIST_WINDOW_DAYS
+    return fallback
   }
 
   return parsed

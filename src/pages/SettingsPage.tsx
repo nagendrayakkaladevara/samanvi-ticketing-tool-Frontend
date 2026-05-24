@@ -3,6 +3,7 @@ import { Check, MoonStar, SunMedium, UserRound } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ReportingPeriodDefaultSettingsSection } from '@/features/preferences/components/reporting-period-default-settings-section'
 import { PwaInstallSettingsSection } from '@/features/pwa/components/PwaInstallSettingsSection'
 import { TicketsAutoRefreshSettingsSection } from '@/features/tickets/components/tickets-auto-refresh-settings-section'
 import { useProfileQuery } from '@/features/profile/hooks/use-profile-query'
@@ -159,6 +160,8 @@ export function SettingsPage() {
         </Card>
 
         <div className="flex flex-col gap-4 xl:col-span-2">
+          <ReportingPeriodDefaultSettingsSection />
+
           <TicketsAutoRefreshSettingsSection />
 
           <Card>
