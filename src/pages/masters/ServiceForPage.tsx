@@ -285,10 +285,11 @@ export function ServiceForPage() {
       {!isLoading && !isError && sortedItems.length > 0 ? (
         <>
           <div className="space-y-3 md:hidden">
-            {sortedItems.map((item) => (
+            {sortedItems.map((item, index) => (
               <Card key={item.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 space-y-1">
+                    <p className="text-xs text-muted-foreground">S.No {index + 1}</p>
                     <p className="truncate font-medium">{item.serviceFor}</p>
                     <p className="text-xs text-muted-foreground">Updated {formatDateTime(item.updatedAt)}</p>
                   </div>
@@ -314,14 +315,16 @@ export function ServiceForPage() {
             <table className="w-full min-w-[640px] border-collapse text-sm">
               <thead>
                 <tr className="border-b bg-muted/30 text-left">
+                  <th className="w-16 px-4 py-3 font-medium">S.No</th>
                   <th className="px-4 py-3 font-medium">Service For</th>
                   <th className="px-4 py-3 font-medium">Last Updated</th>
                   <th className="px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedItems.map((item) => (
+                {sortedItems.map((item, index) => (
                   <tr key={item.id} className="border-b transition-colors last:border-b-0 hover:bg-muted/40">
+                    <td className="px-4 py-3 text-muted-foreground">{index + 1}</td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 font-medium">
                         <Layers className="h-3.5 w-3.5 text-muted-foreground" />
