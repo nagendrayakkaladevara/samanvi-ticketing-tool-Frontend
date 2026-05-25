@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { FormLabel } from '@/components/ui/form-label'
 import { MasterDatePicker } from '@/components/ui/master-date-picker'
 import { Textarea } from '@/components/ui/textarea'
 import { helpersService } from '@/features/employees/api/helpers.service'
@@ -129,7 +129,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
           <form className="space-y-5" onSubmit={handleSubmit}>
             <EmployeeFormSection title="Personal Details">
               <div className="space-y-2">
-                <Label htmlFor="helperAadharName">Aadhar Name</Label>
+                <FormLabel htmlFor="helperAadharName" required>Aadhar Name</FormLabel>
                 <Input
                   id="helperAadharName"
                   value={formValues.aadharName}
@@ -140,7 +140,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="nickName">Nick Name</Label>
+                <FormLabel htmlFor="nickName" required>Nick Name</FormLabel>
                 <Input
                   id="nickName"
                   value={formValues.nickName}
@@ -151,7 +151,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="helperDateOfBirth">Date of Birth</Label>
+                <FormLabel htmlFor="helperDateOfBirth" required>Date of Birth</FormLabel>
                 <MasterDatePicker
                   id="helperDateOfBirth"
                   value={formValues.dateOfBirth}
@@ -161,7 +161,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="helperMobileNumber">Mobile Number</Label>
+                <FormLabel htmlFor="helperMobileNumber" required>Mobile Number</FormLabel>
                 <Input
                   id="helperMobileNumber"
                   value={formValues.mobileNumber}
@@ -173,7 +173,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="alternateNumber">Alternate Number</Label>
+                <FormLabel htmlFor="alternateNumber">Alternate Number</FormLabel>
                 <Input
                   id="alternateNumber"
                   value={formValues.alternateNumber}
@@ -184,7 +184,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="emergencyMobile">Emergency Mobile</Label>
+                <FormLabel htmlFor="emergencyMobile">Emergency Mobile</FormLabel>
                 <Input
                   id="emergencyMobile"
                   value={formValues.emergencyMobile}
@@ -195,7 +195,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="helperAadharNumber">Aadhar Number</Label>
+                <FormLabel htmlFor="helperAadharNumber" required>Aadhar Number</FormLabel>
                 <Input
                   id="helperAadharNumber"
                   value={formValues.aadharNumber}
@@ -210,7 +210,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
 
             <EmployeeFormSection title="Bank Details">
               <div className="space-y-2">
-                <Label htmlFor="helperAccountHolderName">Account Holder Name</Label>
+                <FormLabel htmlFor="helperAccountHolderName" required>Account Holder Name</FormLabel>
                 <Input
                   id="helperAccountHolderName"
                   value={formValues.accountHolderName}
@@ -221,7 +221,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="helperAccountNumber">Account Number</Label>
+                <FormLabel htmlFor="helperAccountNumber" required>Account Number</FormLabel>
                 <Input
                   id="helperAccountNumber"
                   value={formValues.accountNumber}
@@ -232,7 +232,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="helperBankName">Bank Name</Label>
+                <FormLabel htmlFor="helperBankName" required>Bank Name</FormLabel>
                 <Input
                   id="helperBankName"
                   value={formValues.bankName}
@@ -243,7 +243,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="helperBranchName">Branch Name</Label>
+                <FormLabel htmlFor="helperBranchName" required>Branch Name</FormLabel>
                 <Input
                   id="helperBranchName"
                   value={formValues.branchName}
@@ -254,7 +254,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="helperIfscCode">IFSC Code</Label>
+                <FormLabel htmlFor="helperIfscCode" required>IFSC Code</FormLabel>
                 <Input
                   id="helperIfscCode"
                   value={formValues.ifscCode}
@@ -265,7 +265,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="helperUpiId">UPI ID</Label>
+                <FormLabel htmlFor="helperUpiId">UPI ID</FormLabel>
                 <Input
                   id="helperUpiId"
                   value={formValues.upiId}
@@ -278,7 +278,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
 
             <EmployeeFormSection title="Employment">
               <div className="space-y-2">
-                <Label htmlFor="helperDateOfJoining">Date of Joining</Label>
+                <FormLabel htmlFor="helperDateOfJoining" required>Date of Joining</FormLabel>
                 <MasterDatePicker
                   id="helperDateOfJoining"
                   value={formValues.dateOfJoining}
@@ -288,7 +288,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="helperDateOfLeaving">Date of Leaving</Label>
+                <FormLabel htmlFor="helperDateOfLeaving">Date of Leaving</FormLabel>
                 <MasterDatePicker
                   id="helperDateOfLeaving"
                   value={formValues.dateOfLeaving}
@@ -297,7 +297,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reference">Reference</Label>
+                <FormLabel htmlFor="reference" required>Reference</FormLabel>
                 <Input
                   id="reference"
                   value={formValues.reference}
@@ -308,7 +308,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 />
               </div>
               <div className="space-y-2 sm:col-span-2 lg:col-span-3">
-                <Label htmlFor="helperRemarks">Remarks</Label>
+                <FormLabel htmlFor="helperRemarks">Remarks</FormLabel>
                 <Textarea
                   id="helperRemarks"
                   value={formValues.remarks}
@@ -327,7 +327,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 value={formValues.aadharCardFront}
                 onChange={(value) => updateField('aadharCardFront', value)}
                 disabled={isSaving}
-                required={mode === 'create'}
+                required
               />
               <DocumentUploadField
                 id="helperAadharCardBack"
@@ -335,7 +335,7 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
                 value={formValues.aadharCardBack}
                 onChange={(value) => updateField('aadharCardBack', value)}
                 disabled={isSaving}
-                required={mode === 'create'}
+                required
               />
               <DocumentUploadField
                 id="helperUpiScanner"
