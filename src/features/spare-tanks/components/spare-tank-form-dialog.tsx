@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { spareTanksService } from '@/features/spare-tanks/api/spare-tanks.service'
 import type { CreateSpareTankInput, SpareTank, SpareTankFormValues } from '@/features/spare-tanks/types/spare-tank'
+import { BusNumberAutocomplete } from '@/features/tickets/components/bus-number-autocomplete'
 import { queryClient } from '@/lib/query/query-client'
 
 type FormMode = 'create' | 'edit'
@@ -90,6 +91,10 @@ export function SpareTankFormDialog({ open, mode, editingItem, onOpenChange }: S
       toast.error('Bus number is required.')
       return
     }
+    if (busNumber.length > 50) {
+      toast.error('Bus number must be 50 characters or fewer.')
+      return
+    }
     if (!ownerName) {
       toast.error('Owner name is required.')
       return
@@ -116,22 +121,26 @@ export function SpareTankFormDialog({ open, mode, editingItem, onOpenChange }: S
           <DialogTitle>{mode === 'create' ? 'Add Spare Tank' : 'Edit Spare Tank'}</DialogTitle>
           <DialogDescription>
             {mode === 'create'
-              ? 'Link a spare tank to an existing bus and record the owner details.'
-              : 'Update the bus assignment or owner name for this spare tank.'}
+              ? 'Enter a bus number and owner details. The bus number does not need to exist in the Normal Bus master.'
+              : 'Update the bus number or owner name for this spare tank.'}
           </DialogDescription>
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="spareTankBusNumber">Bus Number</Label>
-            <Input
+            <BusNumberAutocomplete
               id="spareTankBusNumber"
               value={formValues.busNumber}
-              onChange={(event) => setFormValues((prev) => ({ ...prev, busNumber: event.target.value }))}
-              placeholder="e.g., TN-01-AB-1234"
+              onChange={(nextValue) => setFormValues((prev) => ({ ...prev, busNumber: nextValue }))}
+              placeholder="e.g., EXT-9999"
               disabled={isSaving}
-              required
+              source="master"
+              maxLength={50}
             />
+            <p className="text-xs text-muted-foreground">
+              Stored as uppercase. Suggestions come from Normal Bus master but any value is allowed.
+            </p>
           </div>
 
           <div className="space-y-2">

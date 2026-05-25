@@ -21,16 +21,7 @@ function normalizeSpareTank(raw: unknown): SpareTank | null {
   const id =
     typeof idCandidate === 'string' ? idCandidate : typeof idCandidate === 'number' ? String(idCandidate) : undefined
   const ownerName = normalizeString(value.ownerName)
-
-  let busNumber = normalizeString(value.busNumber)
-  let busId: string | undefined
-
-  if (value.bus && typeof value.bus === 'object') {
-    const bus = value.bus as Record<string, unknown>
-    busNumber = busNumber ?? normalizeString(bus.busNumber)
-    const nestedId = bus.id ?? bus.busId
-    busId = typeof nestedId === 'string' ? nestedId : typeof nestedId === 'number' ? String(nestedId) : undefined
-  }
+  const busNumber = normalizeString(value.busNumber)
 
   if (!id || !ownerName || !busNumber) return null
 
@@ -38,7 +29,6 @@ function normalizeSpareTank(raw: unknown): SpareTank | null {
     id,
     ownerName,
     busNumber,
-    busId,
     createdAt: normalizeString(value.createdAt),
     updatedAt: normalizeString(value.updatedAt),
   }

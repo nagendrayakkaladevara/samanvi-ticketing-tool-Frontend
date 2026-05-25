@@ -2,7 +2,6 @@ export type SpareTank = {
   id: string
   ownerName: string
   busNumber: string
-  busId?: string
   createdAt?: string
   updatedAt?: string
 }
