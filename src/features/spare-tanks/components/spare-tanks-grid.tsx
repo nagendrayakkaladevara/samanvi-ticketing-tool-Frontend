@@ -73,7 +73,7 @@ function EmptyState({ onAdd, canManage }: { onAdd?: () => void; canManage: boole
       </div>
       <h3 className="ticket-grid-empty__title">No spare tanks registered</h3>
       <p className="ticket-grid-empty__description">
-        Link spare tanks to existing buses and track owner details for fleet operations.
+        Register spare tank bus numbers and track owner details for fleet operations.
       </p>
       {canManage && onAdd ? (
         <Button className="mt-2" onClick={onAdd}>
@@ -319,7 +319,7 @@ export function SpareTanksGrid({
             <AlertDialogTitle>Delete spare tank?</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteTarget
-                ? `This will permanently remove the spare tank linked to "${deleteTarget.busNumber}" (${deleteTarget.ownerName}).`
+                ? `This will permanently remove the spare tank "${deleteTarget.busNumber}" (${deleteTarget.ownerName}).`
                 : 'This action cannot be undone.'}
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEventHandler 
 
 import { Input } from '@/components/ui/input'
 import { useBusNumbersQuery } from '@/features/buses/hooks/use-bus-numbers-query'
+import { useMasterBusNumbersQuery } from '@/features/master-buses/hooks/use-master-buses-query'
 import { cn } from '@/lib/utils'
 
 type BusNumberAutocompleteProps = {
@@ -11,6 +12,9 @@ type BusNumberAutocompleteProps = {
   disabled?: boolean
   placeholder?: string
   className?: string
+  /** Where to load autocomplete suggestions from. Defaults to ticket buses. */
+  source?: 'tickets' | 'master'
+  maxLength?: number
   'aria-invalid'?: boolean
 }
 
@@ -21,11 +25,15 @@ export function BusNumberAutocomplete({
   disabled = false,
   placeholder,
   className,
+  source = 'tickets',
+  maxLength,
   'aria-invalid': ariaInvalid,
 }: BusNumberAutocompleteProps) {
   const listboxId = useId()
   const containerRef = useRef<HTMLDivElement>(null)
-  const { data: busNumbers = [] } = useBusNumbersQuery()
+  const { data: ticketBusNumbers = [] } = useBusNumbersQuery(source === 'tickets')
+  const { data: masterBusNumbers = [] } = useMasterBusNumbersQuery(source === 'master')
+  const busNumbers = source === 'master' ? masterBusNumbers : ticketBusNumbers
   const [isOpen, setIsOpen] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
 
@@ -103,6 +111,7 @@ export function BusNumberAutocomplete({
         value={value}
         placeholder={placeholder}
         disabled={disabled}
+        maxLength={maxLength}
         aria-invalid={ariaInvalid}
         aria-expanded={showDropdown}
         aria-controls={showDropdown ? listboxId : undefined}

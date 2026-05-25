@@ -53,7 +53,7 @@ Bus ──► Spare Tank (busNumber must exist)
 Recommended UI flow:
 
 1. Create **Service For** entries before **Service Numbers**.
-2. Create **Buses** before **Spare Tanks** (spare tank references an existing bus number).
+2. **Spare Tanks** use a free-text bus number and do not require a matching **Buses** master entry.
 
 ---
 
@@ -379,7 +379,7 @@ GET /master/buses?page=1&limit=20
 GET /master/buses/bus-numbers
 ```
 
-Returns a flat array of bus number strings (for ticket creation, spare tank dropdowns, etc.).
+Returns a flat array of bus number strings (for ticket creation, spare tank autocomplete, etc.).
 
 **Response `200`**
 
@@ -525,19 +525,18 @@ GET /master/spare-tanks?page=1&limit=20
     "items": [
       {
         "id": "clx...",
+        "busNumber": "EXT-9999",
         "ownerName": "Ravi Kumar",
-        "createdAt": "2026-05-24T10:00:00.000Z",
-        "updatedAt": "2026-05-24T10:00:00.000Z",
-        "bus": {
-          "id": "clx...",
-          "busNumber": "BUS-1001"
-        }
+        "createdAt": "2026-05-25T10:00:00.000Z",
+        "updatedAt": "2026-05-25T10:00:00.000Z"
       }
     ]
   },
   "meta": { "page": 1, "limit": 20, "total": 5, "totalPages": 1 }
 }
 ```
+
+**Notes:** `busNumber` is returned directly on the spare tank object (not nested under `bus`).
 
 ---
 
@@ -553,19 +552,30 @@ POST /master/spare-tanks
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
-| `busNumber` | string | Yes | Must match an existing bus (case-insensitive) |
+| `busNumber` | string | Yes | 1–50 chars. Any bus number is allowed; does **not** need to exist in Buses master. Stored as uppercase. |
 | `ownerName` | string | Yes | 1–120 chars |
 
 ```json
 {
-  "busNumber": "BUS-1001",
+  "busNumber": "EXT-9999",
   "ownerName": "Ravi Kumar"
 }
 ```
 
 **Response `201`**
 
-**Errors:** `404` if bus number not found.
+```json
+{
+  "success": true,
+  "data": {
+    "id": "clx...",
+    "busNumber": "EXT-9999",
+    "ownerName": "Ravi Kumar",
+    "createdAt": "2026-05-25T10:00:00.000Z",
+    "updatedAt": "2026-05-25T10:00:00.000Z"
+  }
+}
+```
 
 ---
 
@@ -579,10 +589,10 @@ PATCH /master/spare-tanks/:spareTankId
 
 **Body** — at least one of:
 
-| Field | Type |
-|-------|------|
-| `busNumber` | string |
-| `ownerName` | string |
+| Field | Type | Notes |
+|-------|------|-------|
+| `busNumber` | string | 1–50 chars |
+| `ownerName` | string | 1–120 chars |
 
 ---
 
