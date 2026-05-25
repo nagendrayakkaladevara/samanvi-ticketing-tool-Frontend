@@ -1,5 +1,28 @@
 const DD_MM_YYYY = /^(0[1-9]|[12]\d|3[01])-(0[1-9]|1[0-2])-\d{4}$/
 
+function parseMasterDateValue(value?: string | null): Date | null {
+  if (!value) return null
+
+  if (DD_MM_YYYY.test(value)) {
+    const [day, month, year] = value.split('-')
+    const parsed = new Date(Number(year), Number(month) - 1, Number(day))
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+
+  const isoParsed = new Date(value)
+  return Number.isNaN(isoParsed.getTime()) ? null : isoParsed
+}
+
+export function isMasterDateBeforeToday(value?: string | null): boolean {
+  const parsed = parseMasterDateValue(value)
+  if (!parsed) return false
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  parsed.setHours(0, 0, 0, 0)
+  return parsed < today
+}
+
 export function formatMasterDateDisplay(value?: string | null): string {
   if (!value) return '—'
 
