@@ -1,7 +1,13 @@
 import { useMemo, useState } from 'react'
-import { BusFront, FileSpreadsheet, FileText, Fuel, Plus, RefreshCw } from 'lucide-react'
+import { BusFront, Download, FileSpreadsheet, FileText, Fuel, Plus, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { MasterBusFormDialog } from '@/features/master-buses/components/master-bus-form-dialog'
 import { MasterBusesGrid } from '@/features/master-buses/components/master-buses-grid'
@@ -123,6 +129,8 @@ export function BusNoPage() {
 
   const closeForm = () => setFormState({ kind: 'closed' })
 
+  const exportsDisabled = isLoading || exportCount === 0
+
   return (
     <section className="space-y-6">
       <header className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-amber-500/10 via-background to-teal-500/10 p-6 shadow-sm">
@@ -161,37 +169,62 @@ export function BusNoPage() {
         </div>
       </header>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-xl border border-border bg-muted/30 p-1">
+      <div className="flex w-full items-center gap-2 sm:justify-between">
+        <div className="inline-flex min-w-0 flex-1 rounded-xl border border-border bg-muted/30 p-1 sm:flex-none">
           <button
             type="button"
             onClick={() => setActiveTab('normal')}
             className={cn(
-              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+              'inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:gap-2 sm:px-4',
               activeTab === 'normal'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            <BusFront className="h-4 w-4" />
-            Normal Bus
+            <BusFront className="h-4 w-4 shrink-0" />
+            <span className="truncate">Normal Bus</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('spare')}
             className={cn(
-              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+              'inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:gap-2 sm:px-4',
               activeTab === 'spare'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            <Fuel className="h-4 w-4" />
-            Spare Tank
+            <Fuel className="h-4 w-4 shrink-0" />
+            <span className="truncate">Spare Tank</span>
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0 sm:hidden"
+              disabled={exportsDisabled}
+              aria-label="Export options"
+            >
+              <Download className="h-4 w-4" aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem disabled={exportsDisabled} onClick={handleDownloadExcel}>
+              <FileSpreadsheet className="h-4 w-4" aria-hidden />
+              Download Excel
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={exportsDisabled} onClick={handleDownloadPdf}>
+              <FileText className="h-4 w-4" aria-hidden />
+              Download PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <div className="hidden shrink-0 items-center gap-2 sm:flex">
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -201,7 +234,7 @@ export function BusNoPage() {
                   size="sm"
                   className="gap-2"
                   onClick={handleDownloadExcel}
-                  disabled={isLoading || exportCount === 0}
+                  disabled={exportsDisabled}
                   aria-label={
                     activeTab === 'normal' ? 'Download normal buses as Excel' : 'Download spare tanks as Excel'
                   }
@@ -224,7 +257,7 @@ export function BusNoPage() {
                   size="sm"
                   className="gap-2"
                   onClick={handleDownloadPdf}
-                  disabled={isLoading || exportCount === 0}
+                  disabled={exportsDisabled}
                   aria-label={
                     activeTab === 'normal' ? 'Download normal buses as PDF' : 'Download spare tanks as PDF'
                   }
