@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { FormLabel } from '@/components/ui/form-label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { serviceNumbersService } from '@/features/service-numbers/api/service-numbers.service'
@@ -117,7 +117,7 @@ export function ServiceNumberFormDialog({
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="serviceForId">Service For</Label>
+              <FormLabel htmlFor="serviceForId" required={mode === 'create'}>Service For</FormLabel>
               <Select
                 value={formValues.serviceForId || undefined}
                 onValueChange={(value) => updateField('serviceForId', value)}
@@ -137,7 +137,7 @@ export function ServiceNumberFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="serviceNo">Service Number</Label>
+              <FormLabel htmlFor="serviceNo" required={mode === 'create'}>Service Number</FormLabel>
               <Input
                 id="serviceNo"
                 value={formValues.serviceNo}
@@ -150,7 +150,7 @@ export function ServiceNumberFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="distance">Distance (km)</Label>
+              <FormLabel htmlFor="distance" required={mode === 'create'}>Distance (km)</FormLabel>
               <Input
                 id="distance"
                 type="number"
@@ -164,7 +164,7 @@ export function ServiceNumberFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="from">From</Label>
+              <FormLabel htmlFor="from" required={mode === 'create'}>From</FormLabel>
               <Input
                 id="from"
                 value={formValues.from}
@@ -177,7 +177,7 @@ export function ServiceNumberFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="to">To</Label>
+              <FormLabel htmlFor="to" required={mode === 'create'}>To</FormLabel>
               <Input
                 id="to"
                 value={formValues.to}
@@ -190,7 +190,7 @@ export function ServiceNumberFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="via">Via</Label>
+              <FormLabel htmlFor="via" required={mode === 'create'}>Via</FormLabel>
               <Input
                 id="via"
                 value={formValues.via}
@@ -203,7 +203,7 @@ export function ServiceNumberFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="parkingAmount">Parking Amount</Label>
+              <FormLabel htmlFor="parkingAmount" required={mode === 'create'}>Parking Amount</FormLabel>
               <Input
                 id="parkingAmount"
                 type="number"
@@ -217,7 +217,7 @@ export function ServiceNumberFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="driverOneBeta">Driver One Beta</Label>
+              <FormLabel htmlFor="driverOneBeta" required={mode === 'create'}>Driver One Beta</FormLabel>
               <Input
                 id="driverOneBeta"
                 type="number"
@@ -231,7 +231,7 @@ export function ServiceNumberFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="driverTwoBeta">Driver Two Beta</Label>
+              <FormLabel htmlFor="driverTwoBeta" required={mode === 'create'}>Driver Two Beta</FormLabel>
               <Input
                 id="driverTwoBeta"
                 type="number"
@@ -245,7 +245,7 @@ export function ServiceNumberFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="helperBeta">Helper Beta</Label>
+              <FormLabel htmlFor="helperBeta" required={mode === 'create'}>Helper Beta</FormLabel>
               <Input
                 id="helperBeta"
                 type="number"
@@ -259,7 +259,7 @@ export function ServiceNumberFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="conductorBeta">Conductor Beta</Label>
+              <FormLabel htmlFor="conductorBeta" required={mode === 'create'}>Conductor Beta</FormLabel>
               <Input
                 id="conductorBeta"
                 type="number"
@@ -273,7 +273,7 @@ export function ServiceNumberFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="optDriver">Optional Driver</Label>
+              <FormLabel htmlFor="optDriver" required={mode === 'create'}>Optional Driver</FormLabel>
               <Input
                 id="optDriver"
                 value={formValues.optDriver}
@@ -285,7 +285,7 @@ export function ServiceNumberFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="optHelper">Optional Helper</Label>
+              <FormLabel htmlFor="optHelper" required={mode === 'create'}>Optional Helper</FormLabel>
               <Input
                 id="optHelper"
                 value={formValues.optHelper}
@@ -297,7 +297,7 @@ export function ServiceNumberFormDialog({
             </div>
 
             <div className="space-y-2 sm:col-span-2 lg:col-span-3">
-              <Label htmlFor="remarks">Remarks</Label>
+              <FormLabel htmlFor="remarks" required={mode === 'create'}>Remarks</FormLabel>
               <Textarea
                 id="remarks"
                 value={formValues.remarks}

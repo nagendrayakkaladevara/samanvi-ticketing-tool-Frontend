@@ -7,7 +7,7 @@ import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { FormLabel } from '@/components/ui/form-label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { notificationQueryKeys } from '@/features/notifications/hooks/notification-query-keys'
@@ -22,14 +22,6 @@ const MIN_DESCRIPTION_WORDS_FOR_AI = 4
 
 const invalidFieldClass =
   'border-red-500 ring-1 ring-red-500/30 focus-visible:ring-red-500 dark:border-red-400 dark:ring-red-400/30 dark:focus-visible:ring-red-400'
-
-function RequiredBadge() {
-  return (
-    <span className="ml-2 inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-      Required
-    </span>
-  )
-}
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null
@@ -123,10 +115,9 @@ export function CreateTicketPage() {
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <Card className="space-y-4 p-5">
           <div className="space-y-2">
-            <Label htmlFor="title">
+            <FormLabel htmlFor="title" required>
               Title
-              <RequiredBadge />
-            </Label>
+            </FormLabel>
             <Input
               id="title"
               placeholder="e.g., Engine overheating on route 42"
@@ -141,10 +132,9 @@ export function CreateTicketPage() {
 
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Label htmlFor="description">
+              <FormLabel htmlFor="description" required>
                 Description
-                <RequiredBadge />
-              </Label>
+              </FormLabel>
               <Button
                 type="button"
                 variant="outline"
@@ -179,10 +169,9 @@ export function CreateTicketPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="severity">
+              <FormLabel htmlFor="severity" required>
                 Severity
-                <RequiredBadge />
-              </Label>
+              </FormLabel>
               <Select
                 value={form.values.severity}
                 onValueChange={(value) => form.setField('severity', value as 'critical' | 'high' | 'medium' | 'low')}
@@ -201,10 +190,9 @@ export function CreateTicketPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="priority">
+              <FormLabel htmlFor="priority" required>
                 Priority
-                <RequiredBadge />
-              </Label>
+              </FormLabel>
               <Select
                 value={form.values.priority}
                 onValueChange={(value) => form.setField('priority', value as 'p1' | 'p2' | 'p3')}
@@ -222,10 +210,9 @@ export function CreateTicketPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="categoryId">
+              <FormLabel htmlFor="categoryId" required>
                 Category
-                <RequiredBadge />
-              </Label>
+              </FormLabel>
               <Select
                 value={form.values.categoryId}
                 onValueChange={(value) => form.setField('categoryId', value)}
@@ -250,10 +237,9 @@ export function CreateTicketPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="busNumber">
+              <FormLabel htmlFor="busNumber" required>
                 Bus Number
-                <RequiredBadge />
-              </Label>
+              </FormLabel>
               <BusNumberAutocomplete
                 id="busNumber"
                 placeholder="e.g., AP09AB1234"
@@ -267,7 +253,7 @@ export function CreateTicketPage() {
             </div>
 
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="assignedToId">Assign To</Label>
+              <FormLabel htmlFor="assignedToId">Assign To</FormLabel>
               <Select
                 value={form.values.assignedToId}
                 onValueChange={(value) => form.setField('assignedToId', value)}
@@ -289,10 +275,9 @@ export function CreateTicketPage() {
 
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Label htmlFor="slaDueAtLocal">
+              <FormLabel htmlFor="slaDueAtLocal" required>
                 SLA Due At
-                <RequiredBadge />
-              </Label>
+              </FormLabel>
               <Button
                 type="button"
                 variant="outline"

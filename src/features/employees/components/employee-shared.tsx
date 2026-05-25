@@ -2,7 +2,7 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { ImagePlus, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
+import { FormLabel } from '@/components/ui/form-label'
 import { fileToBase64 } from '@/lib/utils/file-to-base64'
 import { cn } from '@/lib/utils'
 import { isMasterDateBeforeToday } from '@/lib/utils/master-dates'
@@ -49,10 +49,9 @@ export function DocumentUploadField({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>
+      <FormLabel htmlFor={id} required={required}>
         {label}
-        {required ? <span className="text-destructive"> *</span> : null}
-      </Label>
+      </FormLabel>
       <div
         className={cn(
           'flex flex-col gap-3 rounded-xl border border-dashed bg-muted/20 p-3',

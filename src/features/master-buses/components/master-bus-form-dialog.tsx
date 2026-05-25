@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { FormLabel } from '@/components/ui/form-label'
 import { MasterDatePicker } from '@/components/ui/master-date-picker'
 import { Textarea } from '@/components/ui/textarea'
 import { masterBusesService } from '@/features/master-buses/api/master-buses.service'
@@ -181,7 +181,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-2 sm:col-span-2 lg:col-span-3">
-              <Label htmlFor="busNumber">Bus Number</Label>
+              <FormLabel htmlFor="busNumber" required={mode === 'create'}>Bus Number</FormLabel>
               <Input
                 id="busNumber"
                 value={formValues.busNumber}
@@ -194,7 +194,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="engineNumber">Engine Number</Label>
+              <FormLabel htmlFor="engineNumber" required={mode === 'create'}>Engine Number</FormLabel>
               <Input
                 id="engineNumber"
                 value={formValues.engineNumber}
@@ -206,7 +206,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="chassisNumber">Chassis Number</Label>
+              <FormLabel htmlFor="chassisNumber" required={mode === 'create'}>Chassis Number</FormLabel>
               <Input
                 id="chassisNumber"
                 value={formValues.chassisNumber}
@@ -218,7 +218,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="odometer">Odometer (km)</Label>
+              <FormLabel htmlFor="odometer" required={mode === 'create'}>Odometer (km)</FormLabel>
               <Input
                 id="odometer"
                 type="number"
@@ -232,7 +232,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="purchaseDate">Purchase Date</Label>
+              <FormLabel htmlFor="purchaseDate">Purchase Date</FormLabel>
               <MasterDatePicker
                 id="purchaseDate"
                 value={formValues.purchaseDate}
@@ -243,7 +243,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="insuranceValidity">Insurance Validity</Label>
+              <FormLabel htmlFor="insuranceValidity" required={mode === 'create'}>Insurance Validity</FormLabel>
               <MasterDatePicker
                 id="insuranceValidity"
                 value={formValues.insuranceValidity}
@@ -255,7 +255,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lastMaintenanceDate">Last Maintenance</Label>
+              <FormLabel htmlFor="lastMaintenanceDate">Last Maintenance</FormLabel>
               <MasterDatePicker
                 id="lastMaintenanceDate"
                 value={formValues.lastMaintenanceDate}
@@ -266,7 +266,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pollutionValidity">Pollution Validity</Label>
+              <FormLabel htmlFor="pollutionValidity">Pollution Validity</FormLabel>
               <MasterDatePicker
                 id="pollutionValidity"
                 value={formValues.pollutionValidity}
@@ -277,7 +277,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fcValidity">FC Validity</Label>
+              <FormLabel htmlFor="fcValidity">FC Validity</FormLabel>
               <MasterDatePicker
                 id="fcValidity"
                 value={formValues.fcValidity}
@@ -288,7 +288,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="basePermitValidity">Base Permit Validity</Label>
+              <FormLabel htmlFor="basePermitValidity">Base Permit Validity</FormLabel>
               <MasterDatePicker
                 id="basePermitValidity"
                 value={formValues.basePermitValidity}
@@ -299,7 +299,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="homeTaxValidity">Home Tax Validity</Label>
+              <FormLabel htmlFor="homeTaxValidity">Home Tax Validity</FormLabel>
               <MasterDatePicker
                 id="homeTaxValidity"
                 value={formValues.homeTaxValidity}
@@ -310,7 +310,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="aitpValidity">AITP Validity</Label>
+              <FormLabel htmlFor="aitpValidity">AITP Validity</FormLabel>
               <MasterDatePicker
                 id="aitpValidity"
                 value={formValues.aitpValidity}
@@ -321,7 +321,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="aitpAuthorizationValidity">AITP Authorization Validity</Label>
+              <FormLabel htmlFor="aitpAuthorizationValidity">AITP Authorization Validity</FormLabel>
               <MasterDatePicker
                 id="aitpAuthorizationValidity"
                 value={formValues.aitpAuthorizationValidity}
@@ -332,7 +332,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="serviceOutDate">Service Out Date</Label>
+              <FormLabel htmlFor="serviceOutDate">Service Out Date</FormLabel>
               <MasterDatePicker
                 id="serviceOutDate"
                 value={formValues.serviceOutDate}
@@ -343,7 +343,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2 sm:col-span-2 lg:col-span-3">
-              <Label htmlFor="remarks">Remarks</Label>
+              <FormLabel htmlFor="remarks">Remarks</FormLabel>
               <Textarea
                 id="remarks"
                 value={formValues.remarks}

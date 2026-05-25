@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { FormLabel } from '@/components/ui/form-label'
 import { MasterDatePicker } from '@/components/ui/master-date-picker'
 import { Textarea } from '@/components/ui/textarea'
 import { officeStaffService } from '@/features/employees/api/office-staff.service'
@@ -129,7 +129,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
           <form className="space-y-5" onSubmit={handleSubmit}>
             <EmployeeFormSection title="Personal Details">
               <div className="space-y-2">
-                <Label htmlFor="staffFullName">Full Name</Label>
+                <FormLabel htmlFor="staffFullName" required={mode === 'create'}>Full Name</FormLabel>
                 <Input
                   id="staffFullName"
                   value={formValues.aadharName}
@@ -140,7 +140,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="staffNickName">Nick Name</Label>
+                <FormLabel htmlFor="staffNickName" required={mode === 'create'}>Nick Name</FormLabel>
                 <Input
                   id="staffNickName"
                   value={formValues.nickName}
@@ -151,7 +151,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="designation">Designation</Label>
+                <FormLabel htmlFor="designation" required={mode === 'create'}>Designation</FormLabel>
                 <Input
                   id="designation"
                   value={formValues.designation}
@@ -162,7 +162,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="staffDateOfBirth">Date of Birth</Label>
+                <FormLabel htmlFor="staffDateOfBirth" required={mode === 'create'}>Date of Birth</FormLabel>
                 <MasterDatePicker
                   id="staffDateOfBirth"
                   value={formValues.dateOfBirth}
@@ -172,7 +172,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="staffMobileNumber">Mobile Number</Label>
+                <FormLabel htmlFor="staffMobileNumber" required={mode === 'create'}>Mobile Number</FormLabel>
                 <Input
                   id="staffMobileNumber"
                   value={formValues.mobileNumber}
@@ -184,7 +184,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="alternativeMobile">Alternative Mobile</Label>
+                <FormLabel htmlFor="alternativeMobile">Alternative Mobile</FormLabel>
                 <Input
                   id="alternativeMobile"
                   value={formValues.alternativeMobile}
@@ -195,7 +195,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="emergencyContact">Emergency Contact</Label>
+                <FormLabel htmlFor="emergencyContact">Emergency Contact</FormLabel>
                 <Input
                   id="emergencyContact"
                   value={formValues.emergencyContact}
@@ -206,7 +206,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="staffAadharNumber">Aadhar Number</Label>
+                <FormLabel htmlFor="staffAadharNumber" required={mode === 'create'}>Aadhar Number</FormLabel>
                 <Input
                   id="staffAadharNumber"
                   value={formValues.aadharNumber}
@@ -221,7 +221,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
 
             <EmployeeFormSection title="Bank Details">
               <div className="space-y-2">
-                <Label htmlFor="staffAccountHolderName">Account Holder Name</Label>
+                <FormLabel htmlFor="staffAccountHolderName" required={mode === 'create'}>Account Holder Name</FormLabel>
                 <Input
                   id="staffAccountHolderName"
                   value={formValues.accountHolderName}
@@ -232,7 +232,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="staffAccountNumber">Account Number</Label>
+                <FormLabel htmlFor="staffAccountNumber" required={mode === 'create'}>Account Number</FormLabel>
                 <Input
                   id="staffAccountNumber"
                   value={formValues.accountNumber}
@@ -243,7 +243,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="staffBankName">Bank Name</Label>
+                <FormLabel htmlFor="staffBankName" required={mode === 'create'}>Bank Name</FormLabel>
                 <Input
                   id="staffBankName"
                   value={formValues.bankName}
@@ -254,7 +254,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="staffBranchName">Branch Name</Label>
+                <FormLabel htmlFor="staffBranchName" required={mode === 'create'}>Branch Name</FormLabel>
                 <Input
                   id="staffBranchName"
                   value={formValues.branchName}
@@ -265,7 +265,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="staffIfscCode">IFSC Code</Label>
+                <FormLabel htmlFor="staffIfscCode" required={mode === 'create'}>IFSC Code</FormLabel>
                 <Input
                   id="staffIfscCode"
                   value={formValues.ifscCode}
@@ -276,7 +276,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="staffUpiId">UPI ID</Label>
+                <FormLabel htmlFor="staffUpiId">UPI ID</FormLabel>
                 <Input
                   id="staffUpiId"
                   value={formValues.upiId}
@@ -289,7 +289,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
 
             <EmployeeFormSection title="Employment">
               <div className="space-y-2">
-                <Label htmlFor="staffDateOfJoining">Date of Joining</Label>
+                <FormLabel htmlFor="staffDateOfJoining" required={mode === 'create'}>Date of Joining</FormLabel>
                 <MasterDatePicker
                   id="staffDateOfJoining"
                   value={formValues.dateOfJoining}
@@ -299,7 +299,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="staffDateOfLeaving">Date of Leaving</Label>
+                <FormLabel htmlFor="staffDateOfLeaving">Date of Leaving</FormLabel>
                 <MasterDatePicker
                   id="staffDateOfLeaving"
                   value={formValues.dateOfLeaving}
@@ -308,7 +308,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="staffReferenceName">Reference Name</Label>
+                <FormLabel htmlFor="staffReferenceName" required={mode === 'create'}>Reference Name</FormLabel>
                 <Input
                   id="staffReferenceName"
                   value={formValues.referenceName}
@@ -319,7 +319,7 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
                 />
               </div>
               <div className="space-y-2 sm:col-span-2 lg:col-span-3">
-                <Label htmlFor="staffRemarks">Remarks</Label>
+                <FormLabel htmlFor="staffRemarks">Remarks</FormLabel>
                 <Textarea
                   id="staffRemarks"
                   value={formValues.remarks}
