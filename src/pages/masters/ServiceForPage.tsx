@@ -1,6 +1,7 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { FileSpreadsheet, Layers, Loader2, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { useMasterDialogParams } from '@/hooks/use-master-dialog-params'
 import { toast } from '@/lib/toast'
 
 import {
@@ -59,11 +60,23 @@ function validateServiceFor(value: string): string | null {
 export function ServiceForPage() {
   const { data: items = [], isLoading, isFetching, isError, error } = useServiceForQuery()
 
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [formMode, setFormMode] = useState<FormMode>('create')
-  const [editingItem, setEditingItem] = useState<ServiceFor | null>(null)
+  const { action, id, openDialog, closeDialog } = useMasterDialogParams()
+
   const [serviceForValue, setServiceForValue] = useState('')
-  const [deleteTarget, setDeleteTarget] = useState<ServiceFor | null>(null)
+
+  const editingItem = useMemo(
+    () => (action === 'edit' && id ? items.find((item) => item.id === id) ?? null : null),
+    [action, id, items],
+  )
+
+  const deleteTarget = useMemo(
+    () => (action === 'delete' && id ? items.find((item) => item.id === id) ?? null : null),
+    [action, id, items],
+  )
+
+  const formMode: FormMode = action === 'edit' ? 'edit' : 'create'
+  const isFormOpen = action === 'create' || (action === 'edit' && Boolean(editingItem))
+  const isDeleteOpen = action === 'delete' && Boolean(deleteTarget)
 
   const sortedItems = useMemo(
     () => [...items].sort((a, b) => a.serviceFor.localeCompare(b.serviceFor)),
@@ -107,7 +120,7 @@ export function ServiceForPage() {
     onSuccess: () => {
       toast.success('Service For deleted successfully.')
       queryClient.invalidateQueries({ queryKey: ['service-for'] })
-      setDeleteTarget(null)
+      closeDialog()
     },
     onError: (mutationError) => {
       toast.error(mutationError instanceof Error ? mutationError.message : 'Failed to delete Service For.')
@@ -117,24 +130,32 @@ export function ServiceForPage() {
   const isSaving = createMutation.isPending || updateMutation.isPending
 
   const closeForm = () => {
-    setIsFormOpen(false)
-    setEditingItem(null)
+    closeDialog()
     setServiceForValue('')
   }
 
   const openCreateForm = () => {
-    setFormMode('create')
-    setEditingItem(null)
     setServiceForValue('')
-    setIsFormOpen(true)
+    openDialog({ action: 'create' })
   }
 
   const openEditForm = (item: ServiceFor) => {
-    setFormMode('edit')
-    setEditingItem(item)
     setServiceForValue(item.serviceFor)
-    setIsFormOpen(true)
+    openDialog({ action: 'edit', id: item.id })
   }
+
+  const openDeleteDialog = (item: ServiceFor) => {
+    openDialog({ action: 'delete', id: item.id })
+  }
+
+  useEffect(() => {
+    if (action === 'edit' && editingItem) {
+      setServiceForValue(editingItem.serviceFor)
+    }
+    if (action === 'create') {
+      setServiceForValue('')
+    }
+  }, [action, editingItem])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -279,7 +300,7 @@ export function ServiceForPage() {
                       variant="destructive"
                       size="sm"
                       className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                      onClick={() => setDeleteTarget(item)}
+                      onClick={() => openDeleteDialog(item)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -318,7 +339,7 @@ export function ServiceForPage() {
                           variant="destructive"
                           size="sm"
                           className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                          onClick={() => setDeleteTarget(item)}
+                          onClick={() => openDeleteDialog(item)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           Delete
@@ -336,11 +357,7 @@ export function ServiceForPage() {
       <Dialog
         open={isFormOpen}
         onOpenChange={(open) => {
-          if (!open) {
-            closeForm()
-            return
-          }
-          setIsFormOpen(true)
+          if (!open) closeForm()
         }}
       >
         <DialogContent className="sm:max-w-md">
@@ -382,7 +399,7 @@ export function ServiceForPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialog open={isDeleteOpen} onOpenChange={(open) => !open && closeDialog()}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Service For?</AlertDialogTitle>
