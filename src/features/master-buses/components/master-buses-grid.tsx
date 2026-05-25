@@ -169,6 +169,17 @@ export function MasterBusesGrid({
   const columnDefs = useMemo<Array<ColDef<MasterBusGridRow>>>(
     () => [
       {
+        headerName: 'S.No',
+        headerClass: 'ticket-grid__header-cell',
+        valueGetter: (params) => (params.node?.rowIndex ?? 0) + 1,
+        minWidth: 70,
+        maxWidth: 90,
+        sortable: false,
+        filter: false,
+        floatingFilter: false,
+        cellClass: 'text-muted-foreground',
+      },
+      {
         field: 'busNumber',
         headerName: 'Bus No',
         headerClass: 'ticket-grid__header-cell',
@@ -379,16 +390,18 @@ export function MasterBusesGrid({
       {!isLoading && !isError && rowData.length > 0 ? (
         <>
           <div className="master-bus-mobile-list md:hidden">
-            {rowData.map((row) => {
+            {rowData.map((row, index) => {
               const bus = busById.get(row.id)
               return (
-                <MasterBusMobileCard
-                  key={row.id}
-                  row={row}
-                  canManage={canManage && Boolean(bus)}
-                  onEdit={bus ? () => onEdit(bus) : undefined}
-                  onDelete={() => setDeleteTarget(row)}
-                />
+                <div key={row.id} className="space-y-1">
+                  <p className="px-1 text-xs text-muted-foreground">S.No {index + 1}</p>
+                  <MasterBusMobileCard
+                    row={row}
+                    canManage={canManage && Boolean(bus)}
+                    onEdit={bus ? () => onEdit(bus) : undefined}
+                    onDelete={() => setDeleteTarget(row)}
+                  />
+                </div>
               )
             })}
           </div>
