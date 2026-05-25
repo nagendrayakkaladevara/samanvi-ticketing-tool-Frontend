@@ -7,7 +7,7 @@ import {
   type ColDef,
   type ICellRendererParams,
 } from 'ag-grid-community'
-import { AlertTriangle, BusFront, Inbox, Pencil, Trash2 } from 'lucide-react'
+import { AlertTriangle, Inbox, Pencil, Trash2 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 
 import {
@@ -25,6 +25,10 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { masterBusesService } from '@/features/master-buses/api/master-buses.service'
+import {
+  MasterBusMobileCard,
+  MasterBusMobileCardSkeleton,
+} from '@/features/master-buses/components/master-bus-mobile-card'
 import type { MasterBus, MasterBusGridRow } from '@/features/master-buses/types/master-bus'
 import { compareMasterBusesByNumber, toMasterBusGridRow } from '@/features/master-buses/utils/master-bus-model'
 import { useDarkMode } from '@/hooks/use-dark-mode'
@@ -347,9 +351,9 @@ export function MasterBusesGrid({
     <>
       {isLoading ? (
         <>
-          <div className="space-y-3 md:hidden">
+          <div className="master-bus-mobile-list md:hidden">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-24 w-full rounded-xl" />
+              <MasterBusMobileCardSkeleton key={index} />
             ))}
           </div>
           <div className="hidden md:block">
@@ -374,48 +378,17 @@ export function MasterBusesGrid({
 
       {!isLoading && !isError && rowData.length > 0 ? (
         <>
-          <div className="space-y-3 md:hidden">
+          <div className="master-bus-mobile-list md:hidden">
             {rowData.map((row) => {
               const bus = busById.get(row.id)
               return (
-                <Card key={row.id} className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 space-y-2">
-                      <span className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-sm font-medium">
-                        <BusFront className="h-3.5 w-3.5 text-muted-foreground" />
-                        {row.busNumber}
-                      </span>
-                      <div className="space-y-0.5 text-xs text-muted-foreground">
-                        <p>Engine: {row.engineNumber}</p>
-                        <p>Chassis: {row.chassisNumber}</p>
-                        <p>Purchase: {row.purchaseDateLabel}</p>
-                        <p>Odometer: {row.odometer.toLocaleString()} km</p>
-                        <p>Insurance: {row.insuranceValidityLabel}</p>
-                        <p>Pollution: {row.pollutionValidityLabel}</p>
-                        <p>FC: {row.fcValidityLabel}</p>
-                        <p>Service Out: {row.serviceOutDateLabel}</p>
-                        {row.remarks?.trim() ? (
-                          <p className="line-clamp-2 text-foreground/80">Remarks: {row.remarks.trim()}</p>
-                        ) : null}
-                      </div>
-                    </div>
-                    {canManage && bus ? (
-                      <div className="flex shrink-0 gap-2">
-                        <Button variant="outline" size="sm" onClick={() => onEdit(bus)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                          onClick={() => setDeleteTarget(row)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ) : null}
-                  </div>
-                </Card>
+                <MasterBusMobileCard
+                  key={row.id}
+                  row={row}
+                  canManage={canManage && Boolean(bus)}
+                  onEdit={bus ? () => onEdit(bus) : undefined}
+                  onDelete={() => setDeleteTarget(row)}
+                />
               )
             })}
           </div>
