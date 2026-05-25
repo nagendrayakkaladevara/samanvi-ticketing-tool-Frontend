@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { BusFront, FileSpreadsheet, Fuel, Plus, RefreshCw } from 'lucide-react'
+import { BusFront, FileSpreadsheet, FileText, Fuel, Plus, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -8,11 +8,13 @@ import { MasterBusesGrid } from '@/features/master-buses/components/master-buses
 import { useMasterBusesQuery } from '@/features/master-buses/hooks/use-master-buses-query'
 import type { MasterBus } from '@/features/master-buses/types/master-bus'
 import { downloadNormalBusesExcel } from '@/features/master-buses/utils/download-normal-buses-excel'
+import { downloadNormalBusesPdf } from '@/features/master-buses/utils/download-normal-buses-pdf'
 import { SpareTankFormDialog } from '@/features/spare-tanks/components/spare-tank-form-dialog'
 import { SpareTanksGrid } from '@/features/spare-tanks/components/spare-tanks-grid'
 import { useSpareTanksQuery } from '@/features/spare-tanks/hooks/use-spare-tanks-query'
 import type { SpareTank } from '@/features/spare-tanks/types/spare-tank'
 import { downloadSpareTanksExcel } from '@/features/spare-tanks/utils/download-spare-tanks-excel'
+import { downloadSpareTanksPdf } from '@/features/spare-tanks/utils/download-spare-tanks-pdf'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
@@ -81,6 +83,33 @@ export function BusNoPage() {
       toast.success('Spare tanks list downloaded as Excel.')
     } catch {
       toast.error('Failed to download Excel file.')
+    }
+  }
+
+  const handleDownloadPdf = () => {
+    if (activeTab === 'normal') {
+      if (buses.length === 0) {
+        toast.error('No normal buses to export.')
+        return
+      }
+      try {
+        downloadNormalBusesPdf(buses)
+        toast.success('Normal buses list downloaded as PDF.')
+      } catch {
+        toast.error('Failed to download PDF file.')
+      }
+      return
+    }
+
+    if (spareTanks.length === 0) {
+      toast.error('No spare tanks to export.')
+      return
+    }
+    try {
+      downloadSpareTanksPdf(spareTanks)
+      toast.success('Spare tanks list downloaded as PDF.')
+    } catch {
+      toast.error('Failed to download PDF file.')
     }
   }
 
@@ -162,29 +191,54 @@ export function BusNoPage() {
           </button>
         </div>
 
-        <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={handleDownloadExcel}
-                disabled={isLoading || exportCount === 0}
-                aria-label={
-                  activeTab === 'normal' ? 'Download normal buses as Excel' : 'Download spare tanks as Excel'
-                }
-              >
-                <FileSpreadsheet className="h-4 w-4" aria-hidden />
-                Download Excel
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              {activeTab === 'normal' ? 'Download normal buses as Excel' : 'Download spare tanks as Excel'}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <div className="flex flex-wrap items-center gap-2">
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleDownloadExcel}
+                  disabled={isLoading || exportCount === 0}
+                  aria-label={
+                    activeTab === 'normal' ? 'Download normal buses as Excel' : 'Download spare tanks as Excel'
+                  }
+                >
+                  <FileSpreadsheet className="h-4 w-4" aria-hidden />
+                  Download Excel
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {activeTab === 'normal' ? 'Download normal buses as Excel' : 'Download spare tanks as Excel'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleDownloadPdf}
+                  disabled={isLoading || exportCount === 0}
+                  aria-label={
+                    activeTab === 'normal' ? 'Download normal buses as PDF' : 'Download spare tanks as PDF'
+                  }
+                >
+                  <FileText className="h-4 w-4" aria-hidden />
+                  Download PDF
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {activeTab === 'normal' ? 'Download normal buses as PDF' : 'Download spare tanks as PDF'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
 
       {activeTab === 'normal' ? (
