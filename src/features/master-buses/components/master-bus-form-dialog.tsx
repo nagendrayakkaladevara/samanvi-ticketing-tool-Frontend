@@ -181,7 +181,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-2 sm:col-span-2 lg:col-span-3">
-              <FormLabel htmlFor="busNumber" required={mode === 'create'}>Bus Number</FormLabel>
+              <FormLabel htmlFor="busNumber" required>Bus Number</FormLabel>
               <Input
                 id="busNumber"
                 value={formValues.busNumber}
@@ -194,7 +194,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <FormLabel htmlFor="engineNumber" required={mode === 'create'}>Engine Number</FormLabel>
+              <FormLabel htmlFor="engineNumber" required>Engine Number</FormLabel>
               <Input
                 id="engineNumber"
                 value={formValues.engineNumber}
@@ -206,7 +206,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <FormLabel htmlFor="chassisNumber" required={mode === 'create'}>Chassis Number</FormLabel>
+              <FormLabel htmlFor="chassisNumber" required>Chassis Number</FormLabel>
               <Input
                 id="chassisNumber"
                 value={formValues.chassisNumber}
@@ -218,7 +218,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <FormLabel htmlFor="odometer" required={mode === 'create'}>Odometer (km)</FormLabel>
+              <FormLabel htmlFor="odometer" required>Odometer (km)</FormLabel>
               <Input
                 id="odometer"
                 type="number"
@@ -243,7 +243,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
             </div>
 
             <div className="space-y-2">
-              <FormLabel htmlFor="insuranceValidity" required={mode === 'create'}>Insurance Validity</FormLabel>
+              <FormLabel htmlFor="insuranceValidity" required>Insurance Validity</FormLabel>
               <MasterDatePicker
                 id="insuranceValidity"
                 value={formValues.insuranceValidity}

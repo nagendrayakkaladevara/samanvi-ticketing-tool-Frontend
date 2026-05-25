@@ -130,7 +130,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
           <form className="space-y-5" onSubmit={handleSubmit}>
             <EmployeeFormSection title="Personal Details">
               <div className="space-y-2">
-                <FormLabel htmlFor="aadharName" required={mode === 'create'}>Aadhar Name</FormLabel>
+                <FormLabel htmlFor="aadharName" required>Aadhar Name</FormLabel>
                 <Input
                   id="aadharName"
                   value={formValues.aadharName}
@@ -141,7 +141,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 />
               </div>
               <div className="space-y-2">
-                <FormLabel htmlFor="dlName" required={mode === 'create'}>DL Name</FormLabel>
+                <FormLabel htmlFor="dlName" required>DL Name</FormLabel>
                 <Input
                   id="dlName"
                   value={formValues.dlName}
@@ -152,7 +152,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 />
               </div>
               <div className="space-y-2">
-                <FormLabel htmlFor="dateOfBirth" required={mode === 'create'}>Date of Birth</FormLabel>
+                <FormLabel htmlFor="dateOfBirth" required>Date of Birth</FormLabel>
                 <MasterDatePicker
                   id="dateOfBirth"
                   value={formValues.dateOfBirth}
@@ -162,7 +162,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 />
               </div>
               <div className="space-y-2">
-                <FormLabel htmlFor="mobileNumber" required={mode === 'create'}>Mobile Number</FormLabel>
+                <FormLabel htmlFor="mobileNumber" required>Mobile Number</FormLabel>
                 <Input
                   id="mobileNumber"
                   value={formValues.mobileNumber}
@@ -196,7 +196,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 />
               </div>
               <div className="space-y-2">
-                <FormLabel htmlFor="aadharNumber" required={mode === 'create'}>Aadhar Number</FormLabel>
+                <FormLabel htmlFor="aadharNumber" required>Aadhar Number</FormLabel>
                 <Input
                   id="aadharNumber"
                   value={formValues.aadharNumber}
@@ -211,7 +211,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
 
             <EmployeeFormSection title="License & Transport">
               <div className="space-y-2">
-                <FormLabel htmlFor="dlNumber" required={mode === 'create'}>DL Number</FormLabel>
+                <FormLabel htmlFor="dlNumber" required>DL Number</FormLabel>
                 <Input
                   id="dlNumber"
                   value={formValues.dlNumber}
@@ -222,7 +222,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 />
               </div>
               <div className="space-y-2">
-                <FormLabel htmlFor="dlIssueDate" required={mode === 'create'}>DL Issue Date</FormLabel>
+                <FormLabel htmlFor="dlIssueDate" required>DL Issue Date</FormLabel>
                 <MasterDatePicker
                   id="dlIssueDate"
                   value={formValues.dlIssueDate}
@@ -232,7 +232,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 />
               </div>
               <div className="space-y-2">
-                <FormLabel htmlFor="dlExpiryDate" required={mode === 'create'}>DL Expiry Date</FormLabel>
+                <FormLabel htmlFor="dlExpiryDate" required>DL Expiry Date</FormLabel>
                 <MasterDatePicker
                   id="dlExpiryDate"
                   value={formValues.dlExpiryDate}
@@ -242,7 +242,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 />
               </div>
               <div className="space-y-2">
-                <FormLabel htmlFor="transportIssueDate" required={mode === 'create'}>Transport Issue Date</FormLabel>
+                <FormLabel htmlFor="transportIssueDate" required>Transport Issue Date</FormLabel>
                 <MasterDatePicker
                   id="transportIssueDate"
                   value={formValues.transportIssueDate}
@@ -252,7 +252,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 />
               </div>
               <div className="space-y-2">
-                <FormLabel htmlFor="transportValidFrom" required={mode === 'create'}>Transport Valid From</FormLabel>
+                <FormLabel htmlFor="transportValidFrom" required>Transport Valid From</FormLabel>
                 <MasterDatePicker
                   id="transportValidFrom"
                   value={formValues.transportValidFrom}
@@ -262,7 +262,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 />
               </div>
               <div className="space-y-2">
-                <FormLabel htmlFor="transportValidTo" required={mode === 'create'}>Transport Valid To</FormLabel>
+                <FormLabel htmlFor="transportValidTo" required>Transport Valid To</FormLabel>
                 <MasterDatePicker
                   id="transportValidTo"
                   value={formValues.transportValidTo}
@@ -275,7 +275,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
 
             <EmployeeFormSection title="Bank Details">
               <div className="space-y-2">
-                <FormLabel htmlFor="accountHolderName" required={mode === 'create'}>Account Holder Name</FormLabel>
+                <FormLabel htmlFor="accountHolderName" required>Account Holder Name</FormLabel>
                 <Input
                   id="accountHolderName"
                   value={formValues.accountHolderName}
@@ -286,7 +286,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 />
               </div>
               <div className="space-y-2">
-                <FormLabel htmlFor="accountNumber" required={mode === 'create'}>Account Number</FormLabel>
+                <FormLabel htmlFor="accountNumber" required>Account Number</FormLabel>
                 <Input
                   id="accountNumber"
                   value={formValues.accountNumber}
@@ -297,7 +297,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 />
               </div>
               <div className="space-y-2">
-                <FormLabel htmlFor="bankName" required={mode === 'create'}>Bank Name</FormLabel>
+                <FormLabel htmlFor="bankName" required>Bank Name</FormLabel>
                 <Input
                   id="bankName"
                   value={formValues.bankName}
@@ -308,7 +308,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 />
               </div>
               <div className="space-y-2">
-                <FormLabel htmlFor="branchName" required={mode === 'create'}>Branch Name</FormLabel>
+                <FormLabel htmlFor="branchName" required>Branch Name</FormLabel>
                 <Input
                   id="branchName"
                   value={formValues.branchName}
@@ -319,7 +319,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 />
               </div>
               <div className="space-y-2">
-                <FormLabel htmlFor="ifscCode" required={mode === 'create'}>IFSC Code</FormLabel>
+                <FormLabel htmlFor="ifscCode" required>IFSC Code</FormLabel>
                 <Input
                   id="ifscCode"
                   value={formValues.ifscCode}
@@ -343,7 +343,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
 
             <EmployeeFormSection title="Employment">
               <div className="space-y-2">
-                <FormLabel htmlFor="dateOfJoining" required={mode === 'create'}>Date of Joining</FormLabel>
+                <FormLabel htmlFor="dateOfJoining" required>Date of Joining</FormLabel>
                 <MasterDatePicker
                   id="dateOfJoining"
                   value={formValues.dateOfJoining}
@@ -362,7 +362,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 />
               </div>
               <div className="space-y-2">
-                <FormLabel htmlFor="referenceName" required={mode === 'create'}>Reference Name</FormLabel>
+                <FormLabel htmlFor="referenceName" required>Reference Name</FormLabel>
                 <Input
                   id="referenceName"
                   value={formValues.referenceName}
@@ -392,7 +392,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 value={formValues.aadharCardFront}
                 onChange={(value) => updateField('aadharCardFront', value)}
                 disabled={isSaving}
-                required={mode === 'create'}
+                required
               />
               <DocumentUploadField
                 id="aadharCardBack"
@@ -400,7 +400,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 value={formValues.aadharCardBack}
                 onChange={(value) => updateField('aadharCardBack', value)}
                 disabled={isSaving}
-                required={mode === 'create'}
+                required
               />
               <DocumentUploadField
                 id="dlFront"
@@ -408,7 +408,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 value={formValues.dlFront}
                 onChange={(value) => updateField('dlFront', value)}
                 disabled={isSaving}
-                required={mode === 'create'}
+                required
               />
               <DocumentUploadField
                 id="dlBack"
@@ -416,7 +416,7 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
                 value={formValues.dlBack}
                 onChange={(value) => updateField('dlBack', value)}
                 disabled={isSaving}
-                required={mode === 'create'}
+                required
               />
               <DocumentUploadField
                 id="upiScanner"
