@@ -168,7 +168,7 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl">
+      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>{mode === 'create' ? 'Add Bus' : 'Edit Bus'}</DialogTitle>
           <DialogDescription>
