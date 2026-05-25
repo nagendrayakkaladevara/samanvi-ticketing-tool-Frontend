@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Layers, Loader2, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { FileSpreadsheet, Layers, Loader2, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 
 import {
@@ -26,9 +26,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { serviceForService } from '@/features/service-for/api/service-for.service'
 import { useServiceForQuery } from '@/features/service-for/hooks/use-service-for-query'
 import type { ServiceFor } from '@/features/service-for/types/service-for'
+import { downloadServiceForExcel } from '@/features/service-for/utils/download-service-for-excel'
 import { queryClient } from '@/lib/query/query-client'
 
 type FormMode = 'create' | 'edit'
@@ -156,6 +158,19 @@ export function ServiceForPage() {
     deleteMutation.mutate(deleteTarget.id)
   }
 
+  const handleDownloadExcel = async () => {
+    if (sortedItems.length === 0) {
+      toast.error('No Service For entries to export.')
+      return
+    }
+    try {
+      await downloadServiceForExcel(sortedItems)
+      toast.success('Service For list downloaded as Excel.')
+    } catch {
+      toast.error('Failed to download Excel file.')
+    }
+  }
+
   return (
     <section className="space-y-6">
       <header className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-sky-500/10 via-background to-violet-500/10 p-6 shadow-sm">
@@ -182,10 +197,30 @@ export function ServiceForPage() {
                 Syncing...
               </span>
             ) : null}
-            <Button className="w-full sm:w-auto" onClick={openCreateForm}>
-              <Plus className="h-4 w-4" />
-              Add Service For
-            </Button>
+            <div className="flex w-full min-w-0 items-center justify-end gap-2 sm:w-auto">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                      onClick={handleDownloadExcel}
+                      disabled={isLoading || sortedItems.length === 0}
+                      aria-label="Download Excel"
+                    >
+                      <FileSpreadsheet className="h-4 w-4" aria-hidden />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Download Excel</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Button className="min-w-0 flex-1 sm:w-auto sm:flex-none" onClick={openCreateForm}>
+                <Plus className="h-4 w-4" />
+                Add Service For
+              </Button>
+            </div>
           </div>
         </div>
       </header>
