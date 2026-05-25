@@ -44,24 +44,13 @@ function BusNumberCell({ value }: ICellRendererParams<SpareTankGridRow>) {
   return <span className="ticket-grid__bus-badge">{value}</span>
 }
 
-function TableSkeleton() {
+function DesktopTableLoader() {
   return (
-    <div className="ticket-grid-skeleton">
-      <div className="ticket-grid-skeleton__header">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="ticket-grid-skeleton__header-cell" />
-        ))}
-      </div>
-      <div className="ticket-grid-skeleton__body">
-        {Array.from({ length: 5 }).map((_, rowIdx) => (
-          <div key={rowIdx} className="ticket-grid-skeleton__row" style={{ animationDelay: `${rowIdx * 60}ms` }}>
-            {Array.from({ length: 4 }).map((_, colIdx) => (
-              <Skeleton key={colIdx} className="ticket-grid-skeleton__cell" />
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
+    <Card className="hidden space-y-3 p-4 md:block">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <Skeleton key={index} className="h-10 w-full" />
+      ))}
+    </Card>
   )
 }
 
@@ -143,6 +132,17 @@ export function SpareTanksGrid({
 
   const columnDefs = useMemo<Array<ColDef<SpareTankGridRow>>>(
     () => [
+      {
+        headerName: 'S.No',
+        headerClass: 'ticket-grid__header-cell',
+        valueGetter: (params) => (params.node?.rowIndex ?? 0) + 1,
+        minWidth: 70,
+        maxWidth: 90,
+        sortable: false,
+        filter: false,
+        floatingFilter: false,
+        cellClass: 'text-muted-foreground',
+      },
       {
         field: 'busNumber',
         headerName: 'Bus No',
@@ -228,9 +228,7 @@ export function SpareTanksGrid({
               <Skeleton key={index} className="h-20 w-full rounded-xl" />
             ))}
           </div>
-          <div className="hidden md:block">
-            <TableSkeleton />
-          </div>
+          <DesktopTableLoader />
         </>
       ) : null}
 
@@ -251,12 +249,13 @@ export function SpareTanksGrid({
       {!isLoading && !isError && rowData.length > 0 ? (
         <>
           <div className="space-y-3 md:hidden">
-            {rowData.map((row) => {
+            {rowData.map((row, index) => {
               const item = itemById.get(row.id)
               return (
                 <Card key={row.id} className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 space-y-1.5">
+                      <p className="text-xs text-muted-foreground">S.No {index + 1}</p>
                       <span className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-sm font-medium">
                         <Fuel className="h-3.5 w-3.5 text-muted-foreground" />
                         {row.busNumber}
