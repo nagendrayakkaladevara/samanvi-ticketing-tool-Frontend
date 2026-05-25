@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { BriefcaseBusiness, HardHat, Loader2, Plus, RefreshCw, Users } from 'lucide-react'
 import { SteeringWheelIcon } from '@/components/icons/steering-wheel-icon'
@@ -35,30 +35,19 @@ import type { Driver } from '@/features/employees/types/driver'
 import type { Helper } from '@/features/employees/types/helper'
 import type { OfficeStaff } from '@/features/employees/types/office-staff'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { useMasterDialogParams } from '@/hooks/use-master-dialog-params'
 import { queryClient } from '@/lib/query/query-client'
 import { cn } from '@/lib/utils'
 import { formatMasterDateDisplay } from '@/lib/utils/master-dates'
 
 type EmployeeTab = 'driver' | 'helper' | 'office-staff'
 
-type FormState =
-  | { kind: 'closed' }
-  | { kind: 'create'; tab: EmployeeTab }
-  | { kind: 'edit'; tab: 'driver'; item: Driver }
-  | { kind: 'edit'; tab: 'helper'; item: Helper }
-  | { kind: 'edit'; tab: 'office-staff'; item: OfficeStaff }
-
-type ViewState =
-  | { kind: 'closed' }
-  | { kind: 'driver'; item: Driver }
-  | { kind: 'helper'; item: Helper }
-  | { kind: 'office-staff'; item: OfficeStaff }
-
-type DeleteState =
-  | { kind: 'closed' }
-  | { kind: 'driver'; item: Driver }
-  | { kind: 'helper'; item: Helper }
-  | { kind: 'office-staff'; item: OfficeStaff }
+function parseEmployeeTab(value: string | null): EmployeeTab {
+  if (value === 'helper' || value === 'office-staff') {
+    return value
+  }
+  return 'driver'
+}
 
 const tabConfig = {
   driver: {
@@ -88,10 +77,8 @@ export function EmployeesPage() {
   const currentUser = useCurrentUser()
   const canManage = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR'
 
-  const [activeTab, setActiveTab] = useState<EmployeeTab>('driver')
-  const [formState, setFormState] = useState<FormState>({ kind: 'closed' })
-  const [viewState, setViewState] = useState<ViewState>({ kind: 'closed' })
-  const [deleteState, setDeleteState] = useState<DeleteState>({ kind: 'closed' })
+  const { action, id, tab: tabParam, openDialog, closeDialog, setTabParam } = useMasterDialogParams()
+  const activeTab = parseEmployeeTab(tabParam)
 
   const {
     data: drivers = [],
@@ -130,12 +117,51 @@ export function EmployeesPage() {
     [officeStaff],
   )
 
+  const editingDriver = useMemo(
+    () => (action === 'edit' && id ? drivers.find((item) => item.id === id) ?? null : null),
+    [action, id, drivers],
+  )
+  const editingHelper = useMemo(
+    () => (action === 'edit' && id ? helpers.find((item) => item.id === id) ?? null : null),
+    [action, id, helpers],
+  )
+  const editingOfficeStaff = useMemo(
+    () => (action === 'edit' && id ? officeStaff.find((item) => item.id === id) ?? null : null),
+    [action, id, officeStaff],
+  )
+
+  const viewingDriver = useMemo(
+    () => (action === 'view' && id ? drivers.find((item) => item.id === id) ?? null : null),
+    [action, id, drivers],
+  )
+  const viewingHelper = useMemo(
+    () => (action === 'view' && id ? helpers.find((item) => item.id === id) ?? null : null),
+    [action, id, helpers],
+  )
+  const viewingOfficeStaff = useMemo(
+    () => (action === 'view' && id ? officeStaff.find((item) => item.id === id) ?? null : null),
+    [action, id, officeStaff],
+  )
+
+  const deleteDriver = useMemo(
+    () => (action === 'delete' && id ? drivers.find((item) => item.id === id) ?? null : null),
+    [action, id, drivers],
+  )
+  const deleteHelper = useMemo(
+    () => (action === 'delete' && id ? helpers.find((item) => item.id === id) ?? null : null),
+    [action, id, helpers],
+  )
+  const deleteOfficeStaff = useMemo(
+    () => (action === 'delete' && id ? officeStaff.find((item) => item.id === id) ?? null : null),
+    [action, id, officeStaff],
+  )
+
   const deleteDriverMutation = useMutation({
     mutationFn: (driverId: string) => driversService.remove(driverId),
     onSuccess: () => {
       toast.success('Driver deleted successfully.')
       queryClient.invalidateQueries({ queryKey: ['drivers'] })
-      setDeleteState({ kind: 'closed' })
+      closeDialog()
     },
     onError: (mutationError) => {
       toast.error(mutationError instanceof Error ? mutationError.message : 'Failed to delete driver.')
@@ -147,7 +173,7 @@ export function EmployeesPage() {
     onSuccess: () => {
       toast.success('Helper deleted successfully.')
       queryClient.invalidateQueries({ queryKey: ['helpers'] })
-      setDeleteState({ kind: 'closed' })
+      closeDialog()
     },
     onError: (mutationError) => {
       toast.error(mutationError instanceof Error ? mutationError.message : 'Failed to delete helper.')
@@ -159,7 +185,7 @@ export function EmployeesPage() {
     onSuccess: () => {
       toast.success('Office staff member deleted successfully.')
       queryClient.invalidateQueries({ queryKey: ['office-staff'] })
-      setDeleteState({ kind: 'closed' })
+      closeDialog()
     },
     onError: (mutationError) => {
       toast.error(
@@ -182,8 +208,28 @@ export function EmployeesPage() {
         ? isLoadingHelpers
         : isLoadingOfficeStaff
 
-  const openAddDialog = () => setFormState({ kind: 'create', tab: activeTab })
-  const closeForm = () => setFormState({ kind: 'closed' })
+  const openAddDialog = () => openDialog({ action: 'create', tab: activeTab })
+  const openDriverEdit = (item: Driver) => openDialog({ action: 'edit', id: item.id, tab: 'driver' })
+  const openHelperEdit = (item: Helper) => openDialog({ action: 'edit', id: item.id, tab: 'helper' })
+  const openOfficeStaffEdit = (item: OfficeStaff) =>
+    openDialog({ action: 'edit', id: item.id, tab: 'office-staff' })
+  const openDriverView = (item: Driver) => openDialog({ action: 'view', id: item.id, tab: 'driver' })
+  const openHelperView = (item: Helper) => openDialog({ action: 'view', id: item.id, tab: 'helper' })
+  const openOfficeStaffView = (item: OfficeStaff) =>
+    openDialog({ action: 'view', id: item.id, tab: 'office-staff' })
+  const openDriverDelete = (item: Driver) => openDialog({ action: 'delete', id: item.id, tab: 'driver' })
+  const openHelperDelete = (item: Helper) => openDialog({ action: 'delete', id: item.id, tab: 'helper' })
+  const openOfficeStaffDelete = (item: OfficeStaff) =>
+    openDialog({ action: 'delete', id: item.id, tab: 'office-staff' })
+
+  const isDriverFormOpen =
+    activeTab === 'driver' && (action === 'create' || (action === 'edit' && Boolean(editingDriver)))
+  const isHelperFormOpen =
+    activeTab === 'helper' && (action === 'create' || (action === 'edit' && Boolean(editingHelper)))
+  const isOfficeStaffFormOpen =
+    activeTab === 'office-staff' &&
+    (action === 'create' || (action === 'edit' && Boolean(editingOfficeStaff)))
+
 
   const driverColumns: EmployeeTableColumn<Driver>[] = [
     {
@@ -233,16 +279,16 @@ export function EmployeesPage() {
   ]
 
   const confirmDelete = () => {
-    if (deleteState.kind === 'driver') {
-      deleteDriverMutation.mutate(deleteState.item.id)
+    if (deleteDriver) {
+      deleteDriverMutation.mutate(deleteDriver.id)
       return
     }
-    if (deleteState.kind === 'helper') {
-      deleteHelperMutation.mutate(deleteState.item.id)
+    if (deleteHelper) {
+      deleteHelperMutation.mutate(deleteHelper.id)
       return
     }
-    if (deleteState.kind === 'office-staff') {
-      deleteOfficeStaffMutation.mutate(deleteState.item.id)
+    if (deleteOfficeStaff) {
+      deleteOfficeStaffMutation.mutate(deleteOfficeStaff.id)
     }
   }
 
@@ -250,17 +296,22 @@ export function EmployeesPage() {
     deleteDriverMutation.isPending || deleteHelperMutation.isPending || deleteOfficeStaffMutation.isPending
 
   const deleteDescription = (() => {
-    if (deleteState.kind === 'driver') {
-      return `This will permanently remove driver "${deleteState.item.driverIdNumber}" (${deleteState.item.aadharName}). Deletion is blocked if records still reference this driver.`
+    if (deleteDriver) {
+      return `This will permanently remove driver "${deleteDriver.driverIdNumber}" (${deleteDriver.aadharName}). Deletion is blocked if records still reference this driver.`
     }
-    if (deleteState.kind === 'helper') {
-      return `This will permanently remove helper "${deleteState.item.helperIdNumber}" (${deleteState.item.aadharName}). Deletion is blocked if records still reference this helper.`
+    if (deleteHelper) {
+      return `This will permanently remove helper "${deleteHelper.helperIdNumber}" (${deleteHelper.aadharName}). Deletion is blocked if records still reference this helper.`
     }
-    if (deleteState.kind === 'office-staff') {
-      return `This will permanently remove staff "${deleteState.item.staffIdNumber}" (${deleteState.item.aadharName}). Deletion is blocked if records still reference this member.`
+    if (deleteOfficeStaff) {
+      return `This will permanently remove staff "${deleteOfficeStaff.staffIdNumber}" (${deleteOfficeStaff.aadharName}). Deletion is blocked if records still reference this member.`
     }
     return 'This action cannot be undone.'
   })()
+
+  const isDeleteOpen =
+    (activeTab === 'driver' && Boolean(deleteDriver)) ||
+    (activeTab === 'helper' && Boolean(deleteHelper)) ||
+    (activeTab === 'office-staff' && Boolean(deleteOfficeStaff))
 
   return (
     <section className="space-y-6">
@@ -309,7 +360,7 @@ export function EmployeesPage() {
             <button
               key={tab}
               type="button"
-              onClick={() => setActiveTab(tab)}
+              onClick={() => setTabParam(tab)}
               className={cn(
                 'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
                 activeTab === tab
@@ -336,9 +387,9 @@ export function EmployeesPage() {
           emptyDescription={tabConfig.driver.emptyDescription}
           canManage={canManage}
           minWidth="1100px"
-          onView={(item) => setViewState({ kind: 'driver', item })}
-          onEdit={(item) => setFormState({ kind: 'edit', tab: 'driver', item })}
-          onDelete={(item) => setDeleteState({ kind: 'driver', item })}
+          onView={openDriverView}
+          onEdit={openDriverEdit}
+          onDelete={openDriverDelete}
         />
       ) : null}
 
@@ -354,9 +405,9 @@ export function EmployeesPage() {
           emptyDescription={tabConfig.helper.emptyDescription}
           canManage={canManage}
           minWidth="900px"
-          onView={(item) => setViewState({ kind: 'helper', item })}
-          onEdit={(item) => setFormState({ kind: 'edit', tab: 'helper', item })}
-          onDelete={(item) => setDeleteState({ kind: 'helper', item })}
+          onView={openHelperView}
+          onEdit={openHelperEdit}
+          onDelete={openHelperDelete}
         />
       ) : null}
 
@@ -372,71 +423,67 @@ export function EmployeesPage() {
           emptyDescription={tabConfig['office-staff'].emptyDescription}
           canManage={canManage}
           minWidth="760px"
-          onView={(item) => setViewState({ kind: 'office-staff', item })}
-          onEdit={(item) => setFormState({ kind: 'edit', tab: 'office-staff', item })}
-          onDelete={(item) => setDeleteState({ kind: 'office-staff', item })}
+          onView={openOfficeStaffView}
+          onEdit={openOfficeStaffEdit}
+          onDelete={openOfficeStaffDelete}
         />
       ) : null}
 
       <DriverFormDialog
-        open={formState.kind === 'create' ? formState.tab === 'driver' : formState.kind === 'edit' && formState.tab === 'driver'}
-        mode={formState.kind === 'edit' && formState.tab === 'driver' ? 'edit' : 'create'}
-        editingItem={formState.kind === 'edit' && formState.tab === 'driver' ? formState.item : null}
+        open={isDriverFormOpen}
+        mode={action === 'edit' ? 'edit' : 'create'}
+        editingItem={editingDriver}
         onOpenChange={(open) => {
-          if (!open) closeForm()
+          if (!open) closeDialog()
         }}
       />
 
       <HelperFormDialog
-        open={formState.kind === 'create' ? formState.tab === 'helper' : formState.kind === 'edit' && formState.tab === 'helper'}
-        mode={formState.kind === 'edit' && formState.tab === 'helper' ? 'edit' : 'create'}
-        editingItem={formState.kind === 'edit' && formState.tab === 'helper' ? formState.item : null}
+        open={isHelperFormOpen}
+        mode={action === 'edit' ? 'edit' : 'create'}
+        editingItem={editingHelper}
         onOpenChange={(open) => {
-          if (!open) closeForm()
+          if (!open) closeDialog()
         }}
       />
 
       <OfficeStaffFormDialog
-        open={
-          formState.kind === 'create'
-            ? formState.tab === 'office-staff'
-            : formState.kind === 'edit' && formState.tab === 'office-staff'
-        }
-        mode={formState.kind === 'edit' && formState.tab === 'office-staff' ? 'edit' : 'create'}
-        editingItem={formState.kind === 'edit' && formState.tab === 'office-staff' ? formState.item : null}
+        open={isOfficeStaffFormOpen}
+        mode={action === 'edit' ? 'edit' : 'create'}
+        editingItem={editingOfficeStaff}
         onOpenChange={(open) => {
-          if (!open) closeForm()
+          if (!open) closeDialog()
         }}
       />
 
       <DriverViewDialog
-        open={viewState.kind === 'driver'}
-        item={viewState.kind === 'driver' ? viewState.item : null}
+        open={activeTab === 'driver' && action === 'view' && Boolean(viewingDriver)}
+        item={viewingDriver}
         onOpenChange={(open) => {
-          if (!open) setViewState({ kind: 'closed' })
+          if (!open) closeDialog()
         }}
       />
 
       <HelperViewDialog
-        open={viewState.kind === 'helper'}
-        item={viewState.kind === 'helper' ? viewState.item : null}
+        open={activeTab === 'helper' && action === 'view' && Boolean(viewingHelper)}
+        item={viewingHelper}
         onOpenChange={(open) => {
-          if (!open) setViewState({ kind: 'closed' })
+          if (!open) closeDialog()
         }}
       />
 
       <OfficeStaffViewDialog
-        open={viewState.kind === 'office-staff'}
-        item={viewState.kind === 'office-staff' ? viewState.item : null}
+        open={activeTab === 'office-staff' && action === 'view' && Boolean(viewingOfficeStaff)}
+        item={viewingOfficeStaff}
         onOpenChange={(open) => {
-          if (!open) setViewState({ kind: 'closed' })
+          if (!open) closeDialog()
         }}
       />
 
       <AlertDialog
-        open={deleteState.kind !== 'closed'}
+        open={isDeleteOpen}
         onOpenChange={(open) => {
-          if (!open) setDeleteState({ kind: 'closed' })
+          if (!open) closeDialog()
         }}
       >
         <AlertDialogContent>

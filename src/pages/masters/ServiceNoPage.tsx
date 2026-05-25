@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Eye, Loader2, Pencil, Plus, RefreshCw, Route, Trash2 } from 'lucide-react'
 import { toast } from '@/lib/toast'
@@ -27,36 +27,52 @@ import {
   formatDistance,
 } from '@/features/service-numbers/utils/service-number-model'
 import { useServiceForQuery } from '@/features/service-for/hooks/use-service-for-query'
+import { useMasterDialogParams } from '@/hooks/use-master-dialog-params'
 import { queryClient } from '@/lib/query/query-client'
-
-type FormState =
-  | { kind: 'closed' }
-  | { kind: 'create' }
-  | { kind: 'edit'; item: ServiceNumber }
 
 export function ServiceNoPage() {
   const { data: items = [], isLoading, isFetching, isError, error } = useServiceNumbersQuery()
   const { data: serviceForOptions = [] } = useServiceForQuery()
-
-  const [formState, setFormState] = useState<FormState>({ kind: 'closed' })
-  const [viewTarget, setViewTarget] = useState<ServiceNumber | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<ServiceNumber | null>(null)
+  const { action, id, openDialog, closeDialog } = useMasterDialogParams()
 
   const sortedItems = useMemo(() => [...items].sort(compareServiceNumbersByNo), [items])
+
+  const editingItem = useMemo(
+    () => (action === 'edit' && id ? sortedItems.find((item) => item.id === id) ?? null : null),
+    [action, id, sortedItems],
+  )
+
+  const viewTarget = useMemo(
+    () => (action === 'view' && id ? sortedItems.find((item) => item.id === id) ?? null : null),
+    [action, id, sortedItems],
+  )
+
+  const deleteTarget = useMemo(
+    () => (action === 'delete' && id ? sortedItems.find((item) => item.id === id) ?? null : null),
+    [action, id, sortedItems],
+  )
+
+  const isFormOpen = action === 'create' || (action === 'edit' && Boolean(editingItem))
+  const isViewOpen = action === 'view' && Boolean(viewTarget)
+  const isDeleteOpen = action === 'delete' && Boolean(deleteTarget)
 
   const deleteMutation = useMutation({
     mutationFn: (serviceNumberId: string) => serviceNumbersService.remove(serviceNumberId),
     onSuccess: () => {
       toast.success('Service number deleted successfully.')
       queryClient.invalidateQueries({ queryKey: ['service-numbers'] })
-      setDeleteTarget(null)
+      closeDialog()
     },
     onError: (mutationError) => {
       toast.error(mutationError instanceof Error ? mutationError.message : 'Failed to delete service number.')
     },
   })
 
-  const closeForm = () => setFormState({ kind: 'closed' })
+  const openCreateForm = () => openDialog({ action: 'create' })
+  const openEditForm = (item: ServiceNumber) => openDialog({ action: 'edit', id: item.id })
+  const openViewDialog = (item: ServiceNumber) => openDialog({ action: 'view', id: item.id })
+  const openDeleteDialog = (item: ServiceNumber) => openDialog({ action: 'delete', id: item.id })
+
 
   const confirmDelete = () => {
     if (!deleteTarget) return
@@ -91,7 +107,7 @@ export function ServiceNoPage() {
                 Syncing...
               </span>
             ) : null}
-            <Button className="w-full sm:w-auto" onClick={() => setFormState({ kind: 'create' })}>
+            <Button className="w-full sm:w-auto" onClick={openCreateForm}>
               <Plus className="h-4 w-4" />
               Add Service Number
             </Button>
@@ -128,7 +144,7 @@ export function ServiceNoPage() {
           <p className="max-w-md text-sm text-muted-foreground">
             Create your first service number to define routes, fares, and crew beta amounts.
           </p>
-          <Button onClick={() => setFormState({ kind: 'create' })}>
+          <Button onClick={openCreateForm}>
             <Plus className="h-4 w-4" />
             Add Service Number
           </Button>
@@ -156,17 +172,17 @@ export function ServiceNoPage() {
                     <p className="text-xs text-muted-foreground">Updated {formatDateTime(item.updatedAt)}</p>
                   </div>
                   <div className="flex shrink-0 gap-1.5">
-                    <Button variant="outline" size="sm" onClick={() => setViewTarget(item)}>
+                    <Button variant="outline" size="sm" onClick={() => openViewDialog(item)}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setFormState({ kind: 'edit', item })}>
+                    <Button variant="outline" size="sm" onClick={() => openEditForm(item)}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
                       className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                      onClick={() => setDeleteTarget(item)}
+                      onClick={() => openDeleteDialog(item)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -207,11 +223,11 @@ export function ServiceNoPage() {
                     <td className="px-4 py-3 text-muted-foreground">{formatDateTime(item.updatedAt)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setViewTarget(item)}>
+                        <Button variant="outline" size="sm" onClick={() => openViewDialog(item)}>
                           <Eye className="h-3.5 w-3.5" />
                           View
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => setFormState({ kind: 'edit', item })}>
+                        <Button variant="outline" size="sm" onClick={() => openEditForm(item)}>
                           <Pencil className="h-3.5 w-3.5" />
                           Edit
                         </Button>
@@ -219,7 +235,7 @@ export function ServiceNoPage() {
                           variant="destructive"
                           size="sm"
                           className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                          onClick={() => setDeleteTarget(item)}
+                          onClick={() => openDeleteDialog(item)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           Delete
@@ -235,24 +251,24 @@ export function ServiceNoPage() {
       ) : null}
 
       <ServiceNumberFormDialog
-        open={formState.kind === 'create' || formState.kind === 'edit'}
-        mode={formState.kind === 'edit' ? 'edit' : 'create'}
-        editingItem={formState.kind === 'edit' ? formState.item : null}
+        open={isFormOpen}
+        mode={action === 'edit' ? 'edit' : 'create'}
+        editingItem={editingItem}
         serviceForOptions={serviceForOptions}
         onOpenChange={(open) => {
-          if (!open) closeForm()
+          if (!open) closeDialog()
         }}
       />
 
       <ServiceNumberViewDialog
-        open={Boolean(viewTarget)}
+        open={isViewOpen}
         item={viewTarget}
         onOpenChange={(open) => {
-          if (!open) setViewTarget(null)
+          if (!open) closeDialog()
         }}
       />
 
-      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialog open={isDeleteOpen} onOpenChange={(open) => !open && closeDialog()}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete service number?</AlertDialogTitle>

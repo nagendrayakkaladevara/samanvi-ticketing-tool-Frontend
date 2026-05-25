@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { BusFront, Download, FileSpreadsheet, FileText, Fuel, Plus, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -22,24 +22,22 @@ import type { SpareTank } from '@/features/spare-tanks/types/spare-tank'
 import { downloadSpareTanksExcel } from '@/features/spare-tanks/utils/download-spare-tanks-excel'
 import { downloadSpareTanksPdf } from '@/features/spare-tanks/utils/download-spare-tanks-pdf'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { useMasterDialogParams } from '@/hooks/use-master-dialog-params'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 
 type BusNoTab = 'normal' | 'spare'
 
-type FormState =
-  | { kind: 'closed' }
-  | { kind: 'bus-create' }
-  | { kind: 'bus-edit'; bus: MasterBus }
-  | { kind: 'spare-create' }
-  | { kind: 'spare-edit'; item: SpareTank }
+function parseBusNoTab(value: string | null): BusNoTab {
+  return value === 'spare' ? 'spare' : 'normal'
+}
 
 export function BusNoPage() {
   const currentUser = useCurrentUser()
   const canManage = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR'
+  const { action, id, tab: tabParam, openDialog, closeDialog, setTabParam } = useMasterDialogParams()
 
-  const [activeTab, setActiveTab] = useState<BusNoTab>('normal')
-  const [formState, setFormState] = useState<FormState>({ kind: 'closed' })
+  const activeTab = parseBusNoTab(tabParam)
 
   const {
     data: buses = [],
@@ -56,6 +54,21 @@ export function BusNoPage() {
     isError: isSpareTanksError,
     error: spareTanksError,
   } = useSpareTanksQuery()
+
+  const editingBus = useMemo(
+    () => (action === 'edit' && id ? buses.find((bus) => bus.id === id) ?? null : null),
+    [action, id, buses],
+  )
+
+  const editingSpareTank = useMemo(
+    () => (action === 'edit' && id ? spareTanks.find((item) => item.id === id) ?? null : null),
+    [action, id, spareTanks],
+  )
+
+  const isBusFormOpen =
+    activeTab === 'normal' && (action === 'create' || (action === 'edit' && Boolean(editingBus)))
+  const isSpareFormOpen =
+    activeTab === 'spare' && (action === 'create' || (action === 'edit' && Boolean(editingSpareTank)))
 
   const isFetching = activeTab === 'normal' ? isFetchingBuses : isFetchingSpareTanks
   const isLoading = activeTab === 'normal' ? isLoadingBuses : isLoadingSpareTanks
@@ -119,15 +132,18 @@ export function BusNoPage() {
     }
   }
 
+  const openBusCreate = () => openDialog({ action: 'create', tab: 'normal' })
+  const openBusEdit = (bus: MasterBus) => openDialog({ action: 'edit', id: bus.id, tab: 'normal' })
+  const openSpareCreate = () => openDialog({ action: 'create', tab: 'spare' })
+  const openSpareEdit = (item: SpareTank) => openDialog({ action: 'edit', id: item.id, tab: 'spare' })
+
   const openAddDialog = () => {
     if (activeTab === 'normal') {
-      setFormState({ kind: 'bus-create' })
+      openBusCreate()
       return
     }
-    setFormState({ kind: 'spare-create' })
+    openSpareCreate()
   }
-
-  const closeForm = () => setFormState({ kind: 'closed' })
 
   const exportsDisabled = isLoading || exportCount === 0
 
@@ -173,7 +189,7 @@ export function BusNoPage() {
         <div className="inline-flex min-w-0 flex-1 rounded-xl border border-border bg-muted/30 p-1 sm:flex-none">
           <button
             type="button"
-            onClick={() => setActiveTab('normal')}
+            onClick={() => setTabParam('normal')}
             className={cn(
               'inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:gap-2 sm:px-4',
               activeTab === 'normal'
@@ -186,7 +202,7 @@ export function BusNoPage() {
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('spare')}
+            onClick={() => setTabParam('spare')}
             className={cn(
               'inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:gap-2 sm:px-4',
               activeTab === 'spare'
@@ -281,8 +297,8 @@ export function BusNoPage() {
           isError={isBusesError}
           error={busesError as Error | null}
           canManage={canManage}
-          onAdd={canManage ? () => setFormState({ kind: 'bus-create' }) : undefined}
-          onEdit={(bus) => setFormState({ kind: 'bus-edit', bus })}
+          onAdd={canManage ? openBusCreate : undefined}
+          onEdit={openBusEdit}
         />
       ) : (
         <SpareTanksGrid
@@ -291,26 +307,26 @@ export function BusNoPage() {
           isError={isSpareTanksError}
           error={spareTanksError as Error | null}
           canManage={canManage}
-          onAdd={canManage ? () => setFormState({ kind: 'spare-create' }) : undefined}
-          onEdit={(item) => setFormState({ kind: 'spare-edit', item })}
+          onAdd={canManage ? openSpareCreate : undefined}
+          onEdit={openSpareEdit}
         />
       )}
 
       <MasterBusFormDialog
-        open={formState.kind === 'bus-create' || formState.kind === 'bus-edit'}
-        mode={formState.kind === 'bus-edit' ? 'edit' : 'create'}
-        editingBus={formState.kind === 'bus-edit' ? formState.bus : null}
+        open={isBusFormOpen}
+        mode={action === 'edit' ? 'edit' : 'create'}
+        editingBus={editingBus}
         onOpenChange={(open) => {
-          if (!open) closeForm()
+          if (!open) closeDialog()
         }}
       />
 
       <SpareTankFormDialog
-        open={formState.kind === 'spare-create' || formState.kind === 'spare-edit'}
-        mode={formState.kind === 'spare-edit' ? 'edit' : 'create'}
-        editingItem={formState.kind === 'spare-edit' ? formState.item : null}
+        open={isSpareFormOpen}
+        mode={action === 'edit' ? 'edit' : 'create'}
+        editingItem={editingSpareTank}
         onOpenChange={(open) => {
-          if (!open) closeForm()
+          if (!open) closeDialog()
         }}
       />
     </section>
