@@ -23,6 +23,10 @@ import { BusNoPage } from '@/pages/masters/BusNoPage'
 import { EmployeesPage } from '@/pages/masters/EmployeesPage'
 import { ServiceForPage } from '@/pages/masters/ServiceForPage'
 import { ServiceNoPage } from '@/pages/masters/ServiceNoPage'
+import { CreateJobPage } from '@/pages/garage/CreateJobPage'
+import { GarageMastersPage } from '@/pages/garage/GarageMastersPage'
+import { GarageReportsPage } from '@/pages/garage/GarageReportsPage'
+import { RepairTrackingPage } from '@/pages/garage/RepairTrackingPage'
 
 function RoleHomeRedirect() {
   const currentUser = useCurrentUser()
@@ -155,6 +159,38 @@ export const appRouter = createBrowserRouter([
             element: (
               <RoleGuard allowedRoles={['ADMIN']}>
                 <EmployeesPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'garage/create-job',
+            element: (
+              <RoleGuard allowedRoles={['ADMIN']}>
+                <CreateJobPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'garage/repair-tracking',
+            element: (
+              <RoleGuard allowedRoles={['ADMIN']}>
+                <RepairTrackingPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'garage/reports',
+            element: (
+              <RoleGuard allowedRoles={['ADMIN']}>
+                <GarageReportsPage />
+              </RoleGuard>
+            ),
+          },
+          {
+            path: 'garage/masters',
+            element: (
+              <RoleGuard allowedRoles={['ADMIN']}>
+                <GarageMastersPage />
               </RoleGuard>
             ),
           },
