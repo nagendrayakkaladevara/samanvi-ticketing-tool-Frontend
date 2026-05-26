@@ -21,6 +21,7 @@ import {
   DocumentUploadField,
   EmployeeFormLoadingState,
   EmployeeFormSection,
+  EmployeeRecordDialogHeader,
 } from '@/features/employees/components/employee-shared'
 import { useHelperDetailQuery } from '@/features/employees/hooks/use-helpers-query'
 import type { Helper, HelperFormValues } from '@/features/employees/types/helper'
@@ -111,17 +112,25 @@ export function HelperFormDialog({ open, mode, editingItem, onOpenChange }: Help
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <HardHat className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-            {mode === 'create' ? 'Add Helper' : 'Edit Helper'}
-          </DialogTitle>
-          <DialogDescription>
-            {mode === 'create'
-              ? 'Register a new helper with identity, employment, and bank details.'
-              : 'Update helper information. Leave documents unchanged unless you upload replacements.'}
-          </DialogDescription>
-        </DialogHeader>
+        {mode === 'edit' && editingItem ? (
+          <EmployeeRecordDialogHeader
+            icon={<HardHat className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />}
+            idNumber={editingItem.helperIdNumber}
+            aadharName={formValues.aadharName}
+            emptyTitle="Edit Helper"
+            emptyDescription="Update helper information. Leave documents unchanged unless you upload replacements."
+          />
+        ) : (
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HardHat className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              Add Helper
+            </DialogTitle>
+            <DialogDescription>
+              Register a new helper with identity, employment, and bank details.
+            </DialogDescription>
+          </DialogHeader>
+        )}
 
         {!isFormReady ? (
           <EmployeeFormLoadingState />

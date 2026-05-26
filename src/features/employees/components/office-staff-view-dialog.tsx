@@ -1,16 +1,11 @@
 import { BriefcaseBusiness, Loader2 } from 'lucide-react'
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { MasterDetailGrid } from '@/components/master-detail-grid'
 import {
   EmployeeDetailItem,
   EmployeeDocumentPreview,
+  EmployeeRecordDialogHeader,
 } from '@/features/employees/components/employee-shared'
 import { useOfficeStaffDetailQuery } from '@/features/employees/hooks/use-office-staff-query'
 import type { OfficeStaff } from '@/features/employees/types/office-staff'
@@ -30,17 +25,13 @@ export function OfficeStaffViewDialog({ open, item, onOpenChange }: OfficeStaffV
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <BriefcaseBusiness className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-            {staff ? staff.staffIdNumber : 'Office Staff Details'}
-          </DialogTitle>
-          <DialogDescription>
-            {staff
-              ? `${staff.aadharName} · ${staff.designation}`
-              : 'Complete office staff profile and documents.'}
-          </DialogDescription>
-        </DialogHeader>
+        <EmployeeRecordDialogHeader
+          icon={<BriefcaseBusiness className="h-5 w-5 text-sky-600 dark:text-sky-400" />}
+          idNumber={staff?.staffIdNumber}
+          aadharName={staff?.aadharName}
+          emptyTitle="Office Staff Details"
+          emptyDescription="Complete office staff profile and documents."
+        />
 
         {isLoading && !detail ? (
           <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
