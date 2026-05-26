@@ -64,15 +64,24 @@ export type MasterBusGridRow = {
   busNumber: string
   engineNumber: string
   chassisNumber: string
+  purchaseDate: string | null
   purchaseDateLabel: string
   odometer: number
+  insuranceValidity: string
   insuranceValidityLabel: string
+  pollutionValidity: string | null
   pollutionValidityLabel: string
+  fcValidity: string | null
   fcValidityLabel: string
+  basePermitValidity: string | null
   basePermitValidityLabel: string
+  homeTaxValidity: string | null
   homeTaxValidityLabel: string
+  aitpValidity: string | null
   aitpValidityLabel: string
+  aitpAuthorizationValidity: string | null
   aitpAuthorizationValidityLabel: string
+  serviceOutDate: string | null
   serviceOutDateLabel: string
   remarks: string | null
 }

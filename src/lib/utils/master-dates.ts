@@ -13,14 +13,45 @@ function parseMasterDateValue(value?: string | null): Date | null {
   return Number.isNaN(isoParsed.getTime()) ? null : isoParsed
 }
 
-export function isMasterDateBeforeToday(value?: string | null): boolean {
-  const parsed = parseMasterDateValue(value)
-  if (!parsed) return false
+export const MASTER_DATE_WARNING_DAYS = 6
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  parsed.setHours(0, 0, 0, 0)
-  return parsed < today
+export type MasterDateHighlightStatus = 'expired' | 'warning' | null
+
+function startOfDay(date: Date): Date {
+  const normalized = new Date(date)
+  normalized.setHours(0, 0, 0, 0)
+  return normalized
+}
+
+export function isMasterDateBeforeToday(value?: string | null): boolean {
+  return getMasterDateHighlightStatus(value) === 'expired'
+}
+
+/** Past dates are expired; dates within the next six days (inclusive) are warning. */
+export function getMasterDateHighlightStatus(value?: string | null): MasterDateHighlightStatus {
+  const parsed = parseMasterDateValue(value)
+  if (!parsed) return null
+
+  const today = startOfDay(new Date())
+  const target = startOfDay(parsed)
+
+  if (target < today) return 'expired'
+
+  const warningEnd = new Date(today)
+  warningEnd.setDate(warningEnd.getDate() + MASTER_DATE_WARNING_DAYS)
+  if (target <= warningEnd) return 'warning'
+
+  return null
+}
+
+export function masterDateHighlightClassName(status: MasterDateHighlightStatus): string {
+  if (status === 'expired') {
+    return 'font-medium text-red-600 dark:text-red-400'
+  }
+  if (status === 'warning') {
+    return 'font-medium text-orange-600 dark:text-orange-400'
+  }
+  return ''
 }
 
 export function formatMasterDateDisplay(value?: string | null): string {
