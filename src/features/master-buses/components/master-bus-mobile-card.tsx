@@ -11,9 +11,9 @@ import type { MouseEvent, ReactNode } from 'react'
 
 import '@/features/tickets/styles/tickets-grid.css'
 
+import { MasterDateDetailField } from '@/components/master-date-detail-field'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { MasterDateDisplay } from '@/features/master-buses/components/master-date-display'
 import type { MasterBusGridRow } from '@/features/master-buses/types/master-bus'
 import { cn } from '@/lib/utils'
 
@@ -40,16 +40,22 @@ function isEmptyLabel(value: string): boolean {
 function DetailCell({ label, value, dateValue, fullWidth = false }: DetailField) {
   const empty = isEmptyLabel(value)
 
+  if (dateValue !== undefined) {
+    return (
+      <MasterDateDetailField
+        label={label}
+        value={value}
+        dateValue={dateValue}
+        className={cn(fullWidth && 'master-bus-mobile-card__field--full')}
+        valueClassName={empty ? 'font-medium italic text-muted-foreground/75' : undefined}
+      />
+    )
+  }
+
   return (
     <div className={cn('master-bus-mobile-card__field', fullWidth && 'master-bus-mobile-card__field--full')}>
       <dt>{label}</dt>
-      <dd className={cn(empty && 'master-bus-mobile-card__value--empty')}>
-        {dateValue !== undefined && !empty ? (
-          <MasterDateDisplay label={value} dateValue={dateValue} />
-        ) : (
-          value
-        )}
-      </dd>
+      <dd className={cn(empty && 'master-bus-mobile-card__value--empty')}>{value}</dd>
     </div>
   )
 }
