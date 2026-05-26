@@ -1,16 +1,11 @@
 import { HardHat, Loader2 } from 'lucide-react'
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { MasterDetailGrid } from '@/components/master-detail-grid'
 import {
   EmployeeDetailItem,
   EmployeeDocumentPreview,
+  EmployeeRecordDialogHeader,
 } from '@/features/employees/components/employee-shared'
 import { useHelperDetailQuery } from '@/features/employees/hooks/use-helpers-query'
 import type { Helper } from '@/features/employees/types/helper'
@@ -30,15 +25,13 @@ export function HelperViewDialog({ open, item, onOpenChange }: HelperViewDialogP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <HardHat className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-            {helper ? helper.helperIdNumber : 'Helper Details'}
-          </DialogTitle>
-          <DialogDescription>
-            {helper ? `${helper.aadharName} · ${helper.mobileNumber}` : 'Complete helper profile and documents.'}
-          </DialogDescription>
-        </DialogHeader>
+        <EmployeeRecordDialogHeader
+          icon={<HardHat className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />}
+          idNumber={helper?.helperIdNumber}
+          aadharName={helper?.aadharName}
+          emptyTitle="Helper Details"
+          emptyDescription="Complete helper profile and documents."
+        />
 
         {isLoading && !detail ? (
           <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">

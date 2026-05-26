@@ -2,18 +2,12 @@ import { Download, Loader2 } from 'lucide-react'
 import { SteeringWheelIcon } from '@/components/icons/steering-wheel-icon'
 
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog'
 import { MasterDetailGrid } from '@/components/master-detail-grid'
 import {
   EmployeeDetailItem,
   EmployeeDocumentPreview,
+  EmployeeRecordDialogHeader,
 } from '@/features/employees/components/employee-shared'
 import { useDriverDetailQuery } from '@/features/employees/hooks/use-drivers-query'
 import type { Driver } from '@/features/employees/types/driver'
@@ -35,15 +29,13 @@ export function DriverViewDialog({ open, item, onOpenChange }: DriverViewDialogP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[min(96vw,42rem)] md:max-w-[min(94vw,56rem)] lg:max-w-[min(92vw,64rem)] xl:max-w-[min(90vw,72rem)]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <SteeringWheelIcon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-            {driver ? driver.driverIdNumber : 'Driver Details'}
-          </DialogTitle>
-          <DialogDescription>
-            {driver ? `${driver.aadharName} · ${driver.mobileNumber}` : 'Complete driver profile and documents.'}
-          </DialogDescription>
-        </DialogHeader>
+        <EmployeeRecordDialogHeader
+          icon={<SteeringWheelIcon className="h-5 w-5 text-violet-600 dark:text-violet-400" />}
+          idNumber={driver?.driverIdNumber}
+          aadharName={driver?.aadharName}
+          emptyTitle="Driver Details"
+          emptyDescription="Complete driver profile and documents."
+        />
 
         {isLoading && !detail ? (
           <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">

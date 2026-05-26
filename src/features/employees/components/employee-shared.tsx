@@ -1,7 +1,8 @@
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { ImagePlus, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { FormLabel } from '@/components/ui/form-label'
 import { fileToBase64 } from '@/lib/utils/file-to-base64'
 import { MasterDateDetailField } from '@/components/master-date-detail-field'
@@ -98,6 +99,38 @@ export function DocumentUploadField({
         {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       </div>
     </div>
+  )
+}
+
+type EmployeeRecordDialogHeaderProps = {
+  icon: ReactNode
+  idNumber?: string | null
+  aadharName?: string | null
+  emptyTitle: string
+  emptyDescription: string
+}
+
+export function EmployeeRecordDialogHeader({
+  icon,
+  idNumber,
+  aadharName,
+  emptyTitle,
+  emptyDescription,
+}: EmployeeRecordDialogHeaderProps) {
+  const trimmedName = aadharName?.trim()
+
+  return (
+    <DialogHeader className="gap-3">
+      <DialogTitle className="flex items-center gap-2 text-left">
+        {icon}
+        {idNumber ?? emptyTitle}
+      </DialogTitle>
+      {trimmedName ? (
+        <p className="text-center text-xl font-bold leading-tight text-foreground">{trimmedName}</p>
+      ) : (
+        <DialogDescription>{emptyDescription}</DialogDescription>
+      )}
+    </DialogHeader>
   )
 }
 

@@ -22,6 +22,7 @@ import {
   DocumentUploadField,
   EmployeeFormLoadingState,
   EmployeeFormSection,
+  EmployeeRecordDialogHeader,
 } from '@/features/employees/components/employee-shared'
 import { useDriverDetailQuery } from '@/features/employees/hooks/use-drivers-query'
 import type { Driver, DriverFormValues } from '@/features/employees/types/driver'
@@ -112,17 +113,25 @@ export function DriverFormDialog({ open, mode, editingItem, onOpenChange }: Driv
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <SteeringWheelIcon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-            {mode === 'create' ? 'Add Driver' : 'Edit Driver'}
-          </DialogTitle>
-          <DialogDescription>
-            {mode === 'create'
-              ? 'Register a new driver with identity, license, transport, and bank details.'
-              : 'Update driver information. Leave documents unchanged unless you upload replacements.'}
-          </DialogDescription>
-        </DialogHeader>
+        {mode === 'edit' && editingItem ? (
+          <EmployeeRecordDialogHeader
+            icon={<SteeringWheelIcon className="h-5 w-5 text-violet-600 dark:text-violet-400" />}
+            idNumber={editingItem.driverIdNumber}
+            aadharName={formValues.aadharName}
+            emptyTitle="Edit Driver"
+            emptyDescription="Update driver information. Leave documents unchanged unless you upload replacements."
+          />
+        ) : (
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <SteeringWheelIcon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+              Add Driver
+            </DialogTitle>
+            <DialogDescription>
+              Register a new driver with identity, license, transport, and bank details.
+            </DialogDescription>
+          </DialogHeader>
+        )}
 
         {!isFormReady ? (
           <EmployeeFormLoadingState />

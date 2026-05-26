@@ -21,6 +21,7 @@ import {
   DocumentUploadField,
   EmployeeFormLoadingState,
   EmployeeFormSection,
+  EmployeeRecordDialogHeader,
 } from '@/features/employees/components/employee-shared'
 import { useOfficeStaffDetailQuery } from '@/features/employees/hooks/use-office-staff-query'
 import type { OfficeStaff, OfficeStaffFormValues } from '@/features/employees/types/office-staff'
@@ -111,17 +112,25 @@ export function OfficeStaffFormDialog({ open, mode, editingItem, onOpenChange }:
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <BriefcaseBusiness className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-            {mode === 'create' ? 'Add Office Staff' : 'Edit Office Staff'}
-          </DialogTitle>
-          <DialogDescription>
-            {mode === 'create'
-              ? 'Register office staff with designation, identity, and bank details.'
-              : 'Update office staff information. Leave documents unchanged unless you upload replacements.'}
-          </DialogDescription>
-        </DialogHeader>
+        {mode === 'edit' && editingItem ? (
+          <EmployeeRecordDialogHeader
+            icon={<BriefcaseBusiness className="h-5 w-5 text-sky-600 dark:text-sky-400" />}
+            idNumber={editingItem.staffIdNumber}
+            aadharName={formValues.aadharName}
+            emptyTitle="Edit Office Staff"
+            emptyDescription="Update office staff information. Leave documents unchanged unless you upload replacements."
+          />
+        ) : (
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BriefcaseBusiness className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+              Add Office Staff
+            </DialogTitle>
+            <DialogDescription>
+              Register office staff with designation, identity, and bank details.
+            </DialogDescription>
+          </DialogHeader>
+        )}
 
         {!isFormReady ? (
           <EmployeeFormLoadingState />
