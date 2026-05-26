@@ -114,19 +114,28 @@ export function EmployeeDetailItem({
   label,
   value,
   dateValue,
+  className,
 }: {
   label: string
   value: string | null | undefined
   dateValue?: string | null
+  className?: string
 }) {
   const displayValue = value?.trim() ? value : '—'
 
   if (dateValue) {
-    return <MasterDateDetailField label={label} value={displayValue} dateValue={dateValue} />
+    return (
+      <MasterDateDetailField
+        label={label}
+        value={displayValue}
+        dateValue={dateValue}
+        className={className}
+      />
+    )
   }
 
   return (
-    <div className="space-y-1 rounded-lg border bg-muted/20 px-3 py-2.5">
+    <div className={cn('space-y-1 rounded-lg border bg-muted/20 px-3 py-2.5', className)}>
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="text-sm font-medium text-foreground">{displayValue}</p>
     </div>

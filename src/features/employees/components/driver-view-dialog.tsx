@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { MasterDetailGrid } from '@/components/master-detail-grid'
 import {
   EmployeeDetailItem,
   EmployeeDocumentPreview,
@@ -51,7 +52,7 @@ export function DriverViewDialog({ open, item, onOpenChange }: DriverViewDialogP
           </div>
         ) : driver ? (
           <div className="space-y-5">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <MasterDetailGrid columns="threeColLg">
               <EmployeeDetailItem label="Driver ID" value={driver.driverIdNumber} />
               <EmployeeDetailItem label="Aadhar Name" value={driver.aadharName} />
               <EmployeeDetailItem label="DL Name" value={driver.dlName} />
@@ -87,19 +88,19 @@ export function DriverViewDialog({ open, item, onOpenChange }: DriverViewDialogP
                 value={formatMasterDateDisplay(driver.dateOfLeaving)}
               />
               <EmployeeDetailItem label="Reference Name" value={driver.referenceName} />
-              <EmployeeDetailItem label="Remarks" value={driver.remarks} />
-            </div>
+              <EmployeeDetailItem label="Remarks" value={driver.remarks} className="col-span-2 lg:col-span-3" />
+            </MasterDetailGrid>
 
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Bank</p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <MasterDetailGrid columns="threeColLg">
                 <EmployeeDetailItem label="Account Holder" value={driver.accountHolderName} />
                 <EmployeeDetailItem label="Account Number" value={driver.accountNumber} />
                 <EmployeeDetailItem label="Bank Name" value={driver.bankName} />
                 <EmployeeDetailItem label="Branch Name" value={driver.branchName} />
                 <EmployeeDetailItem label="IFSC Code" value={driver.ifscCode} />
                 <EmployeeDetailItem label="UPI ID" value={driver.upiId} />
-              </div>
+              </MasterDetailGrid>
             </div>
 
             {detail ? (
@@ -107,20 +108,20 @@ export function DriverViewDialog({ open, item, onOpenChange }: DriverViewDialogP
                 <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">
                   Documents
                 </p>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <MasterDetailGrid columns="threeColLg" className="gap-3 sm:gap-4">
                   <EmployeeDocumentPreview label="Aadhar Front" base64={detail.aadharCardFront} />
                   <EmployeeDocumentPreview label="Aadhar Back" base64={detail.aadharCardBack} />
                   <EmployeeDocumentPreview label="DL Front" base64={detail.dlFront} />
                   <EmployeeDocumentPreview label="DL Back" base64={detail.dlBack} />
                   <EmployeeDocumentPreview label="UPI Scanner" base64={detail.upiScanner} />
-                </div>
+                </MasterDetailGrid>
               </div>
             ) : null}
 
-            <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">
+            <MasterDetailGrid className="border-t pt-4">
               <EmployeeDetailItem label="Created" value={formatEmployeeDateTime(driver.createdAt)} />
               <EmployeeDetailItem label="Last Updated" value={formatEmployeeDateTime(driver.updatedAt)} />
-            </div>
+            </MasterDetailGrid>
           </div>
         ) : null}
 

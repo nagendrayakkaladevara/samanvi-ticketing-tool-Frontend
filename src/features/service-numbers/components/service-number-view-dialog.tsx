@@ -1,5 +1,6 @@
 import { Download, Route } from 'lucide-react'
 
+import { MasterDetailGrid } from '@/components/master-detail-grid'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -16,6 +17,7 @@ import {
   formatDateTime,
   formatDistance,
 } from '@/features/service-numbers/utils/service-number-model'
+import { cn } from '@/lib/utils'
 
 type ServiceNumberViewDialogProps = {
   open: boolean
@@ -23,9 +25,17 @@ type ServiceNumberViewDialogProps = {
   onOpenChange: (open: boolean) => void
 }
 
-function DetailItem({ label, value }: { label: string; value: string }) {
+function DetailItem({
+  label,
+  value,
+  className,
+}: {
+  label: string
+  value: string
+  className?: string
+}) {
   return (
-    <div className="space-y-1 rounded-lg border bg-muted/20 px-3 py-2.5">
+    <div className={cn('space-y-1 rounded-lg border bg-muted/20 px-3 py-2.5', className)}>
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="text-sm font-medium text-foreground">{value}</p>
     </div>
@@ -50,40 +60,42 @@ export function ServiceNumberViewDialog({ open, item, onOpenChange }: ServiceNum
 
         {item ? (
           <div className="space-y-5">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <MasterDetailGrid>
               <DetailItem label="Service For" value={item.serviceFor.serviceFor} />
               <DetailItem label="Service Number" value={item.serviceNo} />
               <DetailItem label="From" value={item.from} />
               <DetailItem label="To" value={item.to} />
               <DetailItem label="Via" value={item.via} />
               <DetailItem label="Distance" value={formatDistance(item.distance)} />
-            </div>
+            </MasterDetailGrid>
 
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Amounts</p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <MasterDetailGrid columns="threeColLg">
                 <DetailItem label="Parking Amount" value={formatAmount(item.parkingAmount)} />
                 <DetailItem label="Driver One Beta" value={formatAmount(item.driverOneBeta)} />
                 <DetailItem label="Driver Two Beta" value={formatAmount(item.driverTwoBeta)} />
                 <DetailItem label="Helper Beta" value={formatAmount(item.helperBeta)} />
                 <DetailItem label="Conductor Beta" value={formatAmount(item.conductorBeta)} />
-              </div>
+              </MasterDetailGrid>
             </div>
 
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Crew</p>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <MasterDetailGrid>
                 <DetailItem label="Optional Driver" value={item.optDriver} />
                 <DetailItem label="Optional Helper" value={item.optHelper} />
-              </div>
+              </MasterDetailGrid>
             </div>
 
-            <DetailItem label="Remarks" value={item.remarks} />
+            <MasterDetailGrid>
+              <DetailItem label="Remarks" value={item.remarks} className="col-span-2" />
+            </MasterDetailGrid>
 
-            <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">
+            <MasterDetailGrid className="border-t pt-4">
               <DetailItem label="Created" value={formatDateTime(item.createdAt)} />
               <DetailItem label="Last Updated" value={formatDateTime(item.updatedAt)} />
-            </div>
+            </MasterDetailGrid>
           </div>
         ) : null}
 
