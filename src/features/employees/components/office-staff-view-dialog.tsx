@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { MasterDetailGrid } from '@/components/master-detail-grid'
 import {
   EmployeeDetailItem,
   EmployeeDocumentPreview,
@@ -48,7 +49,7 @@ export function OfficeStaffViewDialog({ open, item, onOpenChange }: OfficeStaffV
           </div>
         ) : staff ? (
           <div className="space-y-5">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <MasterDetailGrid>
               <EmployeeDetailItem label="Staff ID" value={staff.staffIdNumber} />
               <EmployeeDetailItem label="Full Name" value={staff.aadharName} />
               <EmployeeDetailItem label="Nick Name" value={staff.nickName} />
@@ -61,19 +62,19 @@ export function OfficeStaffViewDialog({ open, item, onOpenChange }: OfficeStaffV
               <EmployeeDetailItem label="Date of Joining" value={formatMasterDateDisplay(staff.dateOfJoining)} />
               <EmployeeDetailItem label="Date of Leaving" value={formatMasterDateDisplay(staff.dateOfLeaving)} />
               <EmployeeDetailItem label="Reference Name" value={staff.referenceName} />
-              <EmployeeDetailItem label="Remarks" value={staff.remarks} />
-            </div>
+              <EmployeeDetailItem label="Remarks" value={staff.remarks} className="col-span-2" />
+            </MasterDetailGrid>
 
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Bank</p>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <MasterDetailGrid>
                 <EmployeeDetailItem label="Account Holder" value={staff.accountHolderName} />
                 <EmployeeDetailItem label="Account Number" value={staff.accountNumber} />
                 <EmployeeDetailItem label="Bank Name" value={staff.bankName} />
                 <EmployeeDetailItem label="Branch Name" value={staff.branchName} />
                 <EmployeeDetailItem label="IFSC Code" value={staff.ifscCode} />
                 <EmployeeDetailItem label="UPI ID" value={staff.upiId} />
-              </div>
+              </MasterDetailGrid>
             </div>
 
             {detail ? (
@@ -81,18 +82,18 @@ export function OfficeStaffViewDialog({ open, item, onOpenChange }: OfficeStaffV
                 <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">
                   Documents
                 </p>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <MasterDetailGrid className="gap-3 sm:gap-4">
                   <EmployeeDocumentPreview label="Aadhar Front" base64={detail.aadharCardFront} />
                   <EmployeeDocumentPreview label="Aadhar Back" base64={detail.aadharCardBack} />
                   <EmployeeDocumentPreview label="UPI Scanner" base64={detail.upiScanner} />
-                </div>
+                </MasterDetailGrid>
               </div>
             ) : null}
 
-            <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">
+            <MasterDetailGrid className="border-t pt-4">
               <EmployeeDetailItem label="Created" value={formatEmployeeDateTime(staff.createdAt)} />
               <EmployeeDetailItem label="Last Updated" value={formatEmployeeDateTime(staff.updatedAt)} />
-            </div>
+            </MasterDetailGrid>
           </div>
         ) : null}
       </DialogContent>
