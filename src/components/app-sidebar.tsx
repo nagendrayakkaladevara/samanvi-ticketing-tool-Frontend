@@ -10,6 +10,7 @@ import {
   Settings,
   Ticket,
   Users,
+  Wrench,
 } from 'lucide-react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 
@@ -70,6 +71,13 @@ const mastersNavItems = [
   { to: '/masters/employees', label: 'Employees' },
 ] as const
 
+const garageNavItems = [
+  { to: '/garage/create-job', label: 'Create Job' },
+  { to: '/garage/repair-tracking', label: 'Repair Tracking' },
+  { to: '/garage/reports', label: 'Reports' },
+  { to: '/garage/masters', label: 'Garage Masters' },
+] as const
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const currentUser = useCurrentUser()
   const location = useLocation()
@@ -97,7 +105,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return currentUser ? item.roles.includes(currentUser.role) : false
   })
   const showMastersNav = currentUser?.role === 'ADMIN'
+  const showGarageNav = currentUser?.role === 'ADMIN'
   const isMastersRouteActive = location.pathname.startsWith('/masters')
+  const isGarageRouteActive = location.pathname.startsWith('/garage')
 
   return (
     <Sidebar collapsible="icon" className="no-print" {...props}>
@@ -137,6 +147,32 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {mastersNavItems.map((item) => (
+                          <SidebarMenuSubItem key={item.to}>
+                            <SidebarMenuSubButton asChild isActive={location.pathname === item.to}>
+                              <NavLink to={item.to} onClick={handleMobileItemClick}>
+                                <span>{item.label}</span>
+                              </NavLink>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              ) : null}
+              {showGarageNav ? (
+                <Collapsible asChild defaultOpen={isGarageRouteActive} className="group/collapsible">
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton tooltip="Garage" isActive={isGarageRouteActive}>
+                        <Wrench />
+                        <span>Garage</span>
+                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {garageNavItems.map((item) => (
                           <SidebarMenuSubItem key={item.to}>
                             <SidebarMenuSubButton asChild isActive={location.pathname === item.to}>
                               <NavLink to={item.to} onClick={handleMobileItemClick}>
