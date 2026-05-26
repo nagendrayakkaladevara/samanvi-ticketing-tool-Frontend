@@ -4,8 +4,8 @@ import { ImagePlus, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FormLabel } from '@/components/ui/form-label'
 import { fileToBase64 } from '@/lib/utils/file-to-base64'
+import { MasterDateDetailField } from '@/components/master-date-detail-field'
 import { cn } from '@/lib/utils'
-import { isMasterDateBeforeToday } from '@/lib/utils/master-dates'
 
 type DocumentUploadFieldProps = {
   id: string
@@ -119,26 +119,16 @@ export function EmployeeDetailItem({
   value: string | null | undefined
   dateValue?: string | null
 }) {
-  const isPastDue = dateValue ? isMasterDateBeforeToday(dateValue) : false
+  const displayValue = value?.trim() ? value : '—'
+
+  if (dateValue) {
+    return <MasterDateDetailField label={label} value={displayValue} dateValue={dateValue} />
+  }
 
   return (
-    <div
-      className={cn(
-        'space-y-1 rounded-lg border bg-muted/20 px-3 py-2.5',
-        isPastDue && 'border-destructive/60 bg-destructive/10',
-      )}
-    >
-      <p
-        className={cn(
-          'text-xs font-medium uppercase tracking-wide text-muted-foreground',
-          isPastDue && 'text-destructive',
-        )}
-      >
-        {label}
-      </p>
-      <p className={cn('text-sm font-medium text-foreground', isPastDue && 'text-destructive')}>
-        {value?.trim() ? value : '—'}
-      </p>
+    <div className="space-y-1 rounded-lg border bg-muted/20 px-3 py-2.5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-sm font-medium text-foreground">{displayValue}</p>
     </div>
   )
 }

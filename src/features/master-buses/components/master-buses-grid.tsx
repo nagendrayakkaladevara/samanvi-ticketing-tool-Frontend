@@ -26,6 +26,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { masterBusesService } from '@/features/master-buses/api/master-buses.service'
 import {
+  MasterDateCell,
+  type MasterBusDateField,
+} from '@/features/master-buses/components/master-date-display'
+import {
   MasterBusMobileCard,
   MasterBusMobileCardSkeleton,
 } from '@/features/master-buses/components/master-bus-mobile-card'
@@ -43,6 +47,37 @@ ModuleRegistry.registerModules([AllCommunityModule])
 
 function BusNumberCell({ value }: ICellRendererParams<MasterBusGridRow>) {
   return <span className="ticket-grid__bus-badge">{value}</span>
+}
+
+function ValidityDateCell({
+  value,
+  data,
+  colDef,
+}: ICellRendererParams<MasterBusGridRow, string> & { dateField?: MasterBusDateField }) {
+  const dateField = (colDef?.cellRendererParams as { dateField?: MasterBusDateField } | undefined)?.dateField
+  const rawDate = dateField && data ? (data[dateField] as string | null | undefined) : undefined
+  const label = value ?? '—'
+
+  return <MasterDateCell label={label} dateValue={rawDate} />
+}
+
+function validityDateColumn(
+  labelField: keyof MasterBusGridRow,
+  dateField: MasterBusDateField,
+  headerName: string,
+  minWidth: number,
+): ColDef<MasterBusGridRow> {
+  return {
+    field: labelField,
+    headerName,
+    headerClass: 'ticket-grid__header-cell',
+    cellRenderer: ValidityDateCell,
+    cellRendererParams: { dateField },
+    minWidth,
+    flex: 1,
+    sortable: true,
+    filter: true,
+  }
 }
 
 function RemarksCell({ value }: ICellRendererParams<MasterBusGridRow, string | null>) {
@@ -227,78 +262,14 @@ export function MasterBusesGrid({
         valueFormatter: (params) =>
           typeof params.value === 'number' ? params.value.toLocaleString() : String(params.value ?? '—'),
       },
-      {
-        field: 'insuranceValidityLabel',
-        headerName: 'Insurance',
-        headerClass: 'ticket-grid__header-cell',
-        minWidth: 130,
-        flex: 1,
-        sortable: true,
-        filter: true,
-      },
-      {
-        field: 'pollutionValidityLabel',
-        headerName: 'Pollution',
-        headerClass: 'ticket-grid__header-cell',
-        minWidth: 130,
-        flex: 1,
-        sortable: true,
-        filter: true,
-      },
-      {
-        field: 'fcValidityLabel',
-        headerName: 'FC',
-        headerClass: 'ticket-grid__header-cell',
-        minWidth: 120,
-        flex: 1,
-        sortable: true,
-        filter: true,
-      },
-      {
-        field: 'basePermitValidityLabel',
-        headerName: 'Base Permit',
-        headerClass: 'ticket-grid__header-cell',
-        minWidth: 130,
-        flex: 1,
-        sortable: true,
-        filter: true,
-      },
-      {
-        field: 'homeTaxValidityLabel',
-        headerName: 'Home Tax',
-        headerClass: 'ticket-grid__header-cell',
-        minWidth: 130,
-        flex: 1,
-        sortable: true,
-        filter: true,
-      },
-      {
-        field: 'aitpValidityLabel',
-        headerName: 'AITP',
-        headerClass: 'ticket-grid__header-cell',
-        minWidth: 120,
-        flex: 1,
-        sortable: true,
-        filter: true,
-      },
-      {
-        field: 'aitpAuthorizationValidityLabel',
-        headerName: 'AITP Auth',
-        headerClass: 'ticket-grid__header-cell',
-        minWidth: 130,
-        flex: 1,
-        sortable: true,
-        filter: true,
-      },
-      {
-        field: 'serviceOutDateLabel',
-        headerName: 'Service Out',
-        headerClass: 'ticket-grid__header-cell',
-        minWidth: 130,
-        flex: 1,
-        sortable: true,
-        filter: true,
-      },
+      validityDateColumn('insuranceValidityLabel', 'insuranceValidity', 'Insurance', 130),
+      validityDateColumn('pollutionValidityLabel', 'pollutionValidity', 'Pollution', 130),
+      validityDateColumn('fcValidityLabel', 'fcValidity', 'FC', 120),
+      validityDateColumn('basePermitValidityLabel', 'basePermitValidity', 'Base Permit', 130),
+      validityDateColumn('homeTaxValidityLabel', 'homeTaxValidity', 'Home Tax', 130),
+      validityDateColumn('aitpValidityLabel', 'aitpValidity', 'AITP', 120),
+      validityDateColumn('aitpAuthorizationValidityLabel', 'aitpAuthorizationValidity', 'AITP Auth', 130),
+      validityDateColumn('serviceOutDateLabel', 'serviceOutDate', 'Service Out', 130),
       {
         field: 'remarks',
         headerName: 'Remarks',

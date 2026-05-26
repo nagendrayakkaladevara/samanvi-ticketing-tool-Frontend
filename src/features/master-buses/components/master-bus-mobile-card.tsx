@@ -11,6 +11,7 @@ import type { MouseEvent, ReactNode } from 'react'
 
 import '@/features/tickets/styles/tickets-grid.css'
 
+import { MasterDateDetailField } from '@/components/master-date-detail-field'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import type { MasterBusGridRow } from '@/features/master-buses/types/master-bus'
@@ -27,6 +28,7 @@ type MasterBusMobileCardProps = {
 type DetailField = {
   label: string
   value: string
+  dateValue?: string | null
   fullWidth?: boolean
 }
 
@@ -35,8 +37,20 @@ function isEmptyLabel(value: string): boolean {
   return !trimmed || trimmed === '—'
 }
 
-function DetailCell({ label, value, fullWidth = false }: DetailField) {
+function DetailCell({ label, value, dateValue, fullWidth = false }: DetailField) {
   const empty = isEmptyLabel(value)
+
+  if (dateValue !== undefined) {
+    return (
+      <MasterDateDetailField
+        label={label}
+        value={value}
+        dateValue={dateValue}
+        className={cn(fullWidth && 'master-bus-mobile-card__field--full')}
+        valueClassName={empty ? 'font-medium italic text-muted-foreground/75' : undefined}
+      />
+    )
+  }
 
   return (
     <div className={cn('master-bus-mobile-card__field', fullWidth && 'master-bus-mobile-card__field--full')}>
@@ -93,17 +107,21 @@ export function MasterBusMobileCard({
           <DetailCell label="Engine" value={row.engineNumber} />
           <DetailCell label="Chassis" value={row.chassisNumber} />
           <DetailCell label="Purchase" value={row.purchaseDateLabel} />
-          <DetailCell label="Service out" value={row.serviceOutDateLabel} />
+          <DetailCell label="Service out" value={row.serviceOutDateLabel} dateValue={row.serviceOutDate} />
         </Section>
 
         <Section title="Compliance" icon={ShieldCheck}>
-          <DetailCell label="Insurance" value={row.insuranceValidityLabel} />
-          <DetailCell label="Pollution" value={row.pollutionValidityLabel} />
-          <DetailCell label="FC" value={row.fcValidityLabel} />
-          <DetailCell label="Base permit" value={row.basePermitValidityLabel} />
-          <DetailCell label="Home tax" value={row.homeTaxValidityLabel} />
-          <DetailCell label="AITP" value={row.aitpValidityLabel} />
-          <DetailCell label="AITP auth" value={row.aitpAuthorizationValidityLabel} />
+          <DetailCell label="Insurance" value={row.insuranceValidityLabel} dateValue={row.insuranceValidity} />
+          <DetailCell label="Pollution" value={row.pollutionValidityLabel} dateValue={row.pollutionValidity} />
+          <DetailCell label="FC" value={row.fcValidityLabel} dateValue={row.fcValidity} />
+          <DetailCell label="Base permit" value={row.basePermitValidityLabel} dateValue={row.basePermitValidity} />
+          <DetailCell label="Home tax" value={row.homeTaxValidityLabel} dateValue={row.homeTaxValidity} />
+          <DetailCell label="AITP" value={row.aitpValidityLabel} dateValue={row.aitpValidity} />
+          <DetailCell
+            label="AITP auth"
+            value={row.aitpAuthorizationValidityLabel}
+            dateValue={row.aitpAuthorizationValidity}
+          />
         </Section>
 
         {remarks ? (
