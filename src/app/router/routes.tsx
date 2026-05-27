@@ -63,6 +63,8 @@ import {
   EditApplicationUserPage,
 } from '@/pages/application-access/ApplicationUserFormPage'
 
+import { ApplicationUserViewPage } from '@/pages/application-access/ApplicationUserViewPage'
+
 
 
 function RoleHomeRedirect() {
@@ -422,6 +424,22 @@ export const appRouter = createBrowserRouter([
               <RoleGuard allowedRoles={['ADMIN']}>
 
                 <EditApplicationUserPage />
+
+              </RoleGuard>
+
+            ),
+
+          },
+
+          {
+
+            path: 'application-access/:userId',
+
+            element: (
+
+              <RoleGuard allowedRoles={['ADMIN']}>
+
+                <ApplicationUserViewPage />
 
               </RoleGuard>
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { KeyRound, Loader2, Pencil, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
+import { KeyRound, Loader2, Eye, Pencil, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import {
@@ -138,12 +138,15 @@ export function ApplicationAccessPage() {
         <>
           <div className="grid gap-3 md:hidden">
             {sortedUsers.map((user) => (
-              <Card key={user.id} className="p-4">
+              <Card key={user.id} className="overflow-hidden p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
+                  <div className="min-w-0 flex-1 space-y-1">
                     <p className="truncate font-medium">{user.displayName}</p>
-                    <p className="text-sm text-muted-foreground">{user.username}</p>
+                    <p className="truncate text-sm text-muted-foreground">{user.username}</p>
                     <p className="text-sm text-muted-foreground">{user.mobileNumber}</p>
+                    {user.email ? (
+                      <p className="break-all text-sm text-muted-foreground">{user.email}</p>
+                    ) : null}
                   </div>
                   <span
                     className={cn(
@@ -154,14 +157,22 @@ export function ApplicationAccessPage() {
                     {user.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <div className="mt-3 flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span>{applicationUserTypeLabels[user.userType] ?? user.userType}</span>
-                  {user.email ? <span>{user.email}</span> : null}
                   {user.permissionIds.length > 0 ? (
                     <span>{user.permissionIds.length} permission override(s)</span>
                   ) : null}
                 </div>
                 <div className="mt-4 flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => navigate(applicationAccessRoutes.view(user.id))}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    View
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -222,6 +233,14 @@ export function ApplicationAccessPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(applicationAccessRoutes.view(user.id))}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          View
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
