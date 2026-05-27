@@ -8,6 +8,11 @@ export type ApplicationUserType =
 
 export type CreatableApplicationUserType = Exclude<ApplicationUserType, 'admin'>
 
+export type UsernameExistsResult = {
+  username: string
+  exists: boolean
+}
+
 export type ApplicationUser = {
   id: string
   displayName: string
@@ -20,6 +25,7 @@ export type ApplicationUser = {
 }
 
 export type CreateApplicationUserInput = {
+  username: string
   fullName: string
   password: string
   mobileNumber: string
@@ -31,6 +37,7 @@ export type CreateApplicationUserInput = {
 
 export type UpdateApplicationUserInput = {
   userId: string
+  username?: string
   fullName?: string
   password?: string
   mobileNumber?: string

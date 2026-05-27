@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { ArrowLeft, Eye, EyeOff, KeyRound, Loader2, Shield } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, Shield } from 'lucide-react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils'
 type FormMode = 'create' | 'edit'
 
 type ApplicationUserFormValues = {
+  username: string
   fullName: string
   mobileNumber: string
   email: string
@@ -48,6 +49,7 @@ type ApplicationUserFormValues = {
 
 function getDefaultValues(): ApplicationUserFormValues {
   return {
+    username: '',
     fullName: '',
     mobileNumber: '',
     email: '',
@@ -68,6 +70,14 @@ function getApplicationUserFieldError(
   mode: FormMode,
 ): string | undefined {
   switch (field) {
+    case 'username': {
+      const username = values.username.trim()
+      if (!username) return 'Username is required.'
+      if (username.length < 3 || username.length > 50) {
+        return 'Username must be between 3 and 50 characters.'
+      }
+      return undefined
+    }
     case 'fullName':
       return !values.fullName.trim() ? 'Full name is required.' : undefined
     case 'mobileNumber':
@@ -93,7 +103,7 @@ function getApplicationUserFieldError(
 
 function validateForm(values: ApplicationUserFormValues, mode: FormMode): ApplicationUserFormErrors {
   const errors: ApplicationUserFormErrors = {}
-  const validatedFields: ApplicationUserFormField[] = ['fullName', 'mobileNumber', 'password', 'email']
+  const validatedFields: ApplicationUserFormField[] = ['username', 'fullName', 'mobileNumber', 'password', 'email']
 
   for (const field of validatedFields) {
     const error = getApplicationUserFieldError(field, values, mode)
@@ -102,6 +112,11 @@ function validateForm(values: ApplicationUserFormValues, mode: FormMode): Applic
 
   return errors
 }
+
+type UsernameAvailabilityStatus = 'idle' | 'checking' | 'available' | 'taken' | 'error'
+
+const USERNAME_TAKEN_MESSAGE = 'This username is already taken.'
+const USERNAME_DEBOUNCE_MS = 500
 
 type ApplicationUserFormPageProps = {
   mode: FormMode
@@ -114,7 +129,12 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
   const [values, setValues] = useState<ApplicationUserFormValues>(getDefaultValues)
   const [fieldErrors, setFieldErrors] = useState<ApplicationUserFormErrors>({})
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const [usernameAvailability, setUsernameAvailability] = useState<UsernameAvailabilityStatus>('idle')
   const preservedHiddenPermissionIdsRef = useRef<string[]>([])
+  const originalUsernameRef = useRef('')
+  const usernameCheckRequestIdRef = useRef(0)
+  const valuesRef = useRef(values)
+  valuesRef.current = values
 
   const {
     data: editingUser,
@@ -139,6 +159,8 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
   useEffect(() => {
     if (mode === 'create') {
       preservedHiddenPermissionIdsRef.current = []
+      originalUsernameRef.current = ''
+      setUsernameAvailability('idle')
       setFieldErrors({})
       return
     }
@@ -153,7 +175,10 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
     )
     preservedHiddenPermissionIdsRef.current = hiddenIds
 
+    originalUsernameRef.current = editingUser.username.trim()
+
     setValues({
+      username: editingUser.username,
       fullName: editingUser.displayName,
       mobileNumber: editingUser.mobileNumber,
       email: editingUser.email ?? '',
@@ -162,13 +187,105 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
       isActive: editingUser.isActive,
       permissionIds: visibleIds,
     })
+    setUsernameAvailability('available')
     setFieldErrors({})
   }, [mode, editingUser, permissionsCatalog])
 
   const updateField = <K extends ApplicationUserFormField>(field: K, value: ApplicationUserFormValues[K]) => {
     setValues((prev) => ({ ...prev, [field]: value }))
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }))
+
+    if (field === 'username') {
+      usernameCheckRequestIdRef.current += 1
+      setUsernameAvailability('idle')
+    }
   }
+
+  const needsUsernameAvailabilityCheck = useCallback((username: string) => {
+    const trimmed = username.trim()
+    return trimmed.length > 0 && trimmed !== originalUsernameRef.current
+  }, [])
+
+  const verifyUsernameAvailability = useCallback(async (username: string): Promise<boolean> => {
+    const currentValues = valuesRef.current
+    const syncError = getApplicationUserFieldError('username', { ...currentValues, username }, mode)
+    if (syncError) {
+      setFieldErrors((prev) => ({ ...prev, username: syncError }))
+      setUsernameAvailability('idle')
+      return false
+    }
+
+    const trimmed = username.trim()
+    if (!needsUsernameAvailabilityCheck(trimmed)) {
+      setFieldErrors((prev) => ({ ...prev, username: undefined }))
+      setUsernameAvailability(trimmed ? 'available' : 'idle')
+      return true
+    }
+
+    const requestId = ++usernameCheckRequestIdRef.current
+    setUsernameAvailability('checking')
+
+    try {
+      const { exists } = await applicationUsersService.checkUsernameExists(trimmed)
+      if (requestId !== usernameCheckRequestIdRef.current) {
+        return false
+      }
+
+      if (exists) {
+        setFieldErrors((prev) => ({ ...prev, username: USERNAME_TAKEN_MESSAGE }))
+        setUsernameAvailability('taken')
+        return false
+      }
+
+      setFieldErrors((prev) => ({ ...prev, username: undefined }))
+      setUsernameAvailability('available')
+      return true
+    } catch {
+      if (requestId !== usernameCheckRequestIdRef.current) {
+        return false
+      }
+
+      setFieldErrors((prev) => ({
+        ...prev,
+        username: 'Unable to verify username. Please try again.',
+      }))
+      setUsernameAvailability('error')
+      return false
+    }
+  }, [mode, needsUsernameAvailabilityCheck])
+
+  useEffect(() => {
+    const trimmed = values.username.trim()
+    const syncError = getApplicationUserFieldError('username', values, mode)
+
+    if (syncError) {
+      setUsernameAvailability('idle')
+      return
+    }
+
+    if (!needsUsernameAvailabilityCheck(trimmed)) {
+      setUsernameAvailability(trimmed ? 'available' : 'idle')
+      setFieldErrors((prev) => {
+        if (
+          prev.username === USERNAME_TAKEN_MESSAGE ||
+          prev.username === 'Unable to verify username. Please try again.'
+        ) {
+          return { ...prev, username: undefined }
+        }
+        return prev
+      })
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      void verifyUsernameAvailability(values.username)
+    }, USERNAME_DEBOUNCE_MS)
+
+    return () => {
+      window.clearTimeout(timer)
+      usernameCheckRequestIdRef.current += 1
+    }
+  }, [values.username, mode, needsUsernameAvailabilityCheck, verifyUsernameAvailability])
 
   const blurField = (field: ApplicationUserFormField) => {
     const error = getApplicationUserFieldError(field, values, mode)
@@ -206,7 +323,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
     },
   })
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     const nextErrors = validateForm(values, mode)
@@ -216,8 +333,17 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
       return
     }
 
+    if (needsUsernameAvailabilityCheck(values.username)) {
+      const isAvailable = await verifyUsernameAvailability(values.username)
+      if (!isAvailable) {
+        toast.error('Please fix the username field before continuing.')
+        return
+      }
+    }
+
     if (mode === 'create') {
       createMutation.mutate({
+        username: values.username.trim(),
         fullName: values.fullName.trim(),
         mobileNumber: values.mobileNumber.trim(),
         password: values.password.trim(),
@@ -241,6 +367,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
 
     updateMutation.mutate({
       userId,
+      username: values.username.trim(),
       fullName: values.fullName.trim(),
       mobileNumber: values.mobileNumber.trim(),
       isActive: values.isActive,
@@ -252,6 +379,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
   }
 
   const isSaving = createMutation.isPending || updateMutation.isPending
+  const isCheckingUsername = usernameAvailability === 'checking'
   const isLoading = mode === 'edit' ? isUserLoading || isPermissionsLoading : isPermissionsLoading
 
   if (currentUser?.role !== 'ADMIN') {
@@ -327,7 +455,49 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2 sm:col-span-2">
+              <div className="space-y-2">
+                <FormLabel htmlFor="username" required>
+                  Username
+                </FormLabel>
+                <div className="relative">
+                  <Input
+                    id="username"
+                    value={values.username}
+                    onChange={(event) => updateField('username', event.target.value)}
+                    onBlur={() => blurField('username')}
+                    disabled={isSaving}
+                    placeholder="rajesh.kumar"
+                    autoComplete="off"
+                    maxLength={50}
+                    aria-invalid={Boolean(fieldErrors.username)}
+                    aria-busy={isCheckingUsername}
+                    className={cn(
+                      (isCheckingUsername ||
+                        (usernameAvailability === 'available' &&
+                          values.username.trim() &&
+                          !fieldErrors.username)) &&
+                        'pr-10',
+                      fieldErrors.username && invalidFieldClass,
+                    )}
+                  />
+                  {isCheckingUsername ? (
+                    <span
+                      className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center"
+                      aria-hidden
+                    >
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+                    </span>
+                  ) : usernameAvailability === 'available' && values.username.trim() && !fieldErrors.username ? (
+                    <CheckCircle2
+                      className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-600"
+                      aria-hidden
+                    />
+                  ) : null}
+                </div>
+                <FieldError message={fieldErrors.username} />
+              </div>
+
+              <div className="space-y-2">
                 <FormLabel htmlFor="fullName" required>
                   Full Name
                 </FormLabel>
@@ -344,7 +514,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
                 <FieldError message={fieldErrors.fullName} />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 sm:col-span-2">
                 <FormLabel htmlFor="mobileNumber" required>
                   Mobile Number
                 </FormLabel>
@@ -362,11 +532,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
                   aria-invalid={Boolean(fieldErrors.mobileNumber)}
                   className={cn(fieldErrors.mobileNumber && invalidFieldClass)}
                 />
-                {fieldErrors.mobileNumber ? (
-                  <FieldError message={fieldErrors.mobileNumber} />
-                ) : (
-                  <p className="text-xs text-muted-foreground">Used as the login username.</p>
-                )}
+                <FieldError message={fieldErrors.mobileNumber} />
               </div>
 
               <div className="space-y-2">
@@ -491,7 +657,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSaving}>
+            <Button type="submit" disabled={isSaving || isCheckingUsername}>
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {mode === 'create' ? 'Create User' : 'Save Changes'}
             </Button>

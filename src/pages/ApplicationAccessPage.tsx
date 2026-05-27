@@ -81,7 +81,7 @@ export function ApplicationAccessPage() {
             <div className="space-y-1">
               <h1 className="text-2xl font-semibold tracking-tight">Application Access</h1>
               <p className="max-w-2xl text-sm text-muted-foreground">
-                Provision login accounts for supervisors, staff, and field roles. Mobile number serves as the username.
+                Provision login accounts for supervisors, staff, and field roles. Each user signs in with a unique username.
               </p>
             </div>
           </div>
@@ -142,6 +142,7 @@ export function ApplicationAccessPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 space-y-1">
                     <p className="truncate font-medium">{user.displayName}</p>
+                    <p className="text-sm text-muted-foreground">{user.username}</p>
                     <p className="text-sm text-muted-foreground">{user.mobileNumber}</p>
                   </div>
                   <span
@@ -189,6 +190,7 @@ export function ApplicationAccessPage() {
               <thead>
                 <tr className="border-b bg-muted/30 text-left">
                   <th className="px-4 py-3 font-medium">Name</th>
+                  <th className="px-4 py-3 font-medium">Username</th>
                   <th className="px-4 py-3 font-medium">Mobile</th>
                   <th className="px-4 py-3 font-medium">Email</th>
                   <th className="px-4 py-3 font-medium">User Type</th>
@@ -201,6 +203,7 @@ export function ApplicationAccessPage() {
                 {sortedUsers.map((user) => (
                   <tr key={user.id} className="border-b transition-colors last:border-b-0 hover:bg-muted/40">
                     <td className="px-4 py-3 font-medium">{user.displayName}</td>
+                    <td className="px-4 py-3">{user.username || '—'}</td>
                     <td className="px-4 py-3">{user.mobileNumber}</td>
                     <td className="px-4 py-3 text-muted-foreground">{user.email ?? '—'}</td>
                     <td className="px-4 py-3">{applicationUserTypeLabels[user.userType] ?? user.userType}</td>

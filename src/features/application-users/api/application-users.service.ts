@@ -4,6 +4,7 @@ import type {
   ApplicationUserType,
   CreateApplicationUserInput,
   UpdateApplicationUserInput,
+  UsernameExistsResult,
 } from '@/features/application-users/types/application-user'
 
 const endpoint = '/application-users'
@@ -69,20 +70,20 @@ function normalizeUser(raw: unknown): ApplicationUser | null {
     return null
   }
 
-  const mobileNumber =
-    normalizeString(value.mobileNumber) ?? normalizeString(value.username) ?? normalizeString(value.mobile) ?? id
+  const mobileNumber = normalizeString(value.mobileNumber) ?? normalizeString(value.mobile) ?? ''
+  const username = normalizeString(value.username) ?? ''
 
   const displayName =
     normalizeString(value.displayName) ??
     normalizeString(value.fullName) ??
     normalizeString(value.name) ??
-    mobileNumber
+    (username || mobileNumber || id)
 
   return {
     id,
     displayName,
     mobileNumber,
-    username: normalizeString(value.username) ?? mobileNumber,
+    username,
     email: normalizeString(value.email),
     userType: normalizeUserType(value.userType ?? value.roleCode ?? value.role),
     isActive: typeof value.isActive === 'boolean' ? value.isActive : true,
@@ -142,10 +143,38 @@ function extractEntityPayload(raw: unknown): unknown {
   return record.user ?? raw
 }
 
+function normalizeUsernameExists(raw: unknown): UsernameExistsResult | null {
+  const entity = extractEntityPayload(raw)
+  if (!entity || typeof entity !== 'object') {
+    return null
+  }
+
+  const record = entity as Record<string, unknown>
+  const username = normalizeString(record.username)
+  if (!username || typeof record.exists !== 'boolean') {
+    return null
+  }
+
+  return { username, exists: record.exists }
+}
+
 export const applicationUsersService = {
   async list(): Promise<ApplicationUser[]> {
     const { data } = await apiClient.get<unknown>(endpoint)
     return extractArrayPayload(data).map(normalizeUser).filter((user): user is ApplicationUser => Boolean(user))
+  },
+
+  async checkUsernameExists(username: string): Promise<UsernameExistsResult> {
+    const { data } = await apiClient.get<unknown>(`${endpoint}/username-exists`, {
+      params: { username: username.trim() },
+    })
+
+    const result = normalizeUsernameExists(data)
+    if (!result) {
+      throw new Error('Unable to verify username availability.')
+    }
+
+    return result
   },
 
   async getById(userId: string): Promise<ApplicationUser> {
