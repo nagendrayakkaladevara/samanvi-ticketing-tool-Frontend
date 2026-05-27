@@ -3,6 +3,7 @@ import type {
   ApplicationUser,
   ApplicationUserType,
   CreateApplicationUserInput,
+  UpdateApplicationUserInput,
 } from '@/features/application-users/types/application-user'
 
 const endpoint = '/application-users'
@@ -32,6 +33,26 @@ function normalizeUserType(value: unknown): ApplicationUserType {
 
   const normalized = value.trim().toLowerCase() as ApplicationUserType
   return applicationUserTypes.has(normalized) ? normalized : 'worker'
+}
+
+function normalizePermissionIds(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => {
+        if (typeof entry === 'string') {
+          return entry
+        }
+        if (entry && typeof entry === 'object') {
+          const record = entry as Record<string, unknown>
+          const id = record.id ?? record.permissionId
+          return typeof id === 'string' ? id : typeof id === 'number' ? String(id) : null
+        }
+        return null
+      })
+      .filter((id): id is string => Boolean(id))
+  }
+
+  return []
 }
 
 function normalizeUser(raw: unknown): ApplicationUser | null {
@@ -65,6 +86,10 @@ function normalizeUser(raw: unknown): ApplicationUser | null {
     email: normalizeString(value.email),
     userType: normalizeUserType(value.userType ?? value.roleCode ?? value.role),
     isActive: typeof value.isActive === 'boolean' ? value.isActive : true,
+    permissionIds:
+      normalizePermissionIds(value.permissionIds).length > 0
+        ? normalizePermissionIds(value.permissionIds)
+        : normalizePermissionIds(value.permissions),
   }
 }
 
@@ -123,8 +148,30 @@ export const applicationUsersService = {
     return extractArrayPayload(data).map(normalizeUser).filter((user): user is ApplicationUser => Boolean(user))
   },
 
+  async getById(userId: string): Promise<ApplicationUser> {
+    const { data } = await apiClient.get<unknown>(`${endpoint}/${userId}`)
+    const user = normalizeUser(extractEntityPayload(data))
+    if (!user) {
+      throw new Error('Application user not found.')
+    }
+    return user
+  },
+
   async create(input: CreateApplicationUserInput): Promise<ApplicationUser> {
     const { data } = await apiClient.post<unknown>(endpoint, input)
     return normalizeUser(extractEntityPayload(data)) ?? (extractEntityPayload(data) as ApplicationUser)
+  },
+
+  async update({ userId, ...payload }: UpdateApplicationUserInput): Promise<ApplicationUser> {
+    const { data } = await apiClient.patch<unknown>(`${endpoint}/${userId}`, payload)
+    return normalizeUser(extractEntityPayload(data)) ?? (extractEntityPayload(data) as ApplicationUser)
+  },
+
+  async remove(userId: string): Promise<void> {
+    await apiClient.delete(`${endpoint}/${userId}`)
+  },
+
+  async assignPermissions(userId: string, permissionIds: string[]): Promise<void> {
+    await apiClient.put(`${endpoint}/${userId}/permissions`, { permissionIds })
   },
 }

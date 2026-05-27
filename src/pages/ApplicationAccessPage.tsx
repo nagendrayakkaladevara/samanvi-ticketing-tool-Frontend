@@ -1,19 +1,38 @@
 import { useMemo, useState } from 'react'
-import { KeyRound, ShieldCheck, UserPlus, Users } from 'lucide-react'
+import { useMutation } from '@tanstack/react-query'
+import { KeyRound, Loader2, Pencil, ShieldCheck, Trash2, UserPlus, Users } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { CreateApplicationUserSheet } from '@/features/application-users/components/create-application-user-sheet'
+import { applicationUsersService } from '@/features/application-users/api/application-users.service'
 import { useApplicationUsersQuery } from '@/features/application-users/hooks/use-application-users-query'
-import { applicationUserTypeLabels } from '@/features/application-users/types/application-user'
+import {
+  applicationUserTypeLabels,
+  type ApplicationUser,
+} from '@/features/application-users/types/application-user'
+import { applicationAccessRoutes } from '@/features/application-users/utils/application-access-routes'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { queryClient } from '@/lib/query/query-client'
+import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 
 export function ApplicationAccessPage() {
+  const navigate = useNavigate()
   const currentUser = useCurrentUser()
   const { data: users = [], isLoading, isError, isFetching, error } = useApplicationUsersQuery()
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<ApplicationUser | null>(null)
 
   const sortedUsers = useMemo(
     () =>
@@ -22,6 +41,23 @@ export function ApplicationAccessPage() {
       ),
     [users],
   )
+
+  const deleteMutation = useMutation({
+    mutationFn: (userId: string) => applicationUsersService.remove(userId),
+    onSuccess: () => {
+      toast.success('Application user deleted successfully.')
+      queryClient.invalidateQueries({ queryKey: ['application-users'] })
+      setDeleteTarget(null)
+    },
+    onError: (mutationError) => {
+      toast.error(mutationError instanceof Error ? mutationError.message : 'Failed to delete application user.')
+    },
+  })
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return
+    deleteMutation.mutate(deleteTarget.id)
+  }
 
   if (currentUser?.role !== 'ADMIN') {
     return (
@@ -51,9 +87,11 @@ export function ApplicationAccessPage() {
           </div>
           <div className="flex w-full items-stretch gap-2 sm:w-auto sm:items-center">
             {isFetching && !isLoading ? <span className="text-xs text-muted-foreground">Refreshing...</span> : null}
-            <Button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto">
-              <UserPlus className="h-4 w-4" />
-              Create User
+            <Button asChild className="w-full sm:w-auto">
+              <Link to={applicationAccessRoutes.create}>
+                <UserPlus className="h-4 w-4" />
+                Create User
+              </Link>
             </Button>
           </div>
         </div>
@@ -87,9 +125,11 @@ export function ApplicationAccessPage() {
               Create the first application user to grant secure access to modules based on role permissions.
             </p>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)}>
-            <UserPlus className="h-4 w-4" />
-            Create First User
+          <Button asChild>
+            <Link to={applicationAccessRoutes.create}>
+              <UserPlus className="h-4 w-4" />
+              Create First User
+            </Link>
           </Button>
         </Card>
       ) : null}
@@ -116,20 +156,45 @@ export function ApplicationAccessPage() {
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span>{applicationUserTypeLabels[user.userType] ?? user.userType}</span>
                   {user.email ? <span>{user.email}</span> : null}
+                  {user.permissionIds.length > 0 ? (
+                    <span>{user.permissionIds.length} permission override(s)</span>
+                  ) : null}
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => navigate(applicationAccessRoutes.edit(user.id))}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="flex-1 border-red-600 bg-red-600 text-white hover:bg-red-700"
+                    onClick={() => setDeleteTarget(user)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
+                  </Button>
                 </div>
               </Card>
             ))}
           </div>
 
           <Card className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[760px] border-collapse text-sm">
+            <table className="w-full min-w-[920px] border-collapse text-sm">
               <thead>
                 <tr className="border-b bg-muted/30 text-left">
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Mobile</th>
                   <th className="px-4 py-3 font-medium">Email</th>
                   <th className="px-4 py-3 font-medium">User Type</th>
+                  <th className="px-4 py-3 font-medium">Overrides</th>
                   <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -139,6 +204,9 @@ export function ApplicationAccessPage() {
                     <td className="px-4 py-3">{user.mobileNumber}</td>
                     <td className="px-4 py-3 text-muted-foreground">{user.email ?? '—'}</td>
                     <td className="px-4 py-3">{applicationUserTypeLabels[user.userType] ?? user.userType}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {user.permissionIds.length > 0 ? user.permissionIds.length : '—'}
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={cn(
@@ -148,6 +216,27 @@ export function ApplicationAccessPage() {
                       >
                         {user.isActive ? 'Active' : 'Inactive'}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(applicationAccessRoutes.edit(user.id))}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                          onClick={() => setDeleteTarget(user)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -162,7 +251,29 @@ export function ApplicationAccessPage() {
         </>
       ) : null}
 
-      <CreateApplicationUserSheet open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete application user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? `This will permanently remove ${deleteTarget.displayName}. This action cannot be undone.`
+                : 'This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   )
 }

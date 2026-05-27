@@ -58,6 +58,11 @@ import { RepairTrackingPage } from '@/pages/garage/RepairTrackingPage'
 
 import { ApplicationAccessPage } from '@/pages/ApplicationAccessPage'
 
+import {
+  CreateApplicationUserPage,
+  EditApplicationUserPage,
+} from '@/pages/application-access/ApplicationUserFormPage'
+
 
 
 function RoleHomeRedirect() {
@@ -385,6 +390,38 @@ export const appRouter = createBrowserRouter([
               <RoleGuard allowedRoles={['ADMIN']}>
 
                 <GarageMastersPage />
+
+              </RoleGuard>
+
+            ),
+
+          },
+
+          {
+
+            path: 'application-access/create',
+
+            element: (
+
+              <RoleGuard allowedRoles={['ADMIN']}>
+
+                <CreateApplicationUserPage />
+
+              </RoleGuard>
+
+            ),
+
+          },
+
+          {
+
+            path: 'application-access/:userId/edit',
+
+            element: (
+
+              <RoleGuard allowedRoles={['ADMIN']}>
+
+                <EditApplicationUserPage />
 
               </RoleGuard>
 

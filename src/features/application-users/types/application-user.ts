@@ -16,6 +16,7 @@ export type ApplicationUser = {
   email?: string
   userType: ApplicationUserType
   isActive: boolean
+  permissionIds: string[]
 }
 
 export type CreateApplicationUserInput = {
@@ -24,6 +25,17 @@ export type CreateApplicationUserInput = {
   mobileNumber: string
   userType: CreatableApplicationUserType
   email?: string
+  isActive?: boolean
+  permissionIds?: string[]
+}
+
+export type UpdateApplicationUserInput = {
+  userId: string
+  fullName?: string
+  password?: string
+  mobileNumber?: string
+  userType?: CreatableApplicationUserType
+  email?: string | null
   isActive?: boolean
   permissionIds?: string[]
 }
