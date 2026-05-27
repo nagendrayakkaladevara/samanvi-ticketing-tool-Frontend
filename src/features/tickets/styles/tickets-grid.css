@@ -642,26 +642,31 @@
   display: none;
 }
 
-/* Pinned left columns (Bus No page) */
-.ticket-grid .ag-pinned-left-header,
-.ticket-grid .ag-pinned-left-cols-container {
-  box-shadow: 4px 0 8px hsl(var(--foreground) / 0.06);
-  z-index: 1;
+/* Sticky Bus No column — keeps S.No | Bus No order while Bus No stays on scroll */
+.ticket-grid .ag-header-cell.ticket-grid__sticky-col,
+.ticket-grid .ag-cell.ticket-grid__sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
 }
 
-.ticket-grid .ag-pinned-left-cols-container .ag-row:not(.ag-row-odd) .ag-cell {
+.ticket-grid .ag-header-cell.ticket-grid__sticky-col {
+  z-index: 3;
+}
+
+.ticket-grid .ag-center-cols-container .ag-row:not(.ag-row-odd) .ag-cell.ticket-grid__sticky-col {
   background-color: var(--ticket-grid-surface);
 }
 
-.ticket-grid .ag-pinned-left-cols-container .ag-row.ag-row-odd .ag-cell {
+.ticket-grid .ag-center-cols-container .ag-row.ag-row-odd .ag-cell.ticket-grid__sticky-col {
   background-color: var(--ticket-grid-row-alt);
 }
 
-.ticket-grid .ag-pinned-left-cols-container .ag-row:hover .ag-cell {
+.ticket-grid .ag-center-cols-container .ag-row:hover .ag-cell.ticket-grid__sticky-col {
   background-color: var(--ticket-grid-row-hover) !important;
 }
 
-.ticket-grid .ag-pinned-left-header .ag-header-cell {
+.ticket-grid .ag-header .ag-header-row:first-child .ag-header-cell.ticket-grid__sticky-col {
   background: linear-gradient(
     180deg,
     hsl(var(--muted) / 0.75) 0%,
@@ -669,16 +674,21 @@
   );
 }
 
-.dark .ticket-grid .ag-pinned-left-header .ag-header-cell {
+.dark .ticket-grid .ag-header .ag-header-row:first-child .ag-header-cell.ticket-grid__sticky-col {
   background: hsl(var(--muted) / 0.45);
 }
 
-.ticket-grid .ag-pinned-left-header .ag-header-row:last-child .ag-header-cell {
+.ticket-grid .ag-header .ag-header-row:last-child .ag-header-cell.ticket-grid__sticky-col {
   background: hsl(var(--muted) / 0.35);
 }
 
-.dark .ticket-grid .ag-pinned-left-header .ag-header-row:last-child .ag-header-cell {
+.dark .ticket-grid .ag-header .ag-header-row:last-child .ag-header-cell.ticket-grid__sticky-col {
   background: hsl(var(--muted) / 0.5);
+}
+
+.ticket-grid .ag-header-cell.ticket-grid__sticky-col,
+.ticket-grid .ag-cell.ticket-grid__sticky-col {
+  box-shadow: 4px 0 8px hsl(var(--foreground) / 0.06);
 }
 
 .ticket-grid .ag-header-cell {
