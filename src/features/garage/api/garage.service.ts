@@ -1,6 +1,11 @@
 import { apiClient } from '@/lib/api/client'
 import type { CreateRepairJobInput, RepairJob } from '@/features/garage/types/job'
 import type {
+  CreateRepairPartInput,
+  RepairPart,
+  UpdateRepairPartInput,
+} from '@/features/garage/types/repair-part'
+import type {
   LeafRepairCategoryOption,
   RepairCategory,
   RepairCategoryListResponse,
@@ -9,6 +14,7 @@ import type {
 
 const jobsEndpoint = '/garage/jobs'
 const categoriesEndpoint = '/garage/masters/repair-categories'
+const partsEndpoint = '/garage/masters/repair-parts'
 
 function normalizeString(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined
@@ -61,6 +67,39 @@ function normalizeRepairCategoryTreeNode(raw: unknown): RepairCategoryTreeNode |
     .filter((node): node is RepairCategoryTreeNode => Boolean(node))
 
   return { ...category, children }
+}
+
+function normalizeRepairPart(raw: unknown): RepairPart | null {
+  if (!raw || typeof raw !== 'object') return null
+  const value = raw as Record<string, unknown>
+  const id = normalizeString(value.id)
+  const partName = normalizeString(value.partName)
+  const priceRaw = value.price
+  const price =
+    typeof priceRaw === 'string'
+      ? priceRaw
+      : typeof priceRaw === 'number'
+        ? priceRaw.toFixed(2)
+        : undefined
+
+  if (!id || !partName || !price) return null
+
+  const descriptionRaw = value.description
+  const description =
+    descriptionRaw === null
+      ? null
+      : typeof descriptionRaw === 'string'
+        ? descriptionRaw
+        : null
+
+  return {
+    id,
+    partName,
+    price,
+    description,
+    createdAt: normalizeString(value.createdAt) ?? '',
+    updatedAt: normalizeString(value.updatedAt) ?? '',
+  }
 }
 
 export function collectLeafRepairCategories(
@@ -187,6 +226,79 @@ export const garageService = {
       .filter((node): node is RepairCategoryTreeNode => Boolean(node))
 
     return { items, tree }
+  },
+
+  async createRepairCategory(input: { name: string; parentId?: string }): Promise<RepairCategory> {
+    const payload: Record<string, string> = { name: input.name.trim() }
+    if (input.parentId?.trim()) {
+      payload.parentId = input.parentId.trim()
+    }
+
+    const { data } = await apiClient.post<unknown>(categoriesEndpoint, payload)
+    const category = normalizeRepairCategory(extractDataPayload(data))
+    if (!category) {
+      throw new Error('Unexpected response when creating repair category.')
+    }
+    return category
+  },
+
+  async updateRepairCategory(categoryId: string, name: string): Promise<RepairCategory> {
+    const { data } = await apiClient.patch<unknown>(`${categoriesEndpoint}/${categoryId}`, {
+      name: name.trim(),
+    })
+    const category = normalizeRepairCategory(extractDataPayload(data))
+    if (!category) {
+      throw new Error('Unexpected response when updating repair category.')
+    }
+    return category
+  },
+
+  async deleteRepairCategory(categoryId: string): Promise<void> {
+    await apiClient.delete(`${categoriesEndpoint}/${categoryId}`)
+  },
+
+  async listRepairParts(params?: { page?: number; limit?: number }): Promise<RepairPart[]> {
+    const page = params?.page ?? 1
+    const limit = params?.limit ?? 50
+    const { data } = await apiClient.get<unknown>(partsEndpoint, { params: { page, limit } })
+    return extractArrayPayload(data)
+      .map(normalizeRepairPart)
+      .filter((item): item is RepairPart => Boolean(item))
+  },
+
+  async createRepairPart(input: CreateRepairPartInput): Promise<RepairPart> {
+    const payload: Record<string, unknown> = {
+      partName: input.partName.trim(),
+      price: input.price,
+    }
+    if (input.description?.trim()) {
+      payload.description = input.description.trim()
+    }
+
+    const { data } = await apiClient.post<unknown>(partsEndpoint, payload)
+    const part = normalizeRepairPart(extractDataPayload(data))
+    if (!part) {
+      throw new Error('Unexpected response when creating repair part.')
+    }
+    return part
+  },
+
+  async updateRepairPart({ partId, ...input }: UpdateRepairPartInput): Promise<RepairPart> {
+    const payload: Record<string, unknown> = {}
+    if (input.partName !== undefined) payload.partName = input.partName.trim()
+    if (input.price !== undefined) payload.price = input.price
+    if (input.description !== undefined) payload.description = input.description
+
+    const { data } = await apiClient.patch<unknown>(`${partsEndpoint}/${partId}`, payload)
+    const part = normalizeRepairPart(extractDataPayload(data))
+    if (!part) {
+      throw new Error('Unexpected response when updating repair part.')
+    }
+    return part
+  },
+
+  async deleteRepairPart(partId: string): Promise<void> {
+    await apiClient.delete(`${partsEndpoint}/${partId}`)
   },
 
   async createJob(input: CreateRepairJobInput): Promise<RepairJob> {

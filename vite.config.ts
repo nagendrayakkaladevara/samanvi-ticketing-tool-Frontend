@@ -57,8 +57,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
-        // Main bundle is ~2.4 MB; Workbox default precache limit is 2 MB
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        // Main bundle exceeds 3 MiB; Workbox default precache limit is 2 MiB
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       devOptions: {
         enabled: true,
