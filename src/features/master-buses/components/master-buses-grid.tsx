@@ -217,10 +217,12 @@ export function MasterBusesGrid({
       {
         field: 'busNumber',
         headerName: 'Bus No',
-        headerClass: 'ticket-grid__header-cell ticket-grid__sticky-col',
-        cellClass: 'ticket-grid__sticky-col',
+        headerClass: 'ticket-grid__header-cell',
         cellRenderer: BusNumberCell,
         width: 140,
+        pinned: 'left',
+        lockPinned: true,
+        resizable: false,
         sortable: true,
         filter: true,
       },
@@ -379,7 +381,10 @@ export function MasterBusesGrid({
 
           <Card className="ticket-grid-wrapper hidden md:block">
             <div
-              className={cn(isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'ticket-grid')}
+              className={cn(
+                isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz',
+                'ticket-grid ticket-grid--bus-no',
+              )}
               style={gridStyle}
             >
               <AgGridReact<MasterBusGridRow>
