@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Clipboard,
   Database,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Mic,
@@ -54,6 +55,7 @@ const navItems: NavItem[] = [
   { to: '/users', label: 'Users', icon: Users, roles: ['ADMIN'] },
   { to: '/buses', label: 'Buses', icon: Bus, roles: ['ADMIN', 'SUPERVISOR'] },
   { to: '/board', label: 'Board', icon: Clipboard, roles: ['ADMIN'] },
+  { to: '/application-access', label: 'Application Access', icon: KeyRound, roles: ['ADMIN'] },
   {
     to: 'https://samanvidashboard.netlify.app/voice-app-access',
     label: 'Voice app access',
