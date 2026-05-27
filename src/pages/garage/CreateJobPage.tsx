@@ -16,6 +16,7 @@ import { useDriversQuery } from '@/features/employees/hooks/use-drivers-query'
 import { useOfficeStaffQuery } from '@/features/employees/hooks/use-office-staff-query'
 import { useMasterBusNumbersQuery } from '@/features/master-buses/hooks/use-master-buses-query'
 import { garageService } from '@/features/garage/api/garage.service'
+import { RepairCategoryPicker } from '@/features/garage/components/repair-category-picker'
 import { useCreateJobForm } from '@/features/garage/hooks/use-create-job-form'
 import { useRepairCategoriesQuery } from '@/features/garage/hooks/use-repair-categories-query'
 import type { JobPriority } from '@/features/garage/types/job'
@@ -71,7 +72,7 @@ export function CreateJobPage() {
   const form = useCreateJobForm()
 
   const { data: categoriesData, isLoading: isCategoriesLoading } = useRepairCategoriesQuery()
-  const leafCategories = categoriesData?.leafOptions ?? []
+  const categoryTree = categoriesData?.tree ?? []
 
   const { data: busNumbers = [], isLoading: isBusNumbersLoading } = useMasterBusNumbersQuery()
   const { data: drivers = [], isLoading: isDriversLoading } = useDriversQuery()
@@ -205,35 +206,16 @@ export function CreateJobPage() {
           />
 
           <div className="space-y-2">
-            <FormLabel htmlFor="repairCategoryId" required>
-              Repair Category
-            </FormLabel>
-            <Select
+            <RepairCategoryPicker
+              id="repairCategoryId"
+              tree={categoryTree}
               value={form.values.repairCategoryId}
               onValueChange={(value) => form.setField('repairCategoryId', value)}
               disabled={isSubmitting || isCategoriesLoading}
-            >
-              <SelectTrigger
-                id="repairCategoryId"
-                aria-invalid={Boolean(form.errors.repairCategoryId)}
-                className={cn(selectTriggerClass, form.errors.repairCategoryId && invalidFieldClass)}
-              >
-                <SelectValue placeholder={isCategoriesLoading ? 'Loading categories…' : 'Select repair category'} />
-              </SelectTrigger>
-              <SelectContent position="popper" className="max-h-[min(24rem,70vh)] w-[var(--radix-select-trigger-width)]">
-                {leafCategories.length === 0 ? (
-                  <SelectItem value="__empty" disabled className={selectItemClass}>
-                    No leaf categories available
-                  </SelectItem>
-                ) : (
-                  leafCategories.map((category) => (
-                    <SelectItem key={category.id} value={category.id} className={selectItemClass}>
-                      {category.label}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+              invalid={Boolean(form.errors.repairCategoryId)}
+              placeholder={isCategoriesLoading ? 'Loading categories…' : 'Select repair category'}
+              className={cn(form.errors.repairCategoryId && invalidFieldClass)}
+            />
             <p className="text-xs text-muted-foreground">Only leaf categories (no subcategories) can be selected.</p>
             <FieldError message={form.errors.repairCategoryId} />
           </div>
