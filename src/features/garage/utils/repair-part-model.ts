@@ -28,33 +28,57 @@ export function compareRepairPartsByName(a: RepairPart, b: RepairPart): number {
   return a.partName.localeCompare(b.partName)
 }
 
+export type RepairPartFormField = 'partName' | 'price' | 'description'
+
+export function getRepairPartFieldError(
+  field: RepairPartFormField,
+  values: { partName: string; price: string; description: string },
+): string | undefined {
+  switch (field) {
+    case 'partName': {
+      const trimmedName = values.partName.trim()
+      if (!trimmedName) {
+        return 'Part name is required.'
+      }
+      if (trimmedName.length > 120) {
+        return 'Part name must be 120 characters or fewer.'
+      }
+      return undefined
+    }
+    case 'price': {
+      const trimmedPrice = values.price.trim()
+      if (!trimmedPrice) {
+        return 'Price is required.'
+      }
+      const parsedPrice = Number.parseFloat(trimmedPrice)
+      if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
+        return 'Enter a valid non-negative price.'
+      }
+      return undefined
+    }
+    case 'description': {
+      const trimmedDescription = values.description.trim()
+      if (trimmedDescription.length > 500) {
+        return 'Description must be 500 characters or fewer.'
+      }
+      return undefined
+    }
+    default:
+      return undefined
+  }
+}
+
 export function validateRepairPartForm(values: {
   partName: string
   price: string
   description: string
 }): Record<string, string> {
   const errors: Record<string, string> = {}
-  const trimmedName = values.partName.trim()
+  const fields: RepairPartFormField[] = ['partName', 'price', 'description']
 
-  if (!trimmedName) {
-    errors.partName = 'Part name is required.'
-  } else if (trimmedName.length > 120) {
-    errors.partName = 'Part name must be 120 characters or fewer.'
-  }
-
-  const trimmedPrice = values.price.trim()
-  if (!trimmedPrice) {
-    errors.price = 'Price is required.'
-  } else {
-    const parsedPrice = Number.parseFloat(trimmedPrice)
-    if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
-      errors.price = 'Enter a valid non-negative price.'
-    }
-  }
-
-  const trimmedDescription = values.description.trim()
-  if (trimmedDescription.length > 500) {
-    errors.description = 'Description must be 500 characters or fewer.'
+  for (const field of fields) {
+    const error = getRepairPartFieldError(field, values)
+    if (error) errors[field] = error
   }
 
   return errors

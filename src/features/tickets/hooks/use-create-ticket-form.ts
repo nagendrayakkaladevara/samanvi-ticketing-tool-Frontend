@@ -34,6 +34,32 @@ function getSuggestedSlaDate(priority: CreateTicketFormValues['priority']): Date
   return new Date(now.getTime() + minutesByPriority[priority] * 60 * 1000)
 }
 
+export function getCreateTicketFieldError(
+  field: keyof CreateTicketFormValues,
+  values: CreateTicketFormValues,
+): string | undefined {
+  switch (field) {
+    case 'title':
+      return !values.title.trim() ? 'Title is required.' : undefined
+    case 'description':
+      return !values.description.trim() ? 'Description is required.' : undefined
+    case 'categoryId':
+      return !values.categoryId.trim() ? 'Category is required.' : undefined
+    case 'busNumber':
+      return !values.busNumber.trim() ? 'Bus number is required.' : undefined
+    case 'slaDueAtLocal':
+      if (!values.slaDueAtLocal.trim()) {
+        return 'SLA due date is required.'
+      }
+      if (Number.isNaN(new Date(values.slaDueAtLocal).getTime())) {
+        return 'Enter a valid SLA due date and time.'
+      }
+      return undefined
+    default:
+      return undefined
+  }
+}
+
 export function useCreateTicketForm() {
   const [values, setValues] = useState<CreateTicketFormValues>({
     title: '',
@@ -49,16 +75,25 @@ export function useCreateTicketForm() {
 
   const validate = (): CreateTicketFormErrors => {
     const nextErrors: CreateTicketFormErrors = {}
-    if (!values.title.trim()) nextErrors.title = 'Title is required.'
-    if (!values.description.trim()) nextErrors.description = 'Description is required.'
-    if (!values.categoryId.trim()) nextErrors.categoryId = 'Category is required.'
-    if (!values.busNumber.trim()) nextErrors.busNumber = 'Bus number is required.'
-    if (!values.slaDueAtLocal.trim()) {
-      nextErrors.slaDueAtLocal = 'SLA due date is required.'
-    } else if (Number.isNaN(new Date(values.slaDueAtLocal).getTime())) {
-      nextErrors.slaDueAtLocal = 'Enter a valid SLA due date and time.'
+    const validatedFields: Array<keyof CreateTicketFormValues> = [
+      'title',
+      'description',
+      'categoryId',
+      'busNumber',
+      'slaDueAtLocal',
+    ]
+
+    for (const field of validatedFields) {
+      const error = getCreateTicketFieldError(field, values)
+      if (error) nextErrors[field] = error
     }
+
     return nextErrors
+  }
+
+  const blurField = (field: keyof CreateTicketFormValues) => {
+    const error = getCreateTicketFieldError(field, values)
+    setErrors((prev) => ({ ...prev, [field]: error }))
   }
 
   const setField = <K extends keyof CreateTicketFormValues>(field: K, value: CreateTicketFormValues[K]) => {
@@ -103,6 +138,7 @@ export function useCreateTicketForm() {
     setValues,
     setErrors,
     setField,
+    blurField,
     validate,
     applySuggestedSla,
     resetForm,
