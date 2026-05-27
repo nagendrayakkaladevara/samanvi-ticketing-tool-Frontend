@@ -649,26 +649,31 @@
   min-height: 8px;
 }
 
-/* Pinned Bus No column */
-.ticket-grid--bus-no .ag-pinned-left-header,
-.ticket-grid--bus-no .ag-pinned-left-cols-container {
-  box-shadow: 4px 0 8px hsl(var(--foreground) / 0.06);
-  z-index: 1;
+/* Sticky Bus No — S.No stays left; Bus No sticks once S.No scrolls off */
+.ticket-grid--bus-no .ag-header-cell.ticket-grid__sticky-col,
+.ticket-grid--bus-no .ag-cell.ticket-grid__sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
 }
 
-.ticket-grid--bus-no .ag-pinned-left-cols-container .ag-row:not(.ag-row-odd) .ag-cell {
+.ticket-grid--bus-no .ag-header-cell.ticket-grid__sticky-col {
+  z-index: 3;
+}
+
+.ticket-grid--bus-no .ag-center-cols-container .ag-row:not(.ag-row-odd) .ag-cell.ticket-grid__sticky-col {
   background-color: var(--ticket-grid-surface);
 }
 
-.ticket-grid--bus-no .ag-pinned-left-cols-container .ag-row.ag-row-odd .ag-cell {
+.ticket-grid--bus-no .ag-center-cols-container .ag-row.ag-row-odd .ag-cell.ticket-grid__sticky-col {
   background-color: var(--ticket-grid-row-alt);
 }
 
-.ticket-grid--bus-no .ag-pinned-left-cols-container .ag-row:hover .ag-cell {
+.ticket-grid--bus-no .ag-center-cols-container .ag-row:hover .ag-cell.ticket-grid__sticky-col {
   background-color: var(--ticket-grid-row-hover) !important;
 }
 
-.ticket-grid--bus-no .ag-pinned-left-header .ag-header-row:first-child .ag-header-cell {
+.ticket-grid--bus-no .ag-header .ag-header-row:first-child .ag-header-cell.ticket-grid__sticky-col {
   background: linear-gradient(
     180deg,
     hsl(var(--muted) / 0.75) 0%,
@@ -676,16 +681,21 @@
   );
 }
 
-.dark .ticket-grid--bus-no .ag-pinned-left-header .ag-header-row:first-child .ag-header-cell {
+.dark .ticket-grid--bus-no .ag-header .ag-header-row:first-child .ag-header-cell.ticket-grid__sticky-col {
   background: hsl(var(--muted) / 0.45);
 }
 
-.ticket-grid--bus-no .ag-pinned-left-header .ag-header-row:last-child .ag-header-cell {
+.ticket-grid--bus-no .ag-header .ag-header-row:last-child .ag-header-cell.ticket-grid__sticky-col {
   background: hsl(var(--muted) / 0.35);
 }
 
-.dark .ticket-grid--bus-no .ag-pinned-left-header .ag-header-row:last-child .ag-header-cell {
+.dark .ticket-grid--bus-no .ag-header .ag-header-row:last-child .ag-header-cell.ticket-grid__sticky-col {
   background: hsl(var(--muted) / 0.5);
+}
+
+.ticket-grid--bus-no .ag-header-cell.ticket-grid__sticky-col,
+.ticket-grid--bus-no .ag-cell.ticket-grid__sticky-col {
+  box-shadow: 4px 0 8px hsl(var(--foreground) / 0.06);
 }
 
 .ticket-grid .ag-header-cell {
