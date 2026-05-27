@@ -9,6 +9,7 @@ type BusNumberAutocompleteProps = {
   id?: string
   value: string
   onChange: (value: string) => void
+  onBlur?: () => void
   disabled?: boolean
   placeholder?: string
   className?: string
@@ -22,6 +23,7 @@ export function BusNumberAutocomplete({
   id,
   value,
   onChange,
+  onBlur,
   disabled = false,
   placeholder,
   className,
@@ -130,6 +132,7 @@ export function BusNumberAutocomplete({
             setIsOpen(true)
           }
         }}
+        onBlur={onBlur}
         onKeyDown={handleKeyDown}
       />
 

@@ -5,6 +5,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { FieldError } from '@/components/ui/field-error'
 import { FormLabel } from '@/components/ui/form-label'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -28,8 +29,10 @@ import {
   partitionPermissionIds,
 } from '@/features/application-users/utils/permission-ui-filters'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { invalidFieldClass } from '@/lib/form/form-field-styles'
 import { queryClient } from '@/lib/query/query-client'
 import { toast } from '@/lib/toast'
+import { cn } from '@/lib/utils'
 
 type FormMode = 'create' | 'edit'
 
@@ -55,28 +58,49 @@ function getDefaultValues(): ApplicationUserFormValues {
   }
 }
 
-function validateForm(values: ApplicationUserFormValues, mode: FormMode): string | null {
-  if (!values.fullName.trim()) {
-    return 'Full name is required.'
+type ApplicationUserFormField = keyof ApplicationUserFormValues
+
+type ApplicationUserFormErrors = Partial<Record<ApplicationUserFormField, string>>
+
+function getApplicationUserFieldError(
+  field: ApplicationUserFormField,
+  values: ApplicationUserFormValues,
+  mode: FormMode,
+): string | undefined {
+  switch (field) {
+    case 'fullName':
+      return !values.fullName.trim() ? 'Full name is required.' : undefined
+    case 'mobileNumber':
+      return !/^\d{10}$/.test(values.mobileNumber.trim())
+        ? 'Mobile number must be exactly 10 digits.'
+        : undefined
+    case 'password':
+      if (mode === 'create' && values.password.trim().length < 6) {
+        return 'Password must be at least 6 characters.'
+      }
+      if (mode === 'edit' && values.password.trim() && values.password.trim().length < 6) {
+        return 'Password must be at least 6 characters.'
+      }
+      return undefined
+    case 'email':
+      return values.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())
+        ? 'Please provide a valid email address.'
+        : undefined
+    default:
+      return undefined
+  }
+}
+
+function validateForm(values: ApplicationUserFormValues, mode: FormMode): ApplicationUserFormErrors {
+  const errors: ApplicationUserFormErrors = {}
+  const validatedFields: ApplicationUserFormField[] = ['fullName', 'mobileNumber', 'password', 'email']
+
+  for (const field of validatedFields) {
+    const error = getApplicationUserFieldError(field, values, mode)
+    if (error) errors[field] = error
   }
 
-  if (!/^\d{10}$/.test(values.mobileNumber.trim())) {
-    return 'Mobile number must be exactly 10 digits.'
-  }
-
-  if (mode === 'create' && values.password.trim().length < 6) {
-    return 'Password must be at least 6 characters.'
-  }
-
-  if (mode === 'edit' && values.password.trim() && values.password.trim().length < 6) {
-    return 'Password must be at least 6 characters.'
-  }
-
-  if (values.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) {
-    return 'Please provide a valid email address.'
-  }
-
-  return null
+  return errors
 }
 
 type ApplicationUserFormPageProps = {
@@ -88,6 +112,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
   const { userId } = useParams()
   const currentUser = useCurrentUser()
   const [values, setValues] = useState<ApplicationUserFormValues>(getDefaultValues)
+  const [fieldErrors, setFieldErrors] = useState<ApplicationUserFormErrors>({})
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const preservedHiddenPermissionIdsRef = useRef<string[]>([])
 
@@ -114,6 +139,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
   useEffect(() => {
     if (mode === 'create') {
       preservedHiddenPermissionIdsRef.current = []
+      setFieldErrors({})
       return
     }
 
@@ -136,7 +162,18 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
       isActive: editingUser.isActive,
       permissionIds: visibleIds,
     })
+    setFieldErrors({})
   }, [mode, editingUser, permissionsCatalog])
+
+  const updateField = <K extends ApplicationUserFormField>(field: K, value: ApplicationUserFormValues[K]) => {
+    setValues((prev) => ({ ...prev, [field]: value }))
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }))
+  }
+
+  const blurField = (field: ApplicationUserFormField) => {
+    const error = getApplicationUserFieldError(field, values, mode)
+    setFieldErrors((prev) => ({ ...prev, [field]: error }))
+  }
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateApplicationUserInput) => applicationUsersService.create(payload),
@@ -172,9 +209,10 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    const validationError = validateForm(values, mode)
-    if (validationError) {
-      toast.error(validationError)
+    const nextErrors = validateForm(values, mode)
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors)
+      toast.error('Please fix the highlighted fields.')
       return
     }
 
@@ -296,10 +334,14 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
                 <Input
                   id="fullName"
                   value={values.fullName}
-                  onChange={(event) => setValues((prev) => ({ ...prev, fullName: event.target.value }))}
+                  onChange={(event) => updateField('fullName', event.target.value)}
+                  onBlur={() => blurField('fullName')}
                   disabled={isSaving}
                   placeholder="Rajesh Kumar"
+                  aria-invalid={Boolean(fieldErrors.fullName)}
+                  className={cn(fieldErrors.fullName && invalidFieldClass)}
                 />
+                <FieldError message={fieldErrors.fullName} />
               </div>
 
               <div className="space-y-2">
@@ -312,15 +354,19 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
                   maxLength={10}
                   value={values.mobileNumber}
                   onChange={(event) =>
-                    setValues((prev) => ({
-                      ...prev,
-                      mobileNumber: event.target.value.replace(/\D/g, '').slice(0, 10),
-                    }))
+                    updateField('mobileNumber', event.target.value.replace(/\D/g, '').slice(0, 10))
                   }
+                  onBlur={() => blurField('mobileNumber')}
                   disabled={isSaving}
                   placeholder="9876543210"
+                  aria-invalid={Boolean(fieldErrors.mobileNumber)}
+                  className={cn(fieldErrors.mobileNumber && invalidFieldClass)}
                 />
-                <p className="text-xs text-muted-foreground">Used as the login username.</p>
+                {fieldErrors.mobileNumber ? (
+                  <FieldError message={fieldErrors.mobileNumber} />
+                ) : (
+                  <p className="text-xs text-muted-foreground">Used as the login username.</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -329,10 +375,14 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
                   id="email"
                   type="email"
                   value={values.email}
-                  onChange={(event) => setValues((prev) => ({ ...prev, email: event.target.value }))}
+                  onChange={(event) => updateField('email', event.target.value)}
+                  onBlur={() => blurField('email')}
                   disabled={isSaving}
                   placeholder="name@example.com"
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  className={cn(fieldErrors.email && invalidFieldClass)}
                 />
+                <FieldError message={fieldErrors.email} />
               </div>
 
               <div className="space-y-2">
@@ -372,11 +422,13 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
                     id="password"
                     type={isPasswordVisible ? 'text' : 'password'}
                     value={values.password}
-                    onChange={(event) => setValues((prev) => ({ ...prev, password: event.target.value }))}
+                    onChange={(event) => updateField('password', event.target.value)}
+                    onBlur={() => blurField('password')}
                     disabled={isSaving}
                     autoComplete="new-password"
-                    className="pr-10"
+                    className={cn('pr-10', fieldErrors.password && invalidFieldClass)}
                     placeholder={mode === 'create' ? 'Minimum 6 characters' : 'Leave blank to keep current password'}
+                    aria-invalid={Boolean(fieldErrors.password)}
                   />
                   <button
                     type="button"
@@ -388,6 +440,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
                     {isPasswordVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                   </button>
                 </div>
+                <FieldError message={fieldErrors.password} />
               </div>
             </div>
 

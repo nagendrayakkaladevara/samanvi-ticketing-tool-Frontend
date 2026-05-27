@@ -6,6 +6,7 @@ import { toast } from '@/lib/toast'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { FieldError } from '@/components/ui/field-error'
 import { Input } from '@/components/ui/input'
 import { FormLabel } from '@/components/ui/form-label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -16,17 +17,10 @@ import { ticketsService } from '@/features/tickets/api/tickets.service'
 import { useCreateTicketForm } from '@/features/tickets/hooks/use-create-ticket-form'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { queryClient } from '@/lib/query/query-client'
+import { invalidFieldClass } from '@/lib/form/form-field-styles'
 import { cn } from '@/lib/utils'
 
 const MIN_DESCRIPTION_WORDS_FOR_AI = 4
-
-const invalidFieldClass =
-  'border-red-500 ring-1 ring-red-500/30 focus-visible:ring-red-500 dark:border-red-400 dark:ring-red-400/30 dark:focus-visible:ring-red-400'
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null
-  return <p className="text-xs font-medium text-red-600 dark:text-red-400">{message}</p>
-}
 
 export function CreateTicketPage() {
   const navigate = useNavigate()
@@ -124,6 +118,7 @@ export function CreateTicketPage() {
               className={cn(form.errors.title && invalidFieldClass)}
               value={form.values.title}
               onChange={(event) => form.setField('title', event.target.value)}
+              onBlur={() => form.blurField('title')}
               aria-invalid={Boolean(form.errors.title)}
               disabled={createTicketMutation.isPending}
             />
@@ -157,6 +152,7 @@ export function CreateTicketPage() {
                 )}
                 value={form.values.description}
                 onChange={(event) => form.setField('description', event.target.value)}
+                onBlur={() => form.blurField('description')}
                 aria-invalid={Boolean(form.errors.description)}
                 disabled={createTicketMutation.isPending || enhanceDescriptionMutation.isPending}
               />
@@ -222,6 +218,7 @@ export function CreateTicketPage() {
                   id="categoryId"
                   aria-invalid={Boolean(form.errors.categoryId)}
                   className={cn(form.errors.categoryId && invalidFieldClass)}
+                  onBlur={() => form.blurField('categoryId')}
                 >
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
@@ -246,6 +243,7 @@ export function CreateTicketPage() {
                 className={cn(form.errors.busNumber && invalidFieldClass)}
                 value={form.values.busNumber}
                 onChange={(nextValue) => form.setField('busNumber', nextValue)}
+                onBlur={() => form.blurField('busNumber')}
                 aria-invalid={Boolean(form.errors.busNumber)}
                 disabled={createTicketMutation.isPending}
               />
@@ -299,6 +297,7 @@ export function CreateTicketPage() {
               )}
               value={form.values.slaDueAtLocal}
               onChange={(event) => form.setField('slaDueAtLocal', event.target.value)}
+              onBlur={() => form.blurField('slaDueAtLocal')}
               aria-invalid={Boolean(form.errors.slaDueAtLocal)}
               disabled={createTicketMutation.isPending}
             />

@@ -7,6 +7,7 @@ import { toast } from '@/lib/toast'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { FieldError } from '@/components/ui/field-error'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { FormLabel } from '@/components/ui/form-label'
@@ -22,10 +23,8 @@ import { useRepairCategoriesQuery } from '@/features/garage/hooks/use-repair-cat
 import type { JobPriority } from '@/features/garage/types/job'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { queryClient } from '@/lib/query/query-client'
+import { invalidFieldClass } from '@/lib/form/form-field-styles'
 import { cn } from '@/lib/utils'
-
-const invalidFieldClass =
-  'border-red-500 ring-1 ring-red-500/30 focus-visible:ring-red-500 dark:border-red-400 dark:ring-red-400/30 dark:focus-visible:ring-red-400'
 
 const selectTriggerClass =
   'h-10 min-w-0 [&>span]:line-clamp-1 [&>span]:block [&>span]:text-left [&>span]:leading-snug'
@@ -38,11 +37,6 @@ const priorityOptions: Array<{ value: JobPriority; label: string; hint: string; 
   { value: 'high', label: 'High', hint: 'Needs attention soon', accent: 'border-amber-500/40 bg-amber-500/5' },
   { value: 'urgent', label: 'Urgent', hint: 'Immediate action', accent: 'border-rose-500/40 bg-rose-500/5' },
 ]
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null
-  return <p className="text-xs font-medium text-red-600 dark:text-red-400">{message}</p>
-}
 
 function SectionHeader({
   icon: Icon,
@@ -156,6 +150,7 @@ export function CreateJobPage() {
                   id="busNumber"
                   aria-invalid={Boolean(form.errors.busNumber)}
                   className={cn(selectTriggerClass, form.errors.busNumber && invalidFieldClass)}
+                  onBlur={() => form.blurField('busNumber')}
                 >
                   <SelectValue placeholder={isBusNumbersLoading ? 'Loading bus numbers…' : 'Select bus number'} />
                 </SelectTrigger>
@@ -190,6 +185,7 @@ export function CreateJobPage() {
                 className={cn(form.errors.odometerReading && invalidFieldClass)}
                 value={form.values.odometerReading}
                 onChange={(event) => form.setField('odometerReading', event.target.value)}
+                onBlur={() => form.blurField('odometerReading')}
                 aria-invalid={Boolean(form.errors.odometerReading)}
                 disabled={isSubmitting}
               />
@@ -211,6 +207,7 @@ export function CreateJobPage() {
               tree={categoryTree}
               value={form.values.repairCategoryId}
               onValueChange={(value) => form.setField('repairCategoryId', value)}
+              onBlur={() => form.blurField('repairCategoryId')}
               disabled={isSubmitting || isCategoriesLoading}
               invalid={Boolean(form.errors.repairCategoryId)}
               placeholder={isCategoriesLoading ? 'Loading categories…' : 'Select repair category'}
@@ -261,6 +258,7 @@ export function CreateJobPage() {
               className={cn('min-h-28', form.errors.description && invalidFieldClass)}
               value={form.values.description}
               onChange={(event) => form.setField('description', event.target.value)}
+              onBlur={() => form.blurField('description')}
               aria-invalid={Boolean(form.errors.description)}
               disabled={isSubmitting}
             />

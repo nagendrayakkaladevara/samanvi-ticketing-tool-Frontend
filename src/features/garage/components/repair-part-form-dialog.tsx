@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { FieldError } from '@/components/ui/field-error'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -21,8 +22,14 @@ import type {
   RepairPart,
   RepairPartFormValues,
 } from '@/features/garage/types/repair-part'
-import { validateRepairPartForm } from '@/features/garage/utils/repair-part-model'
+import {
+  getRepairPartFieldError,
+  validateRepairPartForm,
+  type RepairPartFormField,
+} from '@/features/garage/utils/repair-part-model'
+import { invalidFieldClass } from '@/lib/form/form-field-styles'
 import { queryClient } from '@/lib/query/query-client'
+import { cn } from '@/lib/utils'
 
 type FormMode = 'create' | 'edit'
 
@@ -41,7 +48,7 @@ type RepairPartFormDialogProps = {
 
 export function RepairPartFormDialog({ open, mode, editingPart, onOpenChange }: RepairPartFormDialogProps) {
   const [formValues, setFormValues] = useState<RepairPartFormValues>(defaultFormValues)
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<RepairPartFormField, string>>>({})
 
   useEffect(() => {
     if (!open) return
@@ -94,6 +101,16 @@ export function RepairPartFormDialog({ open, mode, editingPart, onOpenChange }: 
 
   const isSaving = createMutation.isPending || updateMutation.isPending
 
+  const updateField = (field: RepairPartFormField, value: string) => {
+    setFormValues((prev) => ({ ...prev, [field]: value }))
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }))
+  }
+
+  const blurField = (field: RepairPartFormField) => {
+    const error = getRepairPartFieldError(field, formValues)
+    setFieldErrors((prev) => ({ ...prev, [field]: error }))
+  }
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
@@ -140,15 +157,17 @@ export function RepairPartFormDialog({ open, mode, editingPart, onOpenChange }: 
             <Input
               id="partName"
               value={formValues.partName}
-              onChange={(event) => setFormValues((prev) => ({ ...prev, partName: event.target.value }))}
+              onChange={(event) => updateField('partName', event.target.value)}
+              onBlur={() => blurField('partName')}
               placeholder="e.g., Oil Filter, Brake Pad Set"
               disabled={isSaving}
               maxLength={120}
               autoFocus
-              required
+              aria-invalid={Boolean(fieldErrors.partName)}
+              className={cn(fieldErrors.partName && invalidFieldClass)}
             />
             {fieldErrors.partName ? (
-              <p className="text-xs font-medium text-red-600 dark:text-red-400">{fieldErrors.partName}</p>
+              <FieldError message={fieldErrors.partName} />
             ) : (
               <p className="text-xs text-muted-foreground">{formValues.partName.trim().length}/120 characters</p>
             )}
@@ -163,13 +182,15 @@ export function RepairPartFormDialog({ open, mode, editingPart, onOpenChange }: 
               min="0"
               step="0.01"
               value={formValues.price}
-              onChange={(event) => setFormValues((prev) => ({ ...prev, price: event.target.value }))}
+              onChange={(event) => updateField('price', event.target.value)}
+              onBlur={() => blurField('price')}
               placeholder="0.00"
               disabled={isSaving}
-              required
+              aria-invalid={Boolean(fieldErrors.price)}
+              className={cn(fieldErrors.price && invalidFieldClass)}
             />
             {fieldErrors.price ? (
-              <p className="text-xs font-medium text-red-600 dark:text-red-400">{fieldErrors.price}</p>
+              <FieldError message={fieldErrors.price} />
             ) : (
               <p className="text-xs text-muted-foreground">Non-negative amount stored with two decimal places.</p>
             )}
@@ -180,14 +201,17 @@ export function RepairPartFormDialog({ open, mode, editingPart, onOpenChange }: 
             <Textarea
               id="description"
               value={formValues.description}
-              onChange={(event) => setFormValues((prev) => ({ ...prev, description: event.target.value }))}
+              onChange={(event) => updateField('description', event.target.value)}
+              onBlur={() => blurField('description')}
               placeholder="Part specifications or usage notes"
               disabled={isSaving}
               maxLength={500}
               rows={3}
+              aria-invalid={Boolean(fieldErrors.description)}
+              className={cn(fieldErrors.description && invalidFieldClass)}
             />
             {fieldErrors.description ? (
-              <p className="text-xs font-medium text-red-600 dark:text-red-400">{fieldErrors.description}</p>
+              <FieldError message={fieldErrors.description} />
             ) : (
               <p className="text-xs text-muted-foreground">{formValues.description.trim().length}/500 characters</p>
             )}

@@ -25,6 +25,7 @@ type RepairCategoryPickerProps = {
   tree: RepairCategoryTreeNode[]
   value: string
   onValueChange: (value: string) => void
+  onBlur?: () => void
   disabled?: boolean
   invalid?: boolean
   placeholder?: string
@@ -184,6 +185,7 @@ function MenuCategoryPicker({
   tree,
   value,
   onValueChange,
+  onBlur,
   disabled,
   invalid,
   placeholder,
@@ -217,13 +219,22 @@ function MenuCategoryPicker({
   }
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        if (!nextOpen) {
+          onBlur?.()
+        }
+      }}
+    >
       <DropdownMenuTrigger asChild disabled={disabled}>
         <Button
           id={id}
           type="button"
           variant="outline"
           aria-invalid={invalid}
+          onBlur={onBlur}
           className={cn(
             'h-10 w-full justify-between px-3 font-normal shadow-sm',
             'aria-invalid:border-red-500 aria-invalid:ring-1 aria-invalid:ring-red-500/30',
@@ -273,6 +284,7 @@ function CascadingCategorySelects({
   tree,
   value,
   onValueChange,
+  onBlur,
   disabled,
   invalid,
   className,
@@ -375,6 +387,7 @@ function CascadingCategorySelects({
                 className,
                 invalid && index === dropdownLevels.length - 1 && 'border-red-500 ring-1 ring-red-500/30',
               )}
+              onBlur={index === dropdownLevels.length - 1 ? onBlur : undefined}
             >
               <SelectValue
                 placeholder={
@@ -404,6 +417,7 @@ export function RepairCategoryPicker({
   tree,
   value,
   onValueChange,
+  onBlur,
   disabled = false,
   invalid = false,
   placeholder = 'Select repair category',
@@ -433,6 +447,7 @@ export function RepairCategoryPicker({
           tree={tree}
           value={value}
           onValueChange={onValueChange}
+          onBlur={onBlur}
           disabled={disabled}
           invalid={invalid}
           className={className}
@@ -443,6 +458,7 @@ export function RepairCategoryPicker({
           tree={tree}
           value={value}
           onValueChange={onValueChange}
+          onBlur={onBlur}
           disabled={disabled}
           invalid={invalid}
           placeholder={placeholder}

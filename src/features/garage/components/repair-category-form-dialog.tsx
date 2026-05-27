@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { FieldError } from '@/components/ui/field-error'
 import {
   Select,
   SelectContent,
@@ -28,6 +29,8 @@ import {
   validateRepairCategoryName,
 } from '@/features/garage/utils/repair-category-model'
 import { queryClient } from '@/lib/query/query-client'
+import { invalidFieldClass } from '@/lib/form/form-field-styles'
+import { cn } from '@/lib/utils'
 
 type FormMode = 'create-root' | 'create-child' | 'edit'
 
@@ -50,6 +53,7 @@ export function RepairCategoryFormDialog({
 }: RepairCategoryFormDialogProps) {
   const [name, setName] = useState('')
   const [parentId, setParentId] = useState<string>('root')
+  const [nameError, setNameError] = useState<string | undefined>()
 
   const parentOptions = useMemo(() => flattenRepairCategoryOptions(tree), [tree])
 
@@ -59,17 +63,20 @@ export function RepairCategoryFormDialog({
     if (mode === 'edit' && editingCategory) {
       setName(editingCategory.name)
       setParentId(editingCategory.parentId ?? 'root')
+      setNameError(undefined)
       return
     }
 
     if (mode === 'create-child' && parentCategory) {
       setName('')
       setParentId(parentCategory.id)
+      setNameError(undefined)
       return
     }
 
     setName('')
     setParentId('root')
+    setNameError(undefined)
   }, [open, mode, editingCategory, parentCategory])
 
   const createMutation = useMutation({
@@ -130,6 +137,7 @@ export function RepairCategoryFormDialog({
 
     const validationError = validateRepairCategoryName(name)
     if (validationError) {
+      setNameError(validationError)
       toast.error(validationError)
       return
     }
@@ -183,14 +191,23 @@ export function RepairCategoryFormDialog({
             <Input
               id="categoryName"
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                setName(event.target.value)
+                setNameError(undefined)
+              }}
+              onBlur={() => setNameError(validateRepairCategoryName(name) ?? undefined)}
               placeholder="e.g., Engine, Brakes, Electrical"
               disabled={isSaving}
               maxLength={120}
               autoFocus
-              required
+              aria-invalid={Boolean(nameError)}
+              className={cn(nameError && invalidFieldClass)}
             />
-            <p className="text-xs text-muted-foreground">{name.trim().length}/120 characters</p>
+            {nameError ? (
+              <FieldError message={nameError} />
+            ) : (
+              <p className="text-xs text-muted-foreground">{name.trim().length}/120 characters</p>
+            )}
           </div>
 
           <DialogFooter>
