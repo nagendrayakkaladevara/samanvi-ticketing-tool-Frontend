@@ -642,6 +642,16 @@
   display: none;
 }
 
+.ticket-grid .ag-pinned-left-header,
+.ticket-grid .ag-pinned-left-cols-container {
+  z-index: 2;
+}
+
+.ticket-grid .ag-cell.ag-cell-last-left-pinned,
+.ticket-grid .ag-header-cell.ag-header-cell-last-left-pinned {
+  border-right: 1px solid hsl(var(--border) / 0.85);
+}
+
 .ticket-grid .ag-header-cell {
   padding-left: 16px;
   padding-right: 16px;
