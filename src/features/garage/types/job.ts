@@ -30,6 +30,7 @@ export type RepairJob = {
   reportedDriver: {
     id: string
     driverIdNumber: string
+    aadharName: string
     dlName: string
   } | null
   assignedToOfficeStaff: {
@@ -54,4 +55,15 @@ export type CreateRepairJobInput = {
   description: string
   reportedDriverId?: string
   assignedToOfficeStaffId?: string
+}
+
+export type UpdateRepairJobInput = {
+  jobId: string
+  odometerReading?: number
+  repairCategoryId?: string
+  priority?: JobPriority
+  description?: string
+  reportedDriverId?: string | null
+  assignedToOfficeStaffId?: string | null
+  status?: JobStatus
 }

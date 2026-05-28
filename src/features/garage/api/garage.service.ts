@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api/client'
-import type { CreateRepairJobInput, RepairJob } from '@/features/garage/types/job'
+import type { CreateRepairJobInput, RepairJob, UpdateRepairJobInput } from '@/features/garage/types/job'
 import type {
   CreateRepairPartInput,
   RepairPart,
@@ -165,6 +165,8 @@ function normalizeRepairJob(raw: unknown): RepairJob | null {
           id: normalizeString((value.reportedDriver as Record<string, unknown>).id) ?? '',
           driverIdNumber:
             normalizeString((value.reportedDriver as Record<string, unknown>).driverIdNumber) ?? '',
+          aadharName:
+            normalizeString((value.reportedDriver as Record<string, unknown>).aadharName) ?? '',
           dlName: normalizeString((value.reportedDriver as Record<string, unknown>).dlName) ?? '',
         }
       : null
@@ -299,6 +301,48 @@ export const garageService = {
 
   async deleteRepairPart(partId: string): Promise<void> {
     await apiClient.delete(`${partsEndpoint}/${partId}`)
+  },
+
+  async listJobs(params?: { page?: number; limit?: number }): Promise<RepairJob[]> {
+    const page = params?.page ?? 1
+    const limit = params?.limit ?? 50
+    const { data } = await apiClient.get<unknown>(jobsEndpoint, { params: { page, limit } })
+    return extractArrayPayload(data)
+      .map(normalizeRepairJob)
+      .filter((item): item is RepairJob => Boolean(item))
+  },
+
+  async getJob(jobId: string): Promise<RepairJob> {
+    const { data } = await apiClient.get<unknown>(`${jobsEndpoint}/${jobId}`)
+    const job = normalizeRepairJob(extractDataPayload(data))
+    if (!job) {
+      throw new Error('Repair job not found.')
+    }
+    return job
+  },
+
+  async updateJob({ jobId, ...input }: UpdateRepairJobInput): Promise<RepairJob> {
+    const payload: Record<string, unknown> = {}
+    if (input.odometerReading !== undefined) payload.odometerReading = input.odometerReading
+    if (input.repairCategoryId !== undefined) payload.repairCategoryId = input.repairCategoryId
+    if (input.priority !== undefined) payload.priority = input.priority
+    if (input.description !== undefined) payload.description = input.description.trim()
+    if (input.reportedDriverId !== undefined) payload.reportedDriverId = input.reportedDriverId
+    if (input.assignedToOfficeStaffId !== undefined) {
+      payload.assignedToOfficeStaffId = input.assignedToOfficeStaffId
+    }
+    if (input.status !== undefined) payload.status = input.status
+
+    const { data } = await apiClient.patch<unknown>(`${jobsEndpoint}/${jobId}`, payload)
+    const job = normalizeRepairJob(extractDataPayload(data))
+    if (!job) {
+      throw new Error('Unexpected response when updating repair job.')
+    }
+    return job
+  },
+
+  async deleteJob(jobId: string): Promise<void> {
+    await apiClient.delete(`${jobsEndpoint}/${jobId}`)
   },
 
   async createJob(input: CreateRepairJobInput): Promise<RepairJob> {
