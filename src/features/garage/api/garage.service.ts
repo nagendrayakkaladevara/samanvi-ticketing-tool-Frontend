@@ -165,6 +165,8 @@ function normalizeRepairJob(raw: unknown): RepairJob | null {
           id: normalizeString((value.reportedDriver as Record<string, unknown>).id) ?? '',
           driverIdNumber:
             normalizeString((value.reportedDriver as Record<string, unknown>).driverIdNumber) ?? '',
+          aadharName:
+            normalizeString((value.reportedDriver as Record<string, unknown>).aadharName) ?? '',
           dlName: normalizeString((value.reportedDriver as Record<string, unknown>).dlName) ?? '',
         }
       : null

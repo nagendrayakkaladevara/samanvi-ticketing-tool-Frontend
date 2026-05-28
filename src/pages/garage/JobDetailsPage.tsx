@@ -87,7 +87,7 @@ export function JobDetailsPage() {
     ? `${job.assignedToOfficeStaff.nickName}${job.assignedToOfficeStaff.designation ? ` (${job.assignedToOfficeStaff.designation})` : ''}`
     : 'Unassigned'
   const driverLabel = job.reportedDriver
-    ? `${job.reportedDriver.driverIdNumber} — ${job.reportedDriver.dlName}`
+    ? `${job.reportedDriver.driverIdNumber} — ${job.reportedDriver.aadharName || job.reportedDriver.dlName}`
     : 'None'
 
   return (

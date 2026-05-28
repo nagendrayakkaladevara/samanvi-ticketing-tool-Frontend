@@ -30,6 +30,7 @@ export type RepairJob = {
   reportedDriver: {
     id: string
     driverIdNumber: string
+    aadharName: string
     dlName: string
   } | null
   assignedToOfficeStaff: {
