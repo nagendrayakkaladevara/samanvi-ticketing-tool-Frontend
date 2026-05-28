@@ -55,3 +55,14 @@ export type CreateRepairJobInput = {
   reportedDriverId?: string
   assignedToOfficeStaffId?: string
 }
+
+export type UpdateRepairJobInput = {
+  jobId: string
+  odometerReading?: number
+  repairCategoryId?: string
+  priority?: JobPriority
+  description?: string
+  reportedDriverId?: string | null
+  assignedToOfficeStaffId?: string | null
+  status?: JobStatus
+}

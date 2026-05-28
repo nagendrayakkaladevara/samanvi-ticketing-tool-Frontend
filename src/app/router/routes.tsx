@@ -54,6 +54,8 @@ import { GarageMastersPage } from '@/pages/garage/GarageMastersPage'
 
 import { GarageReportsPage } from '@/pages/garage/GarageReportsPage'
 
+import { EditJobPage } from '@/pages/garage/EditJobPage'
+import { JobDetailsPage } from '@/pages/garage/JobDetailsPage'
 import { RepairTrackingPage } from '@/pages/garage/RepairTrackingPage'
 
 import { ApplicationAccessPage } from '@/pages/ApplicationAccessPage'
@@ -360,6 +362,38 @@ export const appRouter = createBrowserRouter([
               <RoleGuard allowedRoles={['ADMIN']}>
 
                 <RepairTrackingPage />
+
+              </RoleGuard>
+
+            ),
+
+          },
+
+          {
+
+            path: 'garage/repair-tracking/:jobId/edit',
+
+            element: (
+
+              <RoleGuard allowedRoles={['ADMIN']}>
+
+                <EditJobPage />
+
+              </RoleGuard>
+
+            ),
+
+          },
+
+          {
+
+            path: 'garage/repair-tracking/:jobId',
+
+            element: (
+
+              <RoleGuard allowedRoles={['ADMIN']}>
+
+                <JobDetailsPage />
 
               </RoleGuard>
 
