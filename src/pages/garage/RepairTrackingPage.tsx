@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { garageService } from '@/features/garage/api/garage.service'
 import { RepairJobsListView } from '@/features/garage/components/repair-jobs-list-view'
+import { useSubmoduleActions } from '@/hooks/use-permissions'
 
 export function RepairTrackingPage() {
   const navigate = useNavigate()
+  const jobActions = useSubmoduleActions('garage', 'repair_job')
   const { data: jobs = [], isLoading, isFetching, isError, error } = useQuery({
     queryKey: ['garage', 'jobs'],
     queryFn: () => garageService.listJobs({ page: 1, limit: 50 }),
@@ -32,10 +34,12 @@ export function RepairTrackingPage() {
                 Syncing...
               </span>
             ) : null}
-            <Button className="w-full sm:w-auto" onClick={() => navigate('/garage/create-job')}>
-              <Plus className="h-4 w-4" />
-              Create Job
-            </Button>
+            {jobActions.canCreate ? (
+              <Button className="w-full sm:w-auto" onClick={() => navigate('/garage/create-job')}>
+                <Plus className="h-4 w-4" />
+                Create Job
+              </Button>
+            ) : null}
           </>
         }
       />
@@ -51,10 +55,12 @@ export function RepairTrackingPage() {
               Create your first repair job to start tracking garage work.
             </p>
           </div>
-          <Button onClick={() => navigate('/garage/create-job')}>
-            <Plus className="h-4 w-4" />
-            Create Repair Job
-          </Button>
+          {jobActions.canCreate ? (
+            <Button onClick={() => navigate('/garage/create-job')}>
+              <Plus className="h-4 w-4" />
+              Create Repair Job
+            </Button>
+          ) : null}
         </Card>
       ) : (
         <RepairJobsListView
@@ -62,6 +68,8 @@ export function RepairTrackingPage() {
           isLoading={isLoading}
           isError={isError}
           error={error instanceof Error ? error : null}
+          canEdit={jobActions.canEdit}
+          canDelete={jobActions.canDelete}
         />
       )}
 

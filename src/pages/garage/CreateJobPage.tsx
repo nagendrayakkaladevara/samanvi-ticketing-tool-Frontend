@@ -23,6 +23,7 @@ import { useCreateJobForm } from '@/features/garage/hooks/use-create-job-form'
 import { useRepairCategoriesQuery } from '@/features/garage/hooks/use-repair-categories-query'
 import type { JobPriority } from '@/features/garage/types/job'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { usePermissions } from '@/hooks/use-permissions'
 import { queryClient } from '@/lib/query/query-client'
 import { invalidFieldClass } from '@/lib/form/form-field-styles'
 import { cn } from '@/lib/utils'
@@ -64,6 +65,8 @@ function SectionHeader({
 export function CreateJobPage() {
   const navigate = useNavigate()
   const currentUser = useCurrentUser()
+  const { can } = usePermissions()
+  const canCreateJob = can('garage', 'repair_job', 'create')
   const form = useCreateJobForm()
 
   const { data: categoriesData, isLoading: isCategoriesLoading } = useRepairCategoriesQuery()
@@ -331,7 +334,7 @@ export function CreateJobPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" className="h-10 w-full sm:w-auto" disabled={isSubmitting}>
+              <Button type="submit" className="h-10 w-full sm:w-auto" disabled={isSubmitting || !canCreateJob}>
                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 <span className="sm:hidden">Create Job</span>
                 <span className="hidden sm:inline">Create Repair Job</span>

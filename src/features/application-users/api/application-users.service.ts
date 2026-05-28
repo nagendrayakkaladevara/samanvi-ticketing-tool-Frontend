@@ -27,13 +27,33 @@ function normalizeString(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined
 }
 
-function normalizeUserType(value: unknown): ApplicationUserType {
+function normalizeUserTypeValue(value: unknown): ApplicationUserType | null {
   if (typeof value !== 'string') {
-    return 'worker'
+    return null
   }
 
-  const normalized = value.trim().toLowerCase() as ApplicationUserType
-  return applicationUserTypes.has(normalized) ? normalized : 'worker'
+  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, '_') as ApplicationUserType
+  return applicationUserTypes.has(normalized) ? normalized : null
+}
+
+function normalizeUserType(value: unknown): ApplicationUserType {
+  const direct = normalizeUserTypeValue(value)
+  if (direct) {
+    return direct
+  }
+
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    const nested =
+      normalizeUserTypeValue(record.code) ??
+      normalizeUserTypeValue(record.label) ??
+      normalizeUserTypeValue(record.name)
+    if (nested) {
+      return nested
+    }
+  }
+
+  return 'worker'
 }
 
 function normalizePermissionIds(value: unknown): string[] {

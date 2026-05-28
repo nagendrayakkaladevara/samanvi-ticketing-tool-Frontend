@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { BusFront, Download, FileSpreadsheet, FileText, Fuel, Plus, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -21,7 +21,7 @@ import { useSpareTanksQuery } from '@/features/spare-tanks/hooks/use-spare-tanks
 import type { SpareTank } from '@/features/spare-tanks/types/spare-tank'
 import { downloadSpareTanksExcel } from '@/features/spare-tanks/utils/download-spare-tanks-excel'
 import { downloadSpareTanksPdf } from '@/features/spare-tanks/utils/download-spare-tanks-pdf'
-import { useCurrentUser } from '@/hooks/use-current-user'
+import { usePermissions, useSubmoduleActions } from '@/hooks/use-permissions'
 import { useMasterDialogParams } from '@/hooks/use-master-dialog-params'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
@@ -33,11 +33,24 @@ function parseBusNoTab(value: string | null): BusNoTab {
 }
 
 export function BusNoPage() {
-  const currentUser = useCurrentUser()
-  const canManage = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR'
+  const { has } = usePermissions()
+  const canViewBus = has('masters', 'bus_number', 'view')
+  const canViewSpare = has('masters', 'spare_tank', 'view')
+  const busActions = useSubmoduleActions('masters', 'bus_number')
+  const spareActions = useSubmoduleActions('masters', 'spare_tank')
   const { action, id, tab: tabParam, openDialog, closeDialog, setTabParam } = useMasterDialogParams()
 
   const activeTab = parseBusNoTab(tabParam)
+
+  useEffect(() => {
+    if (activeTab === 'normal' && !canViewBus && canViewSpare) {
+      setTabParam('spare')
+    } else if (activeTab === 'spare' && !canViewSpare && canViewBus) {
+      setTabParam('normal')
+    }
+  }, [activeTab, canViewBus, canViewSpare, setTabParam])
+
+  const tabActions = activeTab === 'normal' ? busActions : spareActions
 
   const {
     data: buses = [],
@@ -175,7 +188,7 @@ export function BusNoPage() {
                 Syncing...
               </span>
             ) : null}
-            {canManage ? (
+            {tabActions.canCreate ? (
               <Button className="w-full sm:w-auto" onClick={openAddDialog}>
                 <Plus className="h-4 w-4" />
                 {activeTab === 'normal' ? 'Add Bus' : 'Add Spare Tank'}
@@ -187,32 +200,36 @@ export function BusNoPage() {
 
       <div className="flex w-full items-center gap-2 sm:justify-between">
         <div className="inline-flex min-w-0 flex-1 rounded-xl border border-border bg-muted/30 p-1 sm:flex-none">
-          <button
-            type="button"
-            onClick={() => setTabParam('normal')}
-            className={cn(
-              'inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:gap-2 sm:px-4',
-              activeTab === 'normal'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            <BusFront className="h-4 w-4 shrink-0" />
-            <span className="truncate">Normal Bus</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setTabParam('spare')}
-            className={cn(
-              'inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:gap-2 sm:px-4',
-              activeTab === 'spare'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            <Fuel className="h-4 w-4 shrink-0" />
-            <span className="truncate">Spare Tank</span>
-          </button>
+          {canViewBus ? (
+            <button
+              type="button"
+              onClick={() => setTabParam('normal')}
+              className={cn(
+                'inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:gap-2 sm:px-4',
+                activeTab === 'normal'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <BusFront className="h-4 w-4 shrink-0" />
+              <span className="truncate">Normal Bus</span>
+            </button>
+          ) : null}
+          {canViewSpare ? (
+            <button
+              type="button"
+              onClick={() => setTabParam('spare')}
+              className={cn(
+                'inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:gap-2 sm:px-4',
+                activeTab === 'spare'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Fuel className="h-4 w-4 shrink-0" />
+              <span className="truncate">Spare Tank</span>
+            </button>
+          ) : null}
         </div>
 
         <DropdownMenu>
@@ -290,27 +307,30 @@ export function BusNoPage() {
         </div>
       </div>
 
-      {activeTab === 'normal' ? (
+      {activeTab === 'normal' && canViewBus ? (
         <MasterBusesGrid
           buses={buses}
           isLoading={isLoadingBuses}
           isError={isBusesError}
           error={busesError as Error | null}
-          canManage={canManage}
-          onAdd={canManage ? openBusCreate : undefined}
+          canEdit={busActions.canEdit}
+          canDelete={busActions.canDelete}
+          onAdd={busActions.canCreate ? openBusCreate : undefined}
           onEdit={openBusEdit}
         />
-      ) : (
+      ) : null}
+      {activeTab === 'spare' && canViewSpare ? (
         <SpareTanksGrid
           spareTanks={spareTanks}
           isLoading={isLoadingSpareTanks}
           isError={isSpareTanksError}
           error={spareTanksError as Error | null}
-          canManage={canManage}
-          onAdd={canManage ? openSpareCreate : undefined}
+          canEdit={spareActions.canEdit}
+          canDelete={spareActions.canDelete}
+          onAdd={spareActions.canCreate ? openSpareCreate : undefined}
           onEdit={openSpareEdit}
         />
-      )}
+      ) : null}
 
       <MasterBusFormDialog
         open={isBusFormOpen}

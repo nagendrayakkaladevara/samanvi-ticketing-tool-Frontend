@@ -1,18 +1,5 @@
 import * as React from 'react'
-import {
-  Bus,
-  ChevronRight,
-  Clipboard,
-  Database,
-  KeyRound,
-  LayoutDashboard,
-  LogOut,
-  Mic,
-  Settings,
-  Ticket,
-  Users,
-  Wrench,
-} from 'lucide-react'
+import { ChevronRight, Database, LogOut, Wrench } from 'lucide-react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -33,55 +20,12 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { useCurrentUser, type CurrentUser } from '@/hooks/use-current-user'
+import { useAppNavigation } from '@/hooks/use-app-navigation'
 import { SAMANVI_LOGO_URL } from '@/lib/branding'
 import { useAuthStore } from '@/store/auth-store'
 
-type NavItem = {
-  to: string
-  label: string
-  icon: React.ComponentType
-  end?: boolean
-  external?: boolean
-  roles?: CurrentUser['role'][]
-}
-
-/** Temporarily hidden from sidebar; remove paths to restore. */
-const temporarilyHiddenNavPaths = new Set(['/users', '/buses', '/board'])
-
-const navItems: NavItem[] = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN'] },
-  { to: '/tickets', label: 'Tickets', icon: Ticket },
-  { to: '/users', label: 'Users', icon: Users, roles: ['ADMIN'] },
-  { to: '/buses', label: 'Buses', icon: Bus, roles: ['ADMIN', 'SUPERVISOR'] },
-  { to: '/board', label: 'Board', icon: Clipboard, roles: ['ADMIN'] },
-  { to: '/application-access', label: 'Application Access', icon: KeyRound, roles: ['ADMIN'] },
-  {
-    to: 'https://samanvidashboard.netlify.app/voice-app-access',
-    label: 'Voice app access',
-    icon: Mic,
-    external: true,
-    roles: ['ADMIN'],
-  },
-  { to: '/settings', label: 'Settings', icon: Settings },
-]
-
-const mastersNavItems = [
-  { to: '/masters/service-for', label: 'Service For' },
-  { to: '/masters/bus-no', label: 'Bus No' },
-  { to: '/masters/service-no', label: 'Service No' },
-  { to: '/masters/employees', label: 'Employees' },
-] as const
-
-const garageNavItems = [
-  { to: '/garage/create-job', label: 'Create Job' },
-  { to: '/garage/repair-tracking', label: 'Repair Tracking' },
-  { to: '/garage/reports', label: 'Reports' },
-  { to: '/garage/masters', label: 'Garage Masters' },
-] as const
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const currentUser = useCurrentUser()
+  const { mainItems, mastersItems, garageItems } = useAppNavigation()
   const location = useLocation()
   const { isMobile, setOpenMobile } = useSidebar()
   const logout = useAuthStore((state) => state.logout)
@@ -95,19 +39,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       setOpenMobile(false)
     }
   }, [setOpenMobile])
-  const filteredNavItems = navItems.filter((item) => {
-    if (temporarilyHiddenNavPaths.has(item.to)) {
-      return false
-    }
 
-    if (!('roles' in item) || !item.roles) {
-      return true
-    }
-
-    return currentUser ? item.roles.includes(currentUser.role) : false
-  })
-  const showMastersNav = currentUser?.role === 'ADMIN'
-  const showGarageNav = currentUser?.role === 'ADMIN'
   const isMastersRouteActive = location.pathname.startsWith('/masters')
   const isGarageRouteActive = location.pathname.startsWith('/garage')
 
@@ -136,7 +68,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {showMastersNav ? (
+              {mastersItems.length > 0 ? (
                 <Collapsible asChild defaultOpen={isMastersRouteActive} className="group/collapsible">
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
@@ -148,8 +80,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {mastersNavItems.map((item) => (
-                          <SidebarMenuSubItem key={item.to}>
+                        {mastersItems.map((item) => (
+                          <SidebarMenuSubItem key={item.id}>
                             <SidebarMenuSubButton asChild isActive={location.pathname === item.to}>
                               <NavLink to={item.to} onClick={handleMobileItemClick}>
                                 <span>{item.label}</span>
@@ -162,7 +94,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuItem>
                 </Collapsible>
               ) : null}
-              {showGarageNav ? (
+              {garageItems.length > 0 ? (
                 <Collapsible asChild defaultOpen={isGarageRouteActive} className="group/collapsible">
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
@@ -174,8 +106,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {garageNavItems.map((item) => (
-                          <SidebarMenuSubItem key={item.to}>
+                        {garageItems.map((item) => (
+                          <SidebarMenuSubItem key={item.id}>
                             <SidebarMenuSubButton asChild isActive={location.pathname === item.to}>
                               <NavLink to={item.to} onClick={handleMobileItemClick}>
                                 <span>{item.label}</span>
@@ -188,8 +120,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuItem>
                 </Collapsible>
               ) : null}
-              {filteredNavItems.map((item) => (
-                <SidebarMenuItem key={item.to}>
+              {mainItems.map((item) => (
+                <SidebarMenuItem key={item.id}>
                   <SidebarMenuButton asChild tooltip={item.label}>
                     {item.external ? (
                       <a
@@ -198,12 +130,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         rel="noopener noreferrer"
                         onClick={handleMobileItemClick}
                       >
-                        <item.icon />
+                        {item.icon ? <item.icon /> : null}
                         <span>{item.label}</span>
                       </a>
                     ) : (
                       <NavLink to={item.to} end={item.end} onClick={handleMobileItemClick}>
-                        <item.icon />
+                        {item.icon ? <item.icon /> : null}
                         <span>{item.label}</span>
                       </NavLink>
                     )}

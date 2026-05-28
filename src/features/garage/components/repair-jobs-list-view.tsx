@@ -169,6 +169,8 @@ type RepairJobsListViewProps = {
   isError: boolean
   error: Error | null
   emptyDescription?: string
+  canEdit?: boolean
+  canDelete?: boolean
 }
 
 export function RepairJobsListView({
@@ -177,6 +179,8 @@ export function RepairJobsListView({
   isError,
   error,
   emptyDescription,
+  canEdit = false,
+  canDelete = false,
 }: RepairJobsListViewProps) {
   const isDarkMode = useDarkMode()
   const navigate = useNavigate()
@@ -297,7 +301,7 @@ export function RepairJobsListView({
         cellRenderer: (params: ICellRendererParams<JobGridRow>) => (
           <div className="flex items-center justify-end gap-2">
             <ViewJobButtonCell {...params} />
-            {params.data?.id ? (
+            {canEdit && params.data?.id ? (
               <Button
                 size="sm"
                 className="ticket-grid__action-btn"
@@ -310,7 +314,7 @@ export function RepairJobsListView({
                 Edit
               </Button>
             ) : null}
-            {params.data?.id ? (
+            {canDelete && params.data?.id ? (
               <Button
                 size="sm"
                 variant="destructive"
@@ -325,7 +329,7 @@ export function RepairJobsListView({
         ),
       },
     ],
-    [navigate],
+    [canDelete, canEdit, navigate],
   )
 
   const gridStyle: CSSProperties = {
@@ -376,8 +380,8 @@ export function RepairJobsListView({
                 createdBy={row.createdBy}
                 createdAt={row.createdAt}
                 onView={() => navigate(getJobDetailsPath(row.id))}
-                onEdit={() => navigate(getJobEditPath(row.id))}
-                onDelete={(event) => openDeleteDialog(row, event)}
+                onEdit={canEdit ? () => navigate(getJobEditPath(row.id)) : undefined}
+                onDelete={canDelete ? (event) => openDeleteDialog(row, event) : undefined}
               />
             ))}
           </div>

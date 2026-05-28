@@ -1,14 +1,25 @@
+import type { PermissionTreeGroup } from '@/features/application-users/types/permission'
+import type { ApplicationUserType } from '@/features/application-users/types/application-user'
+import type { Permission } from '@/features/application-users/types/permission'
+
+export type UserPermissions = {
+  items: Permission[]
+  tree: PermissionTreeGroup[]
+}
+
 export type AuthUser = {
   id: string
   name: string
   email?: string
   role: 'SUPERVISOR' | 'WORKER' | 'ADMIN' | string
+  userType?: ApplicationUserType
 }
 
 export type AuthSession = {
   accessToken: string
   refreshToken?: string
   user: AuthUser
+  permissions?: UserPermissions
 }
 
 export type LoginInput = {

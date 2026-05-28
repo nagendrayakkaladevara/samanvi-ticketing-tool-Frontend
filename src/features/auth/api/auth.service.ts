@@ -1,8 +1,11 @@
 import { z } from 'zod'
 
+import { fetchMyPermissions } from '@/features/auth/api/permissions-me.service'
 import { apiClient } from '@/lib/api/client'
 import { ApiError } from '@/lib/api/api-error'
-import type { AuthSession, AuthUser, LoginInput } from '@/features/auth/types/auth'
+import type { ApplicationUserType } from '@/features/application-users/types/application-user'
+import type { AuthSession, AuthUser, LoginInput, UserPermissions } from '@/features/auth/types/auth'
+import { normalizePermissionsCatalog } from '@/features/permissions/utils/permission-normalize'
 
 const loginSchema = z.object({
   username: z
@@ -15,6 +18,15 @@ const loginSchema = z.object({
     .min(8, 'Password must be at least 8 characters')
     .max(128, 'Password is too long'),
 })
+
+const applicationUserTypes = new Set<string>([
+  'admin',
+  'supervisor',
+  'chairman',
+  'accountant',
+  'collection_agent',
+  'worker',
+])
 
 function unwrapApiData(raw: unknown): unknown {
   if (typeof raw === 'object' && raw !== null && 'data' in (raw as Record<string, unknown>)) {
@@ -31,6 +43,44 @@ function unwrapUserRecord(raw: unknown): unknown {
   return data
 }
 
+function normalizeUserType(value: unknown): ApplicationUserType | undefined {
+  if (typeof value !== 'string') {
+    return undefined
+  }
+
+  const normalized = value.trim().toLowerCase()
+  return applicationUserTypes.has(normalized) ? (normalized as ApplicationUserType) : undefined
+}
+
+function parsePermissionsFromSource(raw: unknown): UserPermissions | null {
+  if (!raw || typeof raw !== 'object') {
+    return null
+  }
+
+  const record = raw as Record<string, unknown>
+  const permissionsSource =
+    record.permissions ??
+    (typeof record.data === 'object' && record.data !== null
+      ? (record.data as Record<string, unknown>).permissions
+      : undefined)
+
+  if (Array.isArray(permissionsSource)) {
+    return normalizePermissionsCatalog({ items: permissionsSource })
+  }
+
+  if (permissionsSource && typeof permissionsSource === 'object') {
+    const catalog = normalizePermissionsCatalog(permissionsSource)
+    return catalog.items.length > 0 ? catalog : null
+  }
+
+  if (Array.isArray(record.items) || Array.isArray(record.tree)) {
+    const catalog = normalizePermissionsCatalog(record)
+    return catalog.items.length > 0 ? catalog : null
+  }
+
+  return null
+}
+
 function parseAuthUser(raw: unknown): AuthUser {
   const userRecord = unwrapUserRecord(raw)
   const parsed = z
@@ -43,6 +93,7 @@ function parseAuthUser(raw: unknown): AuthUser {
       email: z.string().email().optional(),
       role: z.string().optional(),
       roleCode: z.string().optional(),
+      userType: z.string().optional(),
     })
     .or(
       z.object({
@@ -53,6 +104,7 @@ function parseAuthUser(raw: unknown): AuthUser {
         email: z.string().email().optional(),
         role: z.string().optional(),
         roleCode: z.string().optional(),
+        userType: z.string().optional(),
       }),
     )
     .safeParse(userRecord)
@@ -69,13 +121,15 @@ function parseAuthUser(raw: unknown): AuthUser {
     ('fullName' in user ? user.fullName : undefined) ??
     ('username' in user ? user.username : undefined) ??
     'Samanvi User'
-  const role = user.role ?? user.roleCode ?? 'WORKER'
+  const userType = normalizeUserType(user.userType ?? user.role ?? user.roleCode)
+  const role = (user.role ?? user.roleCode ?? userType ?? 'WORKER').toUpperCase()
 
   return {
     id: userId,
     name: displayName,
     email: user.email,
-    role: role.toUpperCase(),
+    role,
+    userType,
   }
 }
 
@@ -83,6 +137,7 @@ function extractSessionEnvelope(raw: unknown): {
   accessToken: string
   refreshToken?: string
   user?: unknown
+  permissions?: UserPermissions | null
 } {
   const asString = (value: unknown): string | undefined =>
     typeof value === 'string' && value.trim().length > 0 ? value : undefined
@@ -94,6 +149,7 @@ function extractSessionEnvelope(raw: unknown): {
       token: z.string().optional(),
       refreshToken: z.string().optional(),
       user: z.unknown().optional(),
+      permissions: z.unknown().optional(),
     })
     .passthrough()
     .safeParse(raw)
@@ -137,23 +193,39 @@ function extractSessionEnvelope(raw: unknown): {
       (source as Record<string, unknown>).user) ??
     envelope.data.user
 
-  return { accessToken, refreshToken, user }
+  const permissions =
+    parsePermissionsFromSource(source) ??
+    parsePermissionsFromSource(envelope.data) ??
+    parsePermissionsFromSource(user)
+
+  return { accessToken, refreshToken, user, permissions }
 }
 
-async function fetchCurrentUser(accessToken: string): Promise<AuthUser> {
+async function fetchCurrentUser(accessToken: string): Promise<{ user: AuthUser; permissions: UserPermissions | null }> {
   try {
     const response = await apiClient.get('/auth/me', {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     })
-    return parseAuthUser(response.data)
+    return {
+      user: parseAuthUser(response.data),
+      permissions: parsePermissionsFromSource(response.data),
+    }
   } catch (error) {
     if (error instanceof ApiError) {
       throw error
     }
     throw new ApiError('Logged in but failed to load user profile')
   }
+}
+
+async function resolvePermissions(permissions: UserPermissions | null | undefined): Promise<UserPermissions> {
+  if (permissions?.items?.length) {
+    return permissions
+  }
+
+  return fetchMyPermissions()
 }
 
 function assertLoginSucceeded(raw: unknown): void {
@@ -174,10 +246,23 @@ function assertLoginSucceeded(raw: unknown): void {
 
 async function parseSessionPayload(raw: unknown): Promise<AuthSession> {
   assertLoginSucceeded(raw)
-  const { accessToken, refreshToken, user } = extractSessionEnvelope(raw)
-  const parsedUser = user ? parseAuthUser(user) : await fetchCurrentUser(accessToken)
+  const { accessToken, refreshToken, user, permissions: envelopePermissions } = extractSessionEnvelope(raw)
 
-  return { accessToken, refreshToken, user: parsedUser }
+  let parsedUser: AuthUser
+  let parsedPermissions: UserPermissions | null = envelopePermissions ?? null
+
+  if (user) {
+    parsedUser = parseAuthUser(user)
+    parsedPermissions = parsedPermissions ?? parsePermissionsFromSource(user)
+  } else {
+    const me = await fetchCurrentUser(accessToken)
+    parsedUser = me.user
+    parsedPermissions = parsedPermissions ?? me.permissions
+  }
+
+  const permissions = await resolvePermissions(parsedPermissions)
+
+  return { accessToken, refreshToken, user: parsedUser, permissions }
 }
 
 export async function login(input: LoginInput): Promise<AuthSession> {

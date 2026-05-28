@@ -28,9 +28,14 @@ import {
 } from '@/features/service-numbers/utils/service-number-model'
 import { useServiceForQuery } from '@/features/service-for/hooks/use-service-for-query'
 import { useMasterDialogParams } from '@/hooks/use-master-dialog-params'
+import { usePermissions } from '@/hooks/use-permissions'
 import { queryClient } from '@/lib/query/query-client'
 
 export function ServiceNoPage() {
+  const { can } = usePermissions()
+  const canCreate = can('masters', 'service_number', 'create')
+  const canEdit = can('masters', 'service_number', 'edit')
+  const canDelete = can('masters', 'service_number', 'delete')
   const { data: items = [], isLoading, isFetching, isError, error } = useServiceNumbersQuery()
   const { data: serviceForOptions = [] } = useServiceForQuery()
   const { action, id, openDialog, closeDialog } = useMasterDialogParams()
@@ -107,10 +112,12 @@ export function ServiceNoPage() {
                 Syncing...
               </span>
             ) : null}
-            <Button className="w-full sm:w-auto" onClick={openCreateForm}>
-              <Plus className="h-4 w-4" />
-              Add Service Number
-            </Button>
+            {canCreate ? (
+              <Button className="w-full sm:w-auto" onClick={openCreateForm}>
+                <Plus className="h-4 w-4" />
+                Add Service Number
+              </Button>
+            ) : null}
           </div>
         </div>
       </header>
@@ -144,10 +151,12 @@ export function ServiceNoPage() {
           <p className="max-w-md text-sm text-muted-foreground">
             Create your first service number to define routes, fares, and crew beta amounts.
           </p>
-          <Button onClick={openCreateForm}>
-            <Plus className="h-4 w-4" />
-            Add Service Number
-          </Button>
+          {canCreate ? (
+            <Button onClick={openCreateForm}>
+              <Plus className="h-4 w-4" />
+              Add Service Number
+            </Button>
+          ) : null}
         </Card>
       ) : null}
 
@@ -175,17 +184,21 @@ export function ServiceNoPage() {
                     <Button variant="outline" size="sm" onClick={() => openViewDialog(item)}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => openEditForm(item)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                      onClick={() => openDeleteDialog(item)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    {canEdit ? (
+                      <Button variant="outline" size="sm" onClick={() => openEditForm(item)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : null}
+                    {canDelete ? (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                        onClick={() => openDeleteDialog(item)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </Card>
@@ -227,19 +240,23 @@ export function ServiceNoPage() {
                           <Eye className="h-3.5 w-3.5" />
                           View
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => openEditForm(item)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                          onClick={() => openDeleteDialog(item)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
-                        </Button>
+                        {canEdit ? (
+                          <Button variant="outline" size="sm" onClick={() => openEditForm(item)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                        ) : null}
+                        {canDelete ? (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                            onClick={() => openDeleteDialog(item)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </Button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

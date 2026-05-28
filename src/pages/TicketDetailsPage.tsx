@@ -35,6 +35,7 @@ import {
   isNoteRequiredForTransition,
 } from '@/features/tickets/utils/ticket-status-transition'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { usePermissions } from '@/hooks/use-permissions'
 import { SAMANVI_LOGO_URL } from '@/lib/branding'
 import { queryClient } from '@/lib/query/query-client'
 
@@ -255,6 +256,9 @@ function TicketDetailsSkeleton() {
 export function TicketDetailsPage() {
   const { ticketId } = useParams<{ ticketId: string }>()
   const currentUser = useCurrentUser()
+  const { can } = usePermissions()
+  const canAssignByPermission = can('tickets', '', 'assign')
+  const canUpdateStatusByPermission = can('tickets', '', 'update_status')
   const [nextStatus, setNextStatus] = useState<TicketStatus | ''>('')
   const [assignToId, setAssignToId] = useState('')
   const [statusNote, setStatusNote] = useState('')
@@ -293,9 +297,9 @@ export function TicketDetailsPage() {
   }, [currentUser?.role])
 
   const capabilities = roleCapabilityMatrix[normalizedRole]
-  const canUpdateStatus = capabilities.canUpdateStatus
+  const canUpdateStatus = capabilities.canUpdateStatus && canUpdateStatusByPermission
   const canComment = capabilities.canComment
-  const canAssign = capabilities.canAssign
+  const canAssign = capabilities.canAssign && canAssignByPermission
   const canEditAnyAction = canUpdateStatus || canComment || canAssign
 
   const { data: assignableUsers = [] } = useQuery({

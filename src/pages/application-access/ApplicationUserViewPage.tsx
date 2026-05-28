@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { ArrowLeft, KeyRound, Pencil, Shield } from 'lucide-react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 
@@ -11,11 +10,7 @@ import { useApplicationUserQuery } from '@/features/application-users/hooks/use-
 import { usePermissionsQuery } from '@/features/application-users/hooks/use-permissions-query'
 import { applicationUserTypeLabels } from '@/features/application-users/types/application-user'
 import { applicationAccessRoutes } from '@/features/application-users/utils/application-access-routes'
-import {
-  filterPermissionTreeForOverrides,
-  partitionPermissionIds,
-} from '@/features/application-users/utils/permission-ui-filters'
-import { useCurrentUser } from '@/hooks/use-current-user'
+import { usePermissions } from '@/hooks/use-permissions'
 import { cn } from '@/lib/utils'
 
 function DetailItem({
@@ -38,7 +33,9 @@ function DetailItem({
 export function ApplicationUserViewPage() {
   const navigate = useNavigate()
   const { userId } = useParams()
-  const currentUser = useCurrentUser()
+  const { has, can } = usePermissions()
+  const canView = has('users', '', 'view')
+  const canEdit = can('users', '', 'edit')
 
   const {
     data: user,
@@ -54,22 +51,11 @@ export function ApplicationUserViewPage() {
     error: permissionsError,
   } = usePermissionsQuery()
 
-  const permissionTree = useMemo(
-    () => filterPermissionTreeForOverrides(permissionsCatalog?.tree ?? []),
-    [permissionsCatalog?.tree],
-  )
-
-  const visiblePermissionIds = useMemo(() => {
-    if (!user || !permissionsCatalog) {
-      return []
-    }
-
-    return partitionPermissionIds(permissionsCatalog.items, user.permissionIds).visibleIds
-  }, [user, permissionsCatalog])
+  const permissionTree = permissionsCatalog?.tree ?? []
 
   const isLoading = isUserLoading || isPermissionsLoading
 
-  if (currentUser?.role !== 'ADMIN') {
+  if (!canView) {
     return <Navigate to={applicationAccessRoutes.list} replace />
   }
 
@@ -107,7 +93,7 @@ export function ApplicationUserViewPage() {
             </div>
           </div>
 
-          {user ? (
+          {user && canEdit ? (
             <Button
               variant="outline"
               size="icon"
@@ -187,7 +173,7 @@ export function ApplicationUserViewPage() {
                 Admin accounts receive all permissions automatically.
               </div>
             ) : (
-              <PermissionSummaryReadonly tree={permissionTree} selectedIds={visiblePermissionIds} />
+              <PermissionSummaryReadonly tree={permissionTree} selectedIds={user.permissionIds} />
             )}
           </Card>
 

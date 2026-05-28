@@ -54,7 +54,7 @@ function DesktopTableLoader() {
   )
 }
 
-function EmptyState({ onAdd, canManage }: { onAdd?: () => void; canManage: boolean }) {
+function EmptyState({ onAdd }: { onAdd?: () => void }) {
   return (
     <div className="ticket-grid-empty">
       <div className="ticket-grid-empty__icon-wrapper">
@@ -64,7 +64,7 @@ function EmptyState({ onAdd, canManage }: { onAdd?: () => void; canManage: boole
       <p className="ticket-grid-empty__description">
         Register spare tank bus numbers and track owner details for fleet operations.
       </p>
-      {canManage && onAdd ? (
+      {onAdd ? (
         <Button className="mt-2" onClick={onAdd}>
           Add Spare Tank
         </Button>
@@ -78,7 +78,8 @@ type SpareTanksGridProps = {
   isLoading: boolean
   isError: boolean
   error: Error | null
-  canManage: boolean
+  canEdit?: boolean
+  canDelete?: boolean
   onAdd?: () => void
   onEdit: (item: SpareTank) => void
 }
@@ -88,7 +89,8 @@ export function SpareTanksGrid({
   isLoading,
   isError,
   error,
-  canManage,
+  canEdit = false,
+  canDelete = false,
   onAdd,
   onEdit,
 }: SpareTanksGridProps) {
@@ -173,7 +175,7 @@ export function SpareTanksGrid({
         sortable: true,
         filter: true,
       },
-      ...(canManage
+      ...(canEdit || canDelete
         ? [
             {
               headerName: '',
@@ -189,23 +191,27 @@ export function SpareTanksGrid({
                 <div className="flex items-center justify-end gap-2">
                   {params.data ? (
                     <>
-                      <Button
-                        size="sm"
-                        className="ticket-grid__action-btn"
-                        onClick={(event) => openEditDialog(params.data as SpareTankGridRow, event)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                        onClick={(event) => openDeleteDialog(params.data as SpareTankGridRow, event)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </Button>
+                      {canEdit ? (
+                        <Button
+                          size="sm"
+                          className="ticket-grid__action-btn"
+                          onClick={(event) => openEditDialog(params.data as SpareTankGridRow, event)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </Button>
+                      ) : null}
+                      {canDelete ? (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                          onClick={(event) => openDeleteDialog(params.data as SpareTankGridRow, event)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      ) : null}
                     </>
                   ) : null}
                 </div>
@@ -214,7 +220,7 @@ export function SpareTanksGrid({
           ]
         : []),
     ],
-    [canManage, itemById],
+    [canEdit, canDelete, itemById],
   )
 
   const gridStyle: CSSProperties = {
@@ -245,7 +251,7 @@ export function SpareTanksGrid({
       ) : null}
 
       {!isLoading && !isError && rowData.length === 0 ? (
-        <EmptyState onAdd={onAdd} canManage={canManage} />
+        <EmptyState onAdd={onAdd} />
       ) : null}
 
       {!isLoading && !isError && rowData.length > 0 ? (
@@ -267,19 +273,23 @@ export function SpareTanksGrid({
                         Updated {formatSpareTankUpdatedAt(item?.updatedAt)}
                       </p>
                     </div>
-                    {canManage && item ? (
+                    {item && (canEdit || canDelete) ? (
                       <div className="flex shrink-0 gap-2">
-                        <Button variant="outline" size="sm" onClick={() => onEdit(item)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                          onClick={() => setDeleteTarget(row)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {canEdit ? (
+                          <Button variant="outline" size="sm" onClick={() => onEdit(item)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        ) : null}
+                        {canDelete ? (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                            onClick={() => setDeleteTarget(row)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>

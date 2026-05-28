@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/auth-store'
 import { useCurrentUser } from '@/hooks/use-current-user'
 
 type ProtectedRouteProps = {
-  allowedRoles?: Array<'ADMIN' | 'SUPERVISOR' | 'WORKER' | 'VIEWER'>
+  allowedRoles?: string[]
 }
 
 export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {

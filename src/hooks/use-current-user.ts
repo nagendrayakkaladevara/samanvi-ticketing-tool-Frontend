@@ -1,9 +1,20 @@
+import type { ApplicationUserType } from '@/features/application-users/types/application-user'
 import { useAuthStore } from '@/store/auth-store'
 
 export type CurrentUser = {
   id: string
-  role: 'SUPERVISOR' | 'WORKER' | 'ADMIN' | 'VIEWER'
+  role: string
+  userType?: ApplicationUserType
   name: string
+  isAdmin: boolean
+}
+
+function resolveIsAdmin(user: NonNullable<ReturnType<typeof useAuthStore.getState>['user']>): boolean {
+  if (user.userType === 'admin') {
+    return true
+  }
+
+  return user.role === 'ADMIN'
 }
 
 export function useCurrentUser(): CurrentUser | null {
@@ -15,10 +26,9 @@ export function useCurrentUser(): CurrentUser | null {
 
   return {
     id: user.id,
-    role:
-      user.role === 'ADMIN' || user.role === 'SUPERVISOR' || user.role === 'WORKER'
-        ? user.role
-        : 'VIEWER',
+    role: user.role,
+    userType: user.userType,
     name: user.name,
+    isAdmin: resolveIsAdmin(user),
   }
 }
