@@ -11,14 +11,14 @@ import { useTicketsQuery } from '@/features/tickets/hooks/use-tickets-query'
 import { useTicketsAutoRefresh } from '@/features/tickets/hooks/use-tickets-auto-refresh'
 import { TicketsListView } from '@/features/tickets/components/tickets-list-view'
 import { getCreateTicketPath, getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
-import { useCurrentUser } from '@/hooks/use-current-user'
+import { usePermissions } from '@/hooks/use-permissions'
 
 export function TicketsPage() {
   const { autoRefresh } = useTicketsAutoRefresh()
   const { data: tickets = [], isLoading, isFetching, isError, error } = useTicketsQuery({ poll: autoRefresh })
   const navigate = useNavigate()
-  const currentUser = useCurrentUser()
-  const canCreateTicket = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR'
+  const { can } = usePermissions()
+  const canCreateTicket = can('tickets', '', 'create')
   const [ticketNumberQuery, setTicketNumberQuery] = useState('')
 
   const searchTicketMutation = useMutation({

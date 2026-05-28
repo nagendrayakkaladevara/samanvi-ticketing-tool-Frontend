@@ -63,3 +63,15 @@ export const creatableUserTypeOptions: Array<{ label: string; value: CreatableAp
   { label: 'Collection Agent', value: 'collection_agent' },
   { label: 'Worker', value: 'worker' },
 ]
+
+const creatableUserTypeSet = new Set<CreatableApplicationUserType>(
+  creatableUserTypeOptions.map((option) => option.value),
+)
+
+export function toCreatableUserType(userType: ApplicationUserType): CreatableApplicationUserType {
+  if (userType === 'admin') {
+    return 'supervisor'
+  }
+
+  return creatableUserTypeSet.has(userType) ? userType : 'supervisor'
+}

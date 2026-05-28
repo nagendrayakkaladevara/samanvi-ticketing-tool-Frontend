@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { FolderTree, Package, Plus, RefreshCw } from 'lucide-react'
 
 import { PageGradientHeader } from '@/components/page-gradient-header'
@@ -8,7 +8,7 @@ import { RepairPartFormDialog } from '@/features/garage/components/repair-part-f
 import { RepairPartsPanel } from '@/features/garage/components/repair-parts-panel'
 import { useRepairCategoriesQuery } from '@/features/garage/hooks/use-repair-categories-query'
 import { useRepairPartsQuery } from '@/features/garage/hooks/use-repair-parts-query'
-import { useCurrentUser } from '@/hooks/use-current-user'
+import { usePermissions, useSubmoduleActions } from '@/hooks/use-permissions'
 import { useMasterDialogParams } from '@/hooks/use-master-dialog-params'
 import { cn } from '@/lib/utils'
 
@@ -19,11 +19,24 @@ function parseGarageMastersTab(value: string | null): GarageMastersTab {
 }
 
 export function GarageMastersPage() {
-  const currentUser = useCurrentUser()
-  const canManage = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR'
+  const { has } = usePermissions()
+  const canViewCategories = has('garage', 'repair_category', 'view')
+  const canViewParts = has('garage', 'repair_part', 'view')
+  const categoryActions = useSubmoduleActions('garage', 'repair_category')
+  const partActions = useSubmoduleActions('garage', 'repair_part')
   const { action, tab: tabParam, openDialog, closeDialog, setTabParam } = useMasterDialogParams()
 
   const activeTab = parseGarageMastersTab(tabParam)
+
+  useEffect(() => {
+    if (activeTab === 'categories' && !canViewCategories && canViewParts) {
+      setTabParam('parts')
+    } else if (activeTab === 'parts' && !canViewParts && canViewCategories) {
+      setTabParam('categories')
+    }
+  }, [activeTab, canViewCategories, canViewParts, setTabParam])
+
+  const tabActions = activeTab === 'categories' ? categoryActions : partActions
 
   const {
     data: categoriesData,
@@ -72,7 +85,7 @@ export function GarageMastersPage() {
                 Syncing...
               </span>
             ) : null}
-            {canManage ? (
+            {tabActions.canCreate ? (
               <Button className="w-full sm:w-auto" onClick={openCreateDialog}>
                 <Plus className="h-4 w-4" />
                 {addButtonLabel}
@@ -83,56 +96,64 @@ export function GarageMastersPage() {
       />
 
       <div className="inline-flex flex-wrap rounded-xl border border-border bg-muted/30 p-1">
-        <button
-          type="button"
-          onClick={() => setTabParam('categories')}
-          className={cn(
-            'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-            activeTab === 'categories'
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground',
-          )}
-        >
-          <FolderTree className="h-4 w-4 shrink-0" />
-          <span className="truncate">Repair Categories</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setTabParam('parts')}
-          className={cn(
-            'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-            activeTab === 'parts'
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground',
-          )}
-        >
-          <Package className="h-4 w-4 shrink-0" />
-          <span className="truncate">Repair Parts</span>
-        </button>
+        {canViewCategories ? (
+          <button
+            type="button"
+            onClick={() => setTabParam('categories')}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+              activeTab === 'categories'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <FolderTree className="h-4 w-4 shrink-0" />
+            <span className="truncate">Repair Categories</span>
+          </button>
+        ) : null}
+        {canViewParts ? (
+          <button
+            type="button"
+            onClick={() => setTabParam('parts')}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+              activeTab === 'parts'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <Package className="h-4 w-4 shrink-0" />
+            <span className="truncate">Repair Parts</span>
+          </button>
+        ) : null}
       </div>
 
-      {activeTab === 'categories' ? (
+      {activeTab === 'categories' && canViewCategories ? (
         <RepairCategoriesPanel
           tree={tree}
           isLoading={isCategoriesLoading}
           isError={isCategoriesError}
           error={categoriesError as Error | null}
-          canManage={canManage}
+          canCreate={categoryActions.canCreate}
+          canEdit={categoryActions.canEdit}
+          canDelete={categoryActions.canDelete}
           createDialogOpen={isCategoryCreateOpen}
           onCreateDialogOpenChange={(open) => {
             if (!open) closeDialog()
           }}
         />
-      ) : (
+      ) : null}
+      {activeTab === 'parts' && canViewParts ? (
         <RepairPartsPanel
           parts={parts}
           isLoading={isPartsLoading}
           isError={isPartsError}
           error={partsError as Error | null}
-          canManage={canManage}
-          onAdd={canManage ? openCreateDialog : undefined}
+          canEdit={partActions.canEdit}
+          canDelete={partActions.canDelete}
+          onAdd={partActions.canCreate ? openCreateDialog : undefined}
         />
-      )}
+      ) : null}
 
       <RepairPartFormDialog
         open={isPartFormOpen}

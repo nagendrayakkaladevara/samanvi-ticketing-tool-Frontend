@@ -23,14 +23,18 @@ import {
   type ApplicationUser,
 } from '@/features/application-users/types/application-user'
 import { applicationAccessRoutes } from '@/features/application-users/utils/application-access-routes'
-import { useCurrentUser } from '@/hooks/use-current-user'
+import { usePermissions } from '@/hooks/use-permissions'
 import { queryClient } from '@/lib/query/query-client'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 
 export function ApplicationAccessPage() {
   const navigate = useNavigate()
-  const currentUser = useCurrentUser()
+  const { has, can } = usePermissions()
+  const canView = has('users', '', 'view')
+  const canCreate = can('users', '', 'create')
+  const canEdit = can('users', '', 'edit')
+  const canDelete = can('users', '', 'delete')
   const { data: users = [], isLoading, isError, isFetching, error } = useApplicationUsersQuery()
   const [deleteTarget, setDeleteTarget] = useState<ApplicationUser | null>(null)
 
@@ -59,7 +63,7 @@ export function ApplicationAccessPage() {
     deleteMutation.mutate(deleteTarget.id)
   }
 
-  if (currentUser?.role !== 'ADMIN') {
+  if (!canView) {
     return (
       <section className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Application Access</h1>
@@ -87,12 +91,14 @@ export function ApplicationAccessPage() {
           </div>
           <div className="flex w-full items-stretch gap-2 sm:w-auto sm:items-center">
             {isFetching && !isLoading ? <span className="text-xs text-muted-foreground">Refreshing...</span> : null}
-            <Button asChild className="w-full sm:w-auto">
-              <Link to={applicationAccessRoutes.create}>
-                <UserPlus className="h-4 w-4" />
-                Create User
-              </Link>
-            </Button>
+            {canCreate ? (
+              <Button asChild className="w-full sm:w-auto">
+                <Link to={applicationAccessRoutes.create}>
+                  <UserPlus className="h-4 w-4" />
+                  Create User
+                </Link>
+              </Button>
+            ) : null}
           </div>
         </div>
       </header>
@@ -125,12 +131,14 @@ export function ApplicationAccessPage() {
               Create the first application user to grant secure access to modules based on role permissions.
             </p>
           </div>
-          <Button asChild>
-            <Link to={applicationAccessRoutes.create}>
-              <UserPlus className="h-4 w-4" />
-              Create First User
-            </Link>
-          </Button>
+          {canCreate ? (
+            <Button asChild>
+              <Link to={applicationAccessRoutes.create}>
+                <UserPlus className="h-4 w-4" />
+                Create First User
+              </Link>
+            </Button>
+          ) : null}
         </Card>
       ) : null}
 
@@ -173,24 +181,28 @@ export function ApplicationAccessPage() {
                     <Eye className="h-3.5 w-3.5" />
                     View
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => navigate(applicationAccessRoutes.edit(user.id))}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="flex-1 border-red-600 bg-red-600 text-white hover:bg-red-700"
-                    onClick={() => setDeleteTarget(user)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete
-                  </Button>
+                  {canEdit ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => navigate(applicationAccessRoutes.edit(user.id))}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
+                    </Button>
+                  ) : null}
+                  {canDelete ? (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="flex-1 border-red-600 bg-red-600 text-white hover:bg-red-700"
+                      onClick={() => setDeleteTarget(user)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </Button>
+                  ) : null}
                 </div>
               </Card>
             ))}
@@ -241,23 +253,27 @@ export function ApplicationAccessPage() {
                           <Eye className="h-3.5 w-3.5" />
                           View
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(applicationAccessRoutes.edit(user.id))}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                          onClick={() => setDeleteTarget(user)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
-                        </Button>
+                        {canEdit ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(applicationAccessRoutes.edit(user.id))}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                        ) : null}
+                        {canDelete ? (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                            onClick={() => setDeleteTarget(user)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </Button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

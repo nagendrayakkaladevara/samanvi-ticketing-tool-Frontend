@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { FileSpreadsheet, Layers, Loader2, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useMasterDialogParams } from '@/hooks/use-master-dialog-params'
+import { usePermissions } from '@/hooks/use-permissions'
 import { toast } from '@/lib/toast'
 
 import {
@@ -58,6 +59,10 @@ function validateServiceFor(value: string): string | null {
 }
 
 export function ServiceForPage() {
+  const { can } = usePermissions()
+  const canCreate = can('masters', 'service_for', 'create')
+  const canEdit = can('masters', 'service_for', 'edit')
+  const canDelete = can('masters', 'service_for', 'delete')
   const { data: items = [], isLoading, isFetching, isError, error } = useServiceForQuery()
 
   const { action, id, openDialog, closeDialog } = useMasterDialogParams()
@@ -237,10 +242,12 @@ export function ServiceForPage() {
                   <TooltipContent side="bottom">Download Excel</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <Button className="min-w-0 flex-1 sm:w-auto sm:flex-none" onClick={openCreateForm}>
-                <Plus className="h-4 w-4" />
-                Add Service For
-              </Button>
+              {canCreate ? (
+                <Button className="min-w-0 flex-1 sm:w-auto sm:flex-none" onClick={openCreateForm}>
+                  <Plus className="h-4 w-4" />
+                  Add Service For
+                </Button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -275,10 +282,12 @@ export function ServiceForPage() {
           <p className="max-w-md text-sm text-muted-foreground">
             Create your first service type to use it in service number forms and dropdowns.
           </p>
-          <Button onClick={openCreateForm}>
-            <Plus className="h-4 w-4" />
-            Add Service For
-          </Button>
+          {canCreate ? (
+            <Button onClick={openCreateForm}>
+              <Plus className="h-4 w-4" />
+              Add Service For
+            </Button>
+          ) : null}
         </Card>
       ) : null}
 
@@ -294,17 +303,21 @@ export function ServiceForPage() {
                     <p className="text-xs text-muted-foreground">Updated {formatDateTime(item.updatedAt)}</p>
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    <Button variant="outline" size="sm" onClick={() => openEditForm(item)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                      onClick={() => openDeleteDialog(item)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    {canEdit ? (
+                      <Button variant="outline" size="sm" onClick={() => openEditForm(item)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : null}
+                    {canDelete ? (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                        onClick={() => openDeleteDialog(item)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </Card>
@@ -318,7 +331,9 @@ export function ServiceForPage() {
                   <th className="w-16 px-4 py-3 font-medium">S.No</th>
                   <th className="px-4 py-3 font-medium">Service For</th>
                   <th className="px-4 py-3 font-medium">Last Updated</th>
-                  <th className="px-4 py-3 text-right font-medium">Actions</th>
+                  {canEdit || canDelete ? (
+                    <th className="px-4 py-3 text-right font-medium">Actions</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -332,23 +347,29 @@ export function ServiceForPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{formatDateTime(item.updatedAt)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => openEditForm(item)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                          onClick={() => openDeleteDialog(item)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
-                        </Button>
-                      </div>
-                    </td>
+                    {canEdit || canDelete ? (
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          {canEdit ? (
+                            <Button variant="outline" size="sm" onClick={() => openEditForm(item)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                              Edit
+                            </Button>
+                          ) : null}
+                          {canDelete ? (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                              onClick={() => openDeleteDialog(item)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </Button>
+                          ) : null}
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>

@@ -45,7 +45,9 @@ type RepairCategoriesPanelProps = {
   isLoading: boolean
   isError: boolean
   error: Error | null
-  canManage: boolean
+  canCreate?: boolean
+  canEdit?: boolean
+  canDelete?: boolean
   createDialogOpen?: boolean
   onCreateDialogOpenChange?: (open: boolean) => void
 }
@@ -53,14 +55,18 @@ type RepairCategoriesPanelProps = {
 function CategoryTreeNodeRow({
   node,
   depth,
-  canManage,
+  canCreate = false,
+  canEdit = false,
+  canDelete = false,
   onAddChild,
   onEdit,
   onDelete,
 }: {
   node: RepairCategoryTreeNode
   depth: number
-  canManage: boolean
+  canCreate?: boolean
+  canEdit?: boolean
+  canDelete?: boolean
   onAddChild: (category: RepairCategoryTreeNode) => void
   onEdit: (category: RepairCategoryTreeNode) => void
   onDelete: (category: RepairCategoryTreeNode) => void
@@ -102,25 +108,29 @@ function CategoryTreeNodeRow({
           <p className="text-xs text-muted-foreground">Updated {formatRepairCategoryUpdatedAt(node.updatedAt)}</p>
         </div>
 
-        {canManage ? (
+        {(canCreate || canEdit || canDelete) ? (
           <div className="flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
-            {canAddChildCategory(node) ? (
+            {canCreate && canAddChildCategory(node) ? (
               <Button variant="ghost" size="icon" className="size-8" onClick={() => onAddChild(node)} aria-label="Add subcategory">
                 <Plus className="size-4" />
               </Button>
             ) : null}
-            <Button variant="ghost" size="icon" className="size-8" onClick={() => onEdit(node)} aria-label="Edit category">
-              <Pencil className="size-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 text-destructive hover:text-destructive"
-              onClick={() => onDelete(node)}
-              aria-label="Delete category"
-            >
-              <Trash2 className="size-4" />
-            </Button>
+            {canEdit ? (
+              <Button variant="ghost" size="icon" className="size-8" onClick={() => onEdit(node)} aria-label="Edit category">
+                <Pencil className="size-4" />
+              </Button>
+            ) : null}
+            {canDelete ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 text-destructive hover:text-destructive"
+                onClick={() => onDelete(node)}
+                aria-label="Delete category"
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -131,7 +141,9 @@ function CategoryTreeNodeRow({
               key={child.id}
               node={child}
               depth={depth + 1}
-              canManage={canManage}
+              canCreate={canCreate}
+              canEdit={canEdit}
+              canDelete={canDelete}
               onAddChild={onAddChild}
               onEdit={onEdit}
               onDelete={onDelete}
@@ -147,7 +159,9 @@ export function RepairCategoriesPanel({
   isLoading,
   isError,
   error,
-  canManage,
+  canCreate = false,
+  canEdit = false,
+  canDelete = false,
   createDialogOpen = false,
   onCreateDialogOpenChange,
 }: RepairCategoriesPanelProps) {
@@ -210,7 +224,7 @@ export function RepairCategoriesPanel({
           <p className="max-w-md text-sm text-muted-foreground">
             Build a hierarchy of repair types up to five levels deep. Leaf categories can be assigned to repair jobs.
           </p>
-          {canManage ? (
+          {canCreate ? (
             <Button onClick={openCreateRoot}>
               <Plus className="h-4 w-4" />
               Add Root Category
@@ -225,7 +239,7 @@ export function RepairCategoriesPanel({
             <p className="text-sm text-muted-foreground">
               {categoryCount} {categoryCount === 1 ? 'category' : 'categories'} in hierarchy
             </p>
-            {canManage ? (
+            {canCreate ? (
               <Button size="sm" variant="outline" onClick={openCreateRoot}>
                 <Plus className="h-4 w-4" />
                 Add Category
@@ -239,7 +253,9 @@ export function RepairCategoriesPanel({
                 key={node.id}
                 node={node}
                 depth={0}
-                canManage={canManage}
+                canCreate={canCreate}
+                canEdit={canEdit}
+                canDelete={canDelete}
                 onAddChild={(category) => {
                   setDialogState({ mode: 'create-child', parent: category })
                   onCreateDialogOpenChange?.(true)

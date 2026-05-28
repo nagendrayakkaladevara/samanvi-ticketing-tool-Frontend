@@ -124,7 +124,7 @@ function TableSkeleton() {
   )
 }
 
-function EmptyState({ onAdd, canManage }: { onAdd?: () => void; canManage: boolean }) {
+function EmptyState({ onAdd }: { onAdd?: () => void }) {
   return (
     <div className="ticket-grid-empty">
       <div className="ticket-grid-empty__icon-wrapper">
@@ -134,7 +134,7 @@ function EmptyState({ onAdd, canManage }: { onAdd?: () => void; canManage: boole
       <p className="ticket-grid-empty__description">
         Add your first bus to manage fleet details, compliance dates, and spare tank assignments.
       </p>
-      {canManage && onAdd ? (
+      {onAdd ? (
         <Button className="mt-2" onClick={onAdd}>
           Add Bus
         </Button>
@@ -148,7 +148,8 @@ type MasterBusesGridProps = {
   isLoading: boolean
   isError: boolean
   error: Error | null
-  canManage: boolean
+  canEdit?: boolean
+  canDelete?: boolean
   onAdd?: () => void
   onEdit: (bus: MasterBus) => void
 }
@@ -158,7 +159,8 @@ export function MasterBusesGrid({
   isLoading,
   isError,
   error,
-  canManage,
+  canEdit = false,
+  canDelete = false,
   onAdd,
   onEdit,
 }: MasterBusesGridProps) {
@@ -283,7 +285,7 @@ export function MasterBusesGrid({
         filter: true,
         valueFormatter: (params) => (params.value?.trim() ? params.value.trim() : '—'),
       },
-      ...(canManage
+      ...(canEdit || canDelete
         ? [
             {
               headerName: '',
@@ -299,23 +301,27 @@ export function MasterBusesGrid({
                 <div className="flex items-center justify-end gap-2">
                   {params.data ? (
                     <>
-                      <Button
-                        size="sm"
-                        className="ticket-grid__action-btn"
-                        onClick={(event) => openEditDialog(params.data as MasterBusGridRow, event)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                        onClick={(event) => openDeleteDialog(params.data as MasterBusGridRow, event)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </Button>
+                      {canEdit ? (
+                        <Button
+                          size="sm"
+                          className="ticket-grid__action-btn"
+                          onClick={(event) => openEditDialog(params.data as MasterBusGridRow, event)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </Button>
+                      ) : null}
+                      {canDelete ? (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                          onClick={(event) => openDeleteDialog(params.data as MasterBusGridRow, event)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      ) : null}
                     </>
                   ) : null}
                 </div>
@@ -324,7 +330,7 @@ export function MasterBusesGrid({
           ]
         : []),
     ],
-    [canManage, busById],
+    [canEdit, canDelete, busById],
   )
 
   const gridStyle: CSSProperties = {
@@ -357,7 +363,7 @@ export function MasterBusesGrid({
       ) : null}
 
       {!isLoading && !isError && rowData.length === 0 ? (
-        <EmptyState onAdd={onAdd} canManage={canManage} />
+        <EmptyState onAdd={onAdd} />
       ) : null}
 
       {!isLoading && !isError && rowData.length > 0 ? (
@@ -370,9 +376,10 @@ export function MasterBusesGrid({
                   <p className="px-1 text-xs text-muted-foreground">S.No {index + 1}</p>
                   <MasterBusMobileCard
                     row={row}
-                    canManage={canManage && Boolean(bus)}
+                    canEdit={canEdit && Boolean(bus)}
+                    canDelete={canDelete && Boolean(bus)}
                     onEdit={bus ? () => onEdit(bus) : undefined}
-                    onDelete={() => setDeleteTarget(row)}
+                    onDelete={canDelete ? () => setDeleteTarget(row) : undefined}
                   />
                 </div>
               )

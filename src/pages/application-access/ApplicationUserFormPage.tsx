@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, Shield } from 'lucide-react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
@@ -18,17 +18,14 @@ import { usePermissionsQuery } from '@/features/application-users/hooks/use-perm
 import {
   applicationUserTypeLabels,
   creatableUserTypeOptions,
+  toCreatableUserType,
   type CreateApplicationUserInput,
   type CreatableApplicationUserType,
   type UpdateApplicationUserInput,
+  type ApplicationUser,
 } from '@/features/application-users/types/application-user'
 import { applicationAccessRoutes } from '@/features/application-users/utils/application-access-routes'
-import {
-  filterPermissionTreeForOverrides,
-  mergePermissionIdsForSave,
-  partitionPermissionIds,
-} from '@/features/application-users/utils/permission-ui-filters'
-import { useCurrentUser } from '@/hooks/use-current-user'
+import { usePermissions } from '@/hooks/use-permissions'
 import { invalidFieldClass } from '@/lib/form/form-field-styles'
 import { queryClient } from '@/lib/query/query-client'
 import { toast } from '@/lib/toast'
@@ -57,6 +54,19 @@ function getDefaultValues(): ApplicationUserFormValues {
     userType: 'supervisor',
     isActive: true,
     permissionIds: [],
+  }
+}
+
+function getValuesFromEditingUser(editingUser: ApplicationUser): ApplicationUserFormValues {
+  return {
+    username: editingUser.username,
+    fullName: editingUser.displayName,
+    mobileNumber: editingUser.mobileNumber,
+    email: editingUser.email ?? '',
+    password: '',
+    userType: toCreatableUserType(editingUser.userType),
+    isActive: editingUser.isActive,
+    permissionIds: editingUser.permissionIds,
   }
 }
 
@@ -125,13 +135,15 @@ type ApplicationUserFormPageProps = {
 export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) {
   const navigate = useNavigate()
   const { userId } = useParams()
-  const currentUser = useCurrentUser()
+  const { can } = usePermissions()
+  const canAccessForm = mode === 'create' ? can('users', '', 'create') : can('users', '', 'edit')
+  const canManagePermissions = can('users', '', 'manage_permissions')
   const [values, setValues] = useState<ApplicationUserFormValues>(getDefaultValues)
   const [fieldErrors, setFieldErrors] = useState<ApplicationUserFormErrors>({})
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [usernameAvailability, setUsernameAvailability] = useState<UsernameAvailabilityStatus>('idle')
-  const preservedHiddenPermissionIdsRef = useRef<string[]>([])
   const originalUsernameRef = useRef('')
+  const initializedUserIdRef = useRef<string | null>(null)
   const usernameCheckRequestIdRef = useRef(0)
   const valuesRef = useRef(values)
   valuesRef.current = values
@@ -151,45 +163,32 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
   } = usePermissionsQuery()
 
   const isAdminUser = editingUser?.userType === 'admin'
-  const permissionTree = useMemo(
-    () => filterPermissionTreeForOverrides(permissionsCatalog?.tree ?? []),
-    [permissionsCatalog?.tree],
-  )
+  const permissionTree = permissionsCatalog?.tree ?? []
+
+  useEffect(() => {
+    initializedUserIdRef.current = null
+  }, [userId])
 
   useEffect(() => {
     if (mode === 'create') {
-      preservedHiddenPermissionIdsRef.current = []
+      initializedUserIdRef.current = null
       originalUsernameRef.current = ''
+      setValues(getDefaultValues())
       setUsernameAvailability('idle')
       setFieldErrors({})
       return
     }
 
-    if (!editingUser || !permissionsCatalog) {
+    if (!editingUser || initializedUserIdRef.current === editingUser.id) {
       return
     }
 
-    const { visibleIds, hiddenIds } = partitionPermissionIds(
-      permissionsCatalog.items,
-      editingUser.permissionIds,
-    )
-    preservedHiddenPermissionIdsRef.current = hiddenIds
-
+    initializedUserIdRef.current = editingUser.id
     originalUsernameRef.current = editingUser.username.trim()
-
-    setValues({
-      username: editingUser.username,
-      fullName: editingUser.displayName,
-      mobileNumber: editingUser.mobileNumber,
-      email: editingUser.email ?? '',
-      password: '',
-      userType: editingUser.userType === 'admin' ? 'supervisor' : editingUser.userType,
-      isActive: editingUser.isActive,
-      permissionIds: visibleIds,
-    })
+    setValues(getValuesFromEditingUser(editingUser))
     setUsernameAvailability('available')
     setFieldErrors({})
-  }, [mode, editingUser, permissionsCatalog])
+  }, [mode, editingUser])
 
   const updateField = <K extends ApplicationUserFormField>(field: K, value: ApplicationUserFormValues[K]) => {
     setValues((prev) => ({ ...prev, [field]: value }))
@@ -305,10 +304,12 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
   })
 
   const updateMutation = useMutation({
-    mutationFn: async (payload: UpdateApplicationUserInput & { permissionIds: string[] }) => {
-      const { permissionIds, userId: targetUserId, ...updatePayload } = payload
+    mutationFn: async (payload: UpdateApplicationUserInput & { permissionIds: string[]; assignPermissions: boolean }) => {
+      const { permissionIds, assignPermissions, userId: targetUserId, ...updatePayload } = payload
       await applicationUsersService.update({ userId: targetUserId, ...updatePayload })
-      await applicationUsersService.assignPermissions(targetUserId, permissionIds)
+      if (assignPermissions) {
+        await applicationUsersService.assignPermissions(targetUserId, permissionIds)
+      }
     },
     onSuccess: () => {
       toast.success('Application user updated successfully.')
@@ -349,7 +350,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
         password: values.password.trim(),
         userType: values.userType,
         isActive: values.isActive,
-        permissionIds: values.permissionIds,
+        permissionIds: canManagePermissions ? values.permissionIds : [],
         ...(values.email.trim() ? { email: values.email.trim() } : {}),
       })
       return
@@ -360,11 +361,6 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
       return
     }
 
-    const permissionIds = mergePermissionIdsForSave(
-      values.permissionIds,
-      preservedHiddenPermissionIdsRef.current,
-    )
-
     updateMutation.mutate({
       userId,
       username: values.username.trim(),
@@ -372,7 +368,8 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
       mobileNumber: values.mobileNumber.trim(),
       isActive: values.isActive,
       email: values.email.trim() ? values.email.trim() : null,
-      permissionIds,
+      permissionIds: canManagePermissions ? values.permissionIds : [],
+      assignPermissions: canManagePermissions,
       ...(!isAdminUser ? { userType: values.userType } : {}),
       ...(values.password.trim() ? { password: values.password.trim() } : {}),
     })
@@ -382,7 +379,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
   const isCheckingUsername = usernameAvailability === 'checking'
   const isLoading = mode === 'edit' ? isUserLoading || isPermissionsLoading : isPermissionsLoading
 
-  if (currentUser?.role !== 'ADMIN') {
+  if (!canAccessForm) {
     return <Navigate to={applicationAccessRoutes.list} replace />
   }
 
@@ -559,6 +556,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
                   <Input id="userType" value={applicationUserTypeLabels.admin} disabled readOnly />
                 ) : (
                   <Select
+                    key={`${userId ?? 'create'}-${values.userType}`}
                     value={values.userType}
                     onValueChange={(value) =>
                       setValues((prev) => ({ ...prev, userType: value as CreatableApplicationUserType }))
@@ -624,29 +622,31 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
             </div>
           </Card>
 
-          <Card className="space-y-4 p-4 sm:p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-primary" />
-                  <h2 className="text-base font-semibold">Permission overrides</h2>
+          {canManagePermissions ? (
+            <Card className="space-y-4 p-4 sm:p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-primary" />
+                    <h2 className="text-base font-semibold">Permission overrides</h2>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Direct permissions added here stack on top of the role template. Leave unchecked to rely on role defaults only.
+                  </p>
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Direct permissions added here stack on top of the role template. Leave unchecked to rely on role defaults only.
-                </p>
+                <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                  {values.permissionIds.length} selected
+                </span>
               </div>
-              <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                {values.permissionIds.length} selected
-              </span>
-            </div>
 
-            <PermissionPicker
-              tree={permissionTree}
-              selectedIds={values.permissionIds}
-              onChange={(permissionIds) => setValues((prev) => ({ ...prev, permissionIds }))}
-              disabled={isSaving}
-            />
-          </Card>
+              <PermissionPicker
+                tree={permissionTree}
+                selectedIds={values.permissionIds}
+                onChange={(permissionIds) => setValues((prev) => ({ ...prev, permissionIds }))}
+                disabled={isSaving}
+              />
+            </Card>
+          ) : null}
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button

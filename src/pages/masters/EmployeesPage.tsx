@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { BriefcaseBusiness, HardHat, Loader2, Plus, RefreshCw, Users } from 'lucide-react'
 import { SteeringWheelIcon } from '@/components/icons/steering-wheel-icon'
@@ -34,7 +34,7 @@ import { useOfficeStaffQuery } from '@/features/employees/hooks/use-office-staff
 import type { Driver } from '@/features/employees/types/driver'
 import type { Helper } from '@/features/employees/types/helper'
 import type { OfficeStaff } from '@/features/employees/types/office-staff'
-import { useCurrentUser } from '@/hooks/use-current-user'
+import { usePermissions, useSubmoduleActions } from '@/hooks/use-permissions'
 import { useMasterDialogParams } from '@/hooks/use-master-dialog-params'
 import { queryClient } from '@/lib/query/query-client'
 import { cn } from '@/lib/utils'
@@ -74,11 +74,43 @@ const tabConfig = {
 } as const
 
 export function EmployeesPage() {
-  const currentUser = useCurrentUser()
-  const canManage = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR'
+  const { has } = usePermissions()
+  const canViewDriver = has('masters', 'driver', 'view')
+  const canViewHelper = has('masters', 'helper', 'view')
+  const canViewOfficeStaff = has('masters', 'office_staff', 'view')
+  const driverActions = useSubmoduleActions('masters', 'driver')
+  const helperActions = useSubmoduleActions('masters', 'helper')
+  const officeStaffActions = useSubmoduleActions('masters', 'office_staff')
 
   const { action, id, tab: tabParam, openDialog, closeDialog, setTabParam } = useMasterDialogParams()
   const activeTab = parseEmployeeTab(tabParam)
+
+  const tabVisibility = useMemo(
+    () =>
+      ({
+        driver: canViewDriver,
+        helper: canViewHelper,
+        'office-staff': canViewOfficeStaff,
+      }) as const,
+    [canViewDriver, canViewHelper, canViewOfficeStaff],
+  )
+
+  const tabActions = {
+    driver: driverActions,
+    helper: helperActions,
+    'office-staff': officeStaffActions,
+  }[activeTab]
+
+  useEffect(() => {
+    if (tabVisibility[activeTab]) {
+      return
+    }
+
+    const firstVisibleTab = (Object.keys(tabConfig) as EmployeeTab[]).find((tab) => tabVisibility[tab])
+    if (firstVisibleTab) {
+      setTabParam(firstVisibleTab)
+    }
+  }, [activeTab, canViewDriver, canViewHelper, canViewOfficeStaff, setTabParam, tabVisibility])
 
   const {
     data: drivers = [],
@@ -342,7 +374,7 @@ export function EmployeesPage() {
                 Syncing...
               </span>
             ) : null}
-            {canManage ? (
+            {tabActions.canCreate ? (
               <Button className="w-full sm:w-auto" onClick={openAddDialog}>
                 <Plus className="h-4 w-4" />
                 {tabConfig[activeTab].addLabel}
@@ -353,7 +385,7 @@ export function EmployeesPage() {
       </header>
 
       <div className="inline-flex flex-wrap rounded-xl border border-border bg-muted/30 p-1">
-        {(Object.keys(tabConfig) as EmployeeTab[]).map((tab) => {
+        {(Object.keys(tabConfig) as EmployeeTab[]).filter((tab) => tabVisibility[tab]).map((tab) => {
           const config = tabConfig[tab]
           const Icon = config.icon
           return (
@@ -385,7 +417,8 @@ export function EmployeesPage() {
           emptyIcon={<SteeringWheelIcon className="h-10 w-10 text-muted-foreground" />}
           emptyTitle={tabConfig.driver.emptyTitle}
           emptyDescription={tabConfig.driver.emptyDescription}
-          canManage={canManage}
+          canEdit={tabActions.canEdit}
+          canDelete={tabActions.canDelete}
           minWidth="1100px"
           onView={openDriverView}
           onEdit={openDriverEdit}
@@ -403,7 +436,8 @@ export function EmployeesPage() {
           emptyIcon={<HardHat className="h-10 w-10 text-muted-foreground" />}
           emptyTitle={tabConfig.helper.emptyTitle}
           emptyDescription={tabConfig.helper.emptyDescription}
-          canManage={canManage}
+          canEdit={tabActions.canEdit}
+          canDelete={tabActions.canDelete}
           minWidth="900px"
           onView={openHelperView}
           onEdit={openHelperEdit}
@@ -421,7 +455,8 @@ export function EmployeesPage() {
           emptyIcon={<Users className="h-10 w-10 text-muted-foreground" />}
           emptyTitle={tabConfig['office-staff'].emptyTitle}
           emptyDescription={tabConfig['office-staff'].emptyDescription}
-          canManage={canManage}
+          canEdit={tabActions.canEdit}
+          canDelete={tabActions.canDelete}
           minWidth="760px"
           onView={openOfficeStaffView}
           onEdit={openOfficeStaffEdit}

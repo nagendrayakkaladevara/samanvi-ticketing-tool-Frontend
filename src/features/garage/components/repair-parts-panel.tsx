@@ -31,7 +31,8 @@ type RepairPartsPanelProps = {
   isLoading: boolean
   isError: boolean
   error: Error | null
-  canManage: boolean
+  canEdit?: boolean
+  canDelete?: boolean
   onAdd?: () => void
 }
 
@@ -40,7 +41,8 @@ export function RepairPartsPanel({
   isLoading,
   isError,
   error,
-  canManage,
+  canEdit = false,
+  canDelete = false,
   onAdd,
 }: RepairPartsPanelProps) {
   const [editingPart, setEditingPart] = useState<RepairPart | null>(null)
@@ -91,7 +93,7 @@ export function RepairPartsPanel({
           <p className="max-w-md text-sm text-muted-foreground">
             Add spare parts with unit prices. Prices are snapshotted when attached to repair jobs.
           </p>
-          {canManage && onAdd ? (
+          {onAdd ? (
             <Button onClick={onAdd}>
               <Package className="h-4 w-4" />
               Add Repair Part
@@ -115,19 +117,23 @@ export function RepairPartsPanel({
                     ) : null}
                     <p className="text-xs text-muted-foreground">Updated {formatRepairPartUpdatedAt(part.updatedAt)}</p>
                   </div>
-                  {canManage ? (
+                  {(canEdit || canDelete) ? (
                     <div className="flex shrink-0 gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setEditingPart(part)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                        onClick={() => setDeleteTarget(part)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {canEdit ? (
+                        <Button variant="outline" size="sm" onClick={() => setEditingPart(part)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      ) : null}
+                      {canDelete ? (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                          onClick={() => setDeleteTarget(part)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>
@@ -144,7 +150,7 @@ export function RepairPartsPanel({
                   <th className="px-4 py-3 font-medium">Unit Price</th>
                   <th className="px-4 py-3 font-medium">Description</th>
                   <th className="px-4 py-3 font-medium">Last Updated</th>
-                  {canManage ? <th className="px-4 py-3 text-right font-medium">Actions</th> : null}
+                  {(canEdit || canDelete) ? <th className="px-4 py-3 text-right font-medium">Actions</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -166,22 +172,26 @@ export function RepairPartsPanel({
                       )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{formatRepairPartUpdatedAt(part.updatedAt)}</td>
-                    {canManage ? (
+                    {(canEdit || canDelete) ? (
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setEditingPart(part)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                            onClick={() => setDeleteTarget(part)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Delete
-                          </Button>
+                          {canEdit ? (
+                            <Button variant="outline" size="sm" onClick={() => setEditingPart(part)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                              Edit
+                            </Button>
+                          ) : null}
+                          {canDelete ? (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                              onClick={() => setDeleteTarget(part)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </Button>
+                          ) : null}
                         </div>
                       </td>
                     ) : null}

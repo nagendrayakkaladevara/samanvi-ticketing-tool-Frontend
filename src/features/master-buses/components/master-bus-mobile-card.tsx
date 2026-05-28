@@ -19,7 +19,8 @@ import { cn } from '@/lib/utils'
 
 type MasterBusMobileCardProps = {
   row: MasterBusGridRow
-  canManage?: boolean
+  canEdit?: boolean
+  canDelete?: boolean
   onEdit?: () => void
   onDelete?: (event: MouseEvent<HTMLButtonElement>) => void
   className?: string
@@ -82,7 +83,8 @@ function Section({
 
 export function MasterBusMobileCard({
   row,
-  canManage = false,
+  canEdit = false,
+  canDelete = false,
   onEdit,
   onDelete,
   className,
@@ -135,15 +137,15 @@ export function MasterBusMobileCard({
         ) : null}
       </div>
 
-      {canManage && (onEdit || onDelete) ? (
+      {(canEdit && onEdit) || (canDelete && onDelete) ? (
         <div className="master-bus-mobile-card__actions">
-          {onEdit ? (
+          {canEdit && onEdit ? (
             <Button size="sm" variant="outline" className="master-bus-mobile-card__action flex-1" onClick={onEdit}>
               <Pencil className="h-3.5 w-3.5" aria-hidden />
               Edit
             </Button>
           ) : null}
-          {onDelete ? (
+          {canDelete && onDelete ? (
             <Button
               size="sm"
               variant="destructive"

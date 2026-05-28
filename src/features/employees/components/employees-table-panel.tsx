@@ -23,19 +23,22 @@ type EmployeesTablePanelProps<T extends { id: string }> = {
   onView: (item: T) => void
   onEdit: (item: T) => void
   onDelete: (item: T) => void
-  canManage: boolean
+  canEdit?: boolean
+  canDelete?: boolean
   minWidth?: string
 }
 
 function ActionButtons<T>({
   item,
-  canManage,
+  canEdit = false,
+  canDelete = false,
   onView,
   onEdit,
   onDelete,
 }: {
   item: T
-  canManage: boolean
+  canEdit?: boolean
+  canDelete?: boolean
   onView: (item: T) => void
   onEdit: (item: T) => void
   onDelete: (item: T) => void
@@ -46,22 +49,22 @@ function ActionButtons<T>({
         <Eye className="h-3.5 w-3.5" />
         View
       </Button>
-      {canManage ? (
-        <>
-          <Button variant="outline" size="sm" onClick={() => onEdit(item)}>
-            <Pencil className="h-3.5 w-3.5" />
-            Edit
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-            onClick={() => onDelete(item)}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            Delete
-          </Button>
-        </>
+      {canEdit ? (
+        <Button variant="outline" size="sm" onClick={() => onEdit(item)}>
+          <Pencil className="h-3.5 w-3.5" />
+          Edit
+        </Button>
+      ) : null}
+      {canDelete ? (
+        <Button
+          variant="destructive"
+          size="sm"
+          className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+          onClick={() => onDelete(item)}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Delete
+        </Button>
       ) : null}
     </div>
   )
@@ -79,7 +82,8 @@ export function EmployeesTablePanel<T extends { id: string }>({
   onView,
   onEdit,
   onDelete,
-  canManage,
+  canEdit = false,
+  canDelete = false,
   minWidth = '960px',
 }: EmployeesTablePanelProps<T>) {
   if (isLoading) {
@@ -134,7 +138,8 @@ export function EmployeesTablePanel<T extends { id: string }>({
               </div>
               <ActionButtons
                 item={item}
-                canManage={canManage}
+                canEdit={canEdit}
+                canDelete={canDelete}
                 onView={onView}
                 onEdit={onEdit}
                 onDelete={onDelete}
@@ -167,7 +172,8 @@ export function EmployeesTablePanel<T extends { id: string }>({
                 <td className="px-4 py-3">
                   <ActionButtons
                     item={item}
-                    canManage={canManage}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
                     onView={onView}
                     onEdit={onEdit}
                     onDelete={onDelete}
