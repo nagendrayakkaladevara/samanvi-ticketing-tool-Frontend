@@ -1,7 +1,7 @@
 import type { ComponentType, FormEventHandler } from 'react'
 import { useMemo } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { ArrowLeft, Gauge, Loader2, UserRound, Wrench } from 'lucide-react'
+import { Gauge, Loader2, UserRound, Wrench } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '@/lib/toast'
 
@@ -111,17 +111,6 @@ export function CreateJobPage() {
         eyebrow="Garage"
         title="Create Repair Job"
         description="Log a new garage repair with vehicle details, category, and optional assignment."
-        actions={
-          <Button
-            variant="outline"
-            className="w-full sm:w-auto"
-            onClick={() => navigate('/garage/repair-tracking')}
-          >
-            <ArrowLeft className="h-4 w-4 shrink-0" />
-            <span className="sm:hidden">Back</span>
-            <span className="hidden sm:inline">Back to repair tracking</span>
-          </Button>
-        }
       />
 
       <form onSubmit={handleSubmit} className="space-y-4 pb-28 sm:pb-4" noValidate>
