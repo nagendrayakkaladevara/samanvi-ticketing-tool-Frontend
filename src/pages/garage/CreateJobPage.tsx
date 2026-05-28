@@ -1,10 +1,11 @@
 import type { ComponentType, FormEventHandler } from 'react'
 import { useMemo } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { ArrowLeft, Gauge, Loader2, UserRound, Wrench } from 'lucide-react'
+import { Gauge, Loader2, UserRound, Wrench } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '@/lib/toast'
 
+import { PageGradientHeader } from '@/components/page-gradient-header'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { FieldError } from '@/components/ui/field-error'
@@ -104,29 +105,13 @@ export function CreateJobPage() {
   const selectedPriority = priorityOptions.find((option) => option.value === form.values.priority)
 
   return (
-    <section className="mx-auto w-full min-w-0 max-w-3xl space-y-4 sm:space-y-5">
-      <header className="space-y-3">
-        <Button
-          variant="ghost"
-          className="-ml-2 h-9 w-fit px-2 sm:-ml-3 sm:px-4"
-          onClick={() => navigate('/garage/repair-tracking')}
-        >
-          <ArrowLeft className="h-4 w-4 shrink-0" />
-          <span className="sm:hidden">Back</span>
-          <span className="hidden sm:inline">Back to repair tracking</span>
-        </Button>
-        <div className="flex items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-sm sm:size-11">
-            <Wrench className="size-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Create Repair Job</h1>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              Log a new garage repair with vehicle details, category, and optional assignment.
-            </p>
-          </div>
-        </div>
-      </header>
+    <section className="mx-auto w-full min-w-0 max-w-3xl space-y-6">
+      <PageGradientHeader
+        accent="orange"
+        eyebrow="Garage"
+        title="Create Repair Job"
+        description="Log a new garage repair with vehicle details, category, and optional assignment."
+      />
 
       <form onSubmit={handleSubmit} className="space-y-4 pb-28 sm:pb-4" noValidate>
         <Card className="space-y-4 p-4 sm:space-y-5 sm:p-5">

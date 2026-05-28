@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
-import { FolderTree, Package, Plus, RefreshCw, Settings2 } from 'lucide-react'
+import { FolderTree, Package, Plus, RefreshCw } from 'lucide-react'
 
+import { PageGradientHeader } from '@/components/page-gradient-header'
 import { Button } from '@/components/ui/button'
 import { RepairCategoriesPanel } from '@/features/garage/components/repair-categories-panel'
 import { RepairPartFormDialog } from '@/features/garage/components/repair-part-form-dialog'
@@ -54,36 +55,18 @@ export function GarageMastersPage() {
     openDialog({ action: 'create', tab: activeTab })
   }
 
+  const isLoading = activeTab === 'categories' ? isCategoriesLoading : isPartsLoading
+
   return (
-    <section className="mx-auto w-full max-w-5xl space-y-6">
-      <header className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-orange-500/10 via-background to-rose-500/10 p-6 shadow-sm">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-orange-400/25 blur-3xl dark:bg-orange-500/15"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-rose-400/20 blur-3xl dark:bg-rose-500/10"
-        />
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-700 dark:text-orange-400">
-              Garage Masters
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-sm">
-                <Settings2 className="size-5" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-foreground">Garage Masters</h1>
-                <p className="max-w-xl text-sm text-muted-foreground">
-                  Configure repair category hierarchy and spare parts catalog used across garage workflows.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="flex w-full items-stretch justify-end gap-2 sm:w-auto sm:items-center">
-            {isFetching && !(activeTab === 'categories' ? isCategoriesLoading : isPartsLoading) ? (
+    <section className="space-y-6">
+      <PageGradientHeader
+        accent="orange"
+        eyebrow="Garage"
+        title="Garage Masters"
+        description="Configure repair category hierarchy and spare parts catalog used across garage workflows."
+        actions={
+          <>
+            {isFetching && !isLoading ? (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                 Syncing...
@@ -95,16 +78,16 @@ export function GarageMastersPage() {
                 {addButtonLabel}
               </Button>
             ) : null}
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
-      <div className="inline-flex w-full rounded-xl border border-border bg-muted/30 p-1 sm:w-auto">
+      <div className="inline-flex flex-wrap rounded-xl border border-border bg-muted/30 p-1">
         <button
           type="button"
           onClick={() => setTabParam('categories')}
           className={cn(
-            'inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:gap-2 sm:px-4',
+            'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
             activeTab === 'categories'
               ? 'bg-background text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground',
@@ -117,7 +100,7 @@ export function GarageMastersPage() {
           type="button"
           onClick={() => setTabParam('parts')}
           className={cn(
-            'inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:gap-2 sm:px-4',
+            'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
             activeTab === 'parts'
               ? 'bg-background text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground',

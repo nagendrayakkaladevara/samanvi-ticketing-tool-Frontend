@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { Loader2, Plus, RefreshCw, Wrench } from 'lucide-react'
+import { Plus, RefreshCw, Wrench } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
+import { PageGradientHeader } from '@/components/page-gradient-header'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -87,34 +88,33 @@ async function listJobs(): Promise<RepairJob[]> {
 
 export function RepairTrackingPage() {
   const navigate = useNavigate()
-  const { data: jobs = [], isLoading, isFetching, isError, error, refetch } = useQuery({
+  const { data: jobs = [], isLoading, isFetching, isError, error } = useQuery({
     queryKey: ['garage', 'jobs'],
     queryFn: listJobs,
   })
 
   return (
-    <section className="mx-auto w-full max-w-5xl space-y-5">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-sm">
-            <Wrench className="size-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Repair Tracking</h1>
-            <p className="text-sm text-muted-foreground">Track repair job progress and status updates.</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-            {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            Refresh
-          </Button>
-          <Button size="sm" onClick={() => navigate('/garage/create-job')}>
-            <Plus className="h-4 w-4" />
-            Create Job
-          </Button>
-        </div>
-      </header>
+    <section className="space-y-6">
+      <PageGradientHeader
+        accent="orange"
+        eyebrow="Garage"
+        title="Repair Tracking"
+        description="Track repair job progress and status updates across your fleet."
+        actions={
+          <>
+            {isFetching && !isLoading ? (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                Syncing...
+              </span>
+            ) : null}
+            <Button className="w-full sm:w-auto" onClick={() => navigate('/garage/create-job')}>
+              <Plus className="h-4 w-4" />
+              Create Job
+            </Button>
+          </>
+        }
+      />
 
       {isError ? (
         <Card className="border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">

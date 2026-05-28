@@ -1,3 +1,4 @@
+import { PageGradientHeader } from '@/components/page-gradient-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 type GaragePageShellProps = {
@@ -7,11 +8,13 @@ type GaragePageShellProps = {
 
 export function GaragePageShell({ title, description }: GaragePageShellProps) {
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-      </div>
+    <section className="space-y-6">
+      <PageGradientHeader
+        accent="orange"
+        eyebrow="Garage"
+        title={title}
+        description={description ?? `Garage management for ${title.toLowerCase()}.`}
+      />
       <Card>
         <CardHeader>
           <CardTitle>{title}</CardTitle>
@@ -21,6 +24,6 @@ export function GaragePageShell({ title, description }: GaragePageShellProps) {
           <p className="text-sm text-muted-foreground">Content coming soon.</p>
         </CardContent>
       </Card>
-    </div>
+    </section>
   )
 }
