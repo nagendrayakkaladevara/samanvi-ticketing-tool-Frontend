@@ -1,5 +1,13 @@
 import { apiClient } from '@/lib/api/client'
-import type { CreateRepairJobInput, RepairJob, UpdateRepairJobInput } from '@/features/garage/types/job'
+import type {
+  AddJobCommentInput,
+  AddJobPartInput,
+  CreateRepairJobInput,
+  RepairJob,
+  RepairJobActivityLog,
+  RepairJobPart,
+  UpdateRepairJobInput,
+} from '@/features/garage/types/job'
 import type {
   CreateRepairPartInput,
   RepairPart,
@@ -124,6 +132,89 @@ export function collectLeafRepairCategories(
   return result
 }
 
+function normalizeRepairJobActivityLog(raw: unknown): RepairJobActivityLog | null {
+  if (!raw || typeof raw !== 'object') return null
+  const value = raw as Record<string, unknown>
+  const id = normalizeString(value.id)
+  const actionType = normalizeString(value.actionType) as RepairJobActivityLog['actionType'] | undefined
+  const createdAt = normalizeString(value.createdAt)
+  const actorRaw = value.actor
+
+  if (!id || !actionType || !createdAt) return null
+
+  const fromStatus = normalizeString(value.fromStatus) as RepairJobActivityLog['fromStatus'] | undefined
+  const toStatus = normalizeString(value.toStatus) as RepairJobActivityLog['toStatus'] | undefined
+  const noteRaw = value.note
+  const note =
+    noteRaw === null || noteRaw === undefined
+      ? null
+      : typeof noteRaw === 'string'
+        ? noteRaw
+        : null
+
+  const actor =
+    actorRaw && typeof actorRaw === 'object'
+      ? {
+          id: normalizeString((actorRaw as Record<string, unknown>).id) ?? '',
+          username: normalizeString((actorRaw as Record<string, unknown>).username) ?? '',
+          displayName: normalizeString((actorRaw as Record<string, unknown>).displayName) ?? '',
+        }
+      : { id: '', username: '', displayName: '' }
+
+  return {
+    id,
+    actionType,
+    fromStatus: fromStatus ?? null,
+    toStatus: toStatus ?? null,
+    note,
+    createdAt,
+    actor,
+  }
+}
+
+function normalizeRepairJobPart(raw: unknown): RepairJobPart | null {
+  if (!raw || typeof raw !== 'object') return null
+  const value = raw as Record<string, unknown>
+  const id = normalizeString(value.id)
+  const quantity = typeof value.quantity === 'number' ? value.quantity : Number(value.quantity)
+  const unitPriceRaw = value.unitPrice
+  const unitPrice =
+    typeof unitPriceRaw === 'string'
+      ? unitPriceRaw
+      : typeof unitPriceRaw === 'number'
+        ? unitPriceRaw.toFixed(2)
+        : undefined
+
+  if (!id || Number.isNaN(quantity) || quantity < 1 || !unitPrice) return null
+
+  const repairPartRaw = value.repairPart
+  const addedByRaw = value.addedBy
+  if (!repairPartRaw || typeof repairPartRaw !== 'object') return null
+
+  const repairPart = repairPartRaw as Record<string, unknown>
+  const repairPartId = normalizeString(repairPart.id)
+  const partName = normalizeString(repairPart.partName)
+  if (!repairPartId || !partName) return null
+
+  const addedBy =
+    addedByRaw && typeof addedByRaw === 'object'
+      ? {
+          id: normalizeString((addedByRaw as Record<string, unknown>).id) ?? '',
+          username: normalizeString((addedByRaw as Record<string, unknown>).username) ?? '',
+          displayName: normalizeString((addedByRaw as Record<string, unknown>).displayName) ?? '',
+        }
+      : { id: '', username: '', displayName: '' }
+
+  return {
+    id,
+    quantity,
+    unitPrice,
+    createdAt: normalizeString(value.createdAt) ?? '',
+    repairPart: { id: repairPartId, partName },
+    addedBy,
+  }
+}
+
 function normalizeRepairJob(raw: unknown): RepairJob | null {
   if (!raw || typeof raw !== 'object') return null
   const value = raw as Record<string, unknown>
@@ -194,6 +285,25 @@ function normalizeRepairJob(raw: unknown): RepairJob | null {
         }
       : { id: '', username: '', displayName: '' }
 
+  const partsRaw = Array.isArray(value.parts) ? value.parts : []
+  const parts = partsRaw
+    .map(normalizeRepairJobPart)
+    .filter((item): item is RepairJobPart => Boolean(item))
+
+  const previousJobRaw = value.previousJob
+  const previousJob =
+    previousJobRaw && typeof previousJobRaw === 'object'
+      ? {
+          id: normalizeString((previousJobRaw as Record<string, unknown>).id) ?? '',
+          jobIdNumber: normalizeString((previousJobRaw as Record<string, unknown>).jobIdNumber) ?? '',
+        }
+      : null
+
+  const activityLogsRaw = Array.isArray(value.activityLogs) ? value.activityLogs : []
+  const activityLogs = activityLogsRaw
+    .map(normalizeRepairJobActivityLog)
+    .filter((item): item is RepairJobActivityLog => Boolean(item))
+
   return {
     id,
     jobIdNumber,
@@ -202,6 +312,8 @@ function normalizeRepairJob(raw: unknown): RepairJob | null {
     description,
     status,
     isRepeatJob: Boolean(value.isRepeatJob),
+    repeatScheduledFor: normalizeString(value.repeatScheduledFor) ?? null,
+    repeatProcessedAt: normalizeString(value.repeatProcessedAt) ?? null,
     createdAt: normalizeString(value.createdAt) ?? '',
     updatedAt: normalizeString(value.updatedAt) ?? '',
     bus: { id: busId, busNumber },
@@ -209,6 +321,9 @@ function normalizeRepairJob(raw: unknown): RepairJob | null {
     reportedDriver: reportedDriver?.id ? reportedDriver : null,
     assignedToOfficeStaff: assignedToOfficeStaff?.id ? assignedToOfficeStaff : null,
     createdBy,
+    parts,
+    previousJob: previousJob?.id ? previousJob : null,
+    activityLogs,
   }
 }
 
@@ -332,6 +447,7 @@ export const garageService = {
       payload.assignedToOfficeStaffId = input.assignedToOfficeStaffId
     }
     if (input.status !== undefined) payload.status = input.status
+    if (input.scheduleRepeatFor !== undefined) payload.scheduleRepeatFor = input.scheduleRepeatFor
 
     const { data } = await apiClient.patch<unknown>(`${jobsEndpoint}/${jobId}`, payload)
     const job = normalizeRepairJob(extractDataPayload(data))
@@ -343,6 +459,40 @@ export const garageService = {
 
   async deleteJob(jobId: string): Promise<void> {
     await apiClient.delete(`${jobsEndpoint}/${jobId}`)
+  },
+
+  async addJobComment({ jobId, note }: AddJobCommentInput): Promise<RepairJobActivityLog> {
+    const { data } = await apiClient.post<unknown>(`${jobsEndpoint}/${jobId}/comments`, {
+      note: note.trim(),
+    })
+    const comment = normalizeRepairJobActivityLog(extractDataPayload(data))
+    if (!comment) {
+      throw new Error('Unexpected response when adding comment.')
+    }
+    return comment
+  },
+
+  async addJobPart({ jobId, repairPartId, quantity }: AddJobPartInput): Promise<RepairJob> {
+    const payload: Record<string, unknown> = { repairPartId }
+    if (quantity !== undefined) {
+      payload.quantity = quantity
+    }
+
+    const { data } = await apiClient.post<unknown>(`${jobsEndpoint}/${jobId}/parts`, payload)
+    const job = normalizeRepairJob(extractDataPayload(data))
+    if (!job) {
+      throw new Error('Unexpected response when adding spare part to repair job.')
+    }
+    return job
+  },
+
+  async removeJobPart(jobId: string, lineId: string): Promise<RepairJob> {
+    const { data } = await apiClient.delete<unknown>(`${jobsEndpoint}/${jobId}/parts/${lineId}`)
+    const job = normalizeRepairJob(extractDataPayload(data))
+    if (!job) {
+      throw new Error('Unexpected response when removing spare part from repair job.')
+    }
+    return job
   },
 
   async createJob(input: CreateRepairJobInput): Promise<RepairJob> {

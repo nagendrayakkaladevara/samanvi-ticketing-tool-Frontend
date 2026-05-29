@@ -27,21 +27,37 @@ import { useAuthStore } from '@/store/auth-store'
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { mainItems, mastersItems, garageItems } = useAppNavigation()
   const location = useLocation()
-  const { isMobile, setOpenMobile } = useSidebar()
+  const { isMobile, setOpenMobile, state, setOpen } = useSidebar()
   const logout = useAuthStore((state) => state.logout)
   const isMobileRef = React.useRef(isMobile)
   React.useEffect(() => {
     isMobileRef.current = isMobile
   }, [isMobile])
 
-  const handleMobileItemClick = React.useCallback(() => {
+  const handleNavItemClick = React.useCallback(() => {
     if (isMobileRef.current) {
       setOpenMobile(false)
+      return
     }
-  }, [setOpenMobile])
+    if (state === 'collapsed') {
+      setOpen(true)
+    }
+  }, [setOpenMobile, state, setOpen])
 
   const isMastersRouteActive = location.pathname.startsWith('/masters')
   const isGarageRouteActive = location.pathname.startsWith('/garage')
+  const [mastersOpen, setMastersOpen] = React.useState(true)
+  const [garageOpen, setGarageOpen] = React.useState(true)
+
+  const handleCollapsibleOpenChange = React.useCallback(
+    (nextOpen: boolean, setSectionOpen: React.Dispatch<React.SetStateAction<boolean>>) => {
+      if (state === 'collapsed' && !nextOpen) {
+        return
+      }
+      setSectionOpen(nextOpen)
+    },
+    [state],
+  )
 
   return (
     <Sidebar collapsible="icon" className="no-print" {...props}>
@@ -49,7 +65,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg">
-              <Link to="/" onClick={handleMobileItemClick} className="flex items-center gap-2">
+              <Link to="/" onClick={handleNavItemClick} className="flex items-center gap-2">
                 <div className="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   ST
                 </div>
@@ -69,10 +85,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupContent>
             <SidebarMenu>
               {mastersItems.length > 0 ? (
-                <Collapsible asChild defaultOpen={isMastersRouteActive} className="group/collapsible">
+                <Collapsible
+                  asChild
+                  open={mastersOpen}
+                  onOpenChange={(open) => handleCollapsibleOpenChange(open, setMastersOpen)}
+                  className="group/collapsible"
+                >
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip="Masters" isActive={isMastersRouteActive}>
+                      <SidebarMenuButton tooltip="Masters" isActive={isMastersRouteActive} onClick={handleNavItemClick}>
                         <Database />
                         <span>Masters</span>
                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -83,7 +104,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         {mastersItems.map((item) => (
                           <SidebarMenuSubItem key={item.id}>
                             <SidebarMenuSubButton asChild isActive={location.pathname === item.to}>
-                              <NavLink to={item.to} onClick={handleMobileItemClick}>
+                              <NavLink to={item.to} onClick={handleNavItemClick}>
                                 <span>{item.label}</span>
                               </NavLink>
                             </SidebarMenuSubButton>
@@ -95,10 +116,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </Collapsible>
               ) : null}
               {garageItems.length > 0 ? (
-                <Collapsible asChild defaultOpen={isGarageRouteActive} className="group/collapsible">
+                <Collapsible
+                  asChild
+                  open={garageOpen}
+                  onOpenChange={(open) => handleCollapsibleOpenChange(open, setGarageOpen)}
+                  className="group/collapsible"
+                >
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip="Garage" isActive={isGarageRouteActive}>
+                      <SidebarMenuButton tooltip="Garage" isActive={isGarageRouteActive} onClick={handleNavItemClick}>
                         <Wrench />
                         <span>Garage</span>
                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -109,7 +135,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         {garageItems.map((item) => (
                           <SidebarMenuSubItem key={item.id}>
                             <SidebarMenuSubButton asChild isActive={location.pathname === item.to}>
-                              <NavLink to={item.to} onClick={handleMobileItemClick}>
+                              <NavLink to={item.to} onClick={handleNavItemClick}>
                                 <span>{item.label}</span>
                               </NavLink>
                             </SidebarMenuSubButton>
@@ -128,13 +154,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         href={item.to}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={handleMobileItemClick}
+                        onClick={handleNavItemClick}
                       >
                         {item.icon ? <item.icon /> : null}
                         <span>{item.label}</span>
                       </a>
                     ) : (
-                      <NavLink to={item.to} end={item.end} onClick={handleMobileItemClick}>
+                      <NavLink to={item.to} end={item.end} onClick={handleNavItemClick}>
                         {item.icon ? <item.icon /> : null}
                         <span>{item.label}</span>
                       </NavLink>

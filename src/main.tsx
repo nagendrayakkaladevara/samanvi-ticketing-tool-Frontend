@@ -4,7 +4,9 @@ import { registerSW } from 'virtual:pwa-register'
 import { App } from '@/app/App'
 import '@/styles/globals.css'
 
-registerSW({ immediate: true })
+if (import.meta.env.PROD) {
+  registerSW({ immediate: true })
+}
 
 const THEME_STORAGE_KEY = 'samanvi.theme.mode'
 

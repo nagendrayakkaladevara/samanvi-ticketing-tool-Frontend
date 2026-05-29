@@ -21,9 +21,17 @@ import { officeStaffService } from '@/features/employees/api/office-staff.servic
 import { DriverFormDialog } from '@/features/employees/components/driver-form-dialog'
 import { DriverViewDialog } from '@/features/employees/components/driver-view-dialog'
 import {
-  EmployeesTablePanel,
-  type EmployeeTableColumn,
-} from '@/features/employees/components/employees-table-panel'
+  driverDataColumnDefs,
+  driverMobileBadge,
+  driverMobileFields,
+  helperDataColumnDefs,
+  helperMobileBadge,
+  helperMobileFields,
+  officeStaffDataColumnDefs,
+  officeStaffMobileBadge,
+  officeStaffMobileFields,
+} from '@/features/employees/components/employees-grid-columns'
+import { EmployeesGrid } from '@/features/employees/components/employees-grid'
 import { HelperFormDialog } from '@/features/employees/components/helper-form-dialog'
 import { HelperViewDialog } from '@/features/employees/components/helper-view-dialog'
 import { OfficeStaffFormDialog } from '@/features/employees/components/office-staff-form-dialog'
@@ -38,7 +46,6 @@ import { usePermissions, useSubmoduleActions } from '@/hooks/use-permissions'
 import { useMasterDialogParams } from '@/hooks/use-master-dialog-params'
 import { queryClient } from '@/lib/query/query-client'
 import { cn } from '@/lib/utils'
-import { formatMasterDateDisplay } from '@/lib/utils/master-dates'
 
 type EmployeeTab = 'driver' | 'helper' | 'office-staff'
 
@@ -263,53 +270,6 @@ export function EmployeesPage() {
     (action === 'create' || (action === 'edit' && Boolean(editingOfficeStaff)))
 
 
-  const driverColumns: EmployeeTableColumn<Driver>[] = [
-    {
-      key: 'driverId',
-      header: 'Driver ID',
-      render: (item) => (
-        <span className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 font-medium">
-          <SteeringWheelIcon className="h-3.5 w-3.5 text-muted-foreground" />
-          {item.driverIdNumber}
-        </span>
-      ),
-    },
-    { key: 'aadharName', header: 'Aadhar Name', render: (item) => item.aadharName },
-    { key: 'mobileNumber', header: 'Mobile Number', render: (item) => item.mobileNumber },
-    { key: 'dlName', header: 'DL Name', render: (item) => item.dlName },
-    { key: 'dlNumber', header: 'DL Number', render: (item) => item.dlNumber },
-    {
-      key: 'transportValidTo',
-      header: 'Transport Valid To',
-      render: (item) => formatMasterDateDisplay(item.transportValidTo),
-    },
-  ]
-
-  const helperColumns: EmployeeTableColumn<Helper>[] = [
-    {
-      key: 'sno',
-      header: 'S.No',
-      className: 'w-16 text-muted-foreground',
-      render: (_item, index) => index + 1,
-    },
-    { key: 'helperId', header: 'Helper ID', render: (item) => item.helperIdNumber },
-    { key: 'aadharName', header: 'Aadhar Name', render: (item) => item.aadharName },
-    { key: 'mobileNumber', header: 'Mobile Number', render: (item) => item.mobileNumber },
-    { key: 'aadharNumber', header: 'Aadhar Number', render: (item) => item.aadharNumber },
-  ]
-
-  const officeStaffColumns: EmployeeTableColumn<OfficeStaff>[] = [
-    {
-      key: 'sno',
-      header: 'S.No',
-      className: 'w-16 text-muted-foreground',
-      render: (_item, index) => index + 1,
-    },
-    { key: 'fullName', header: 'Full Name', render: (item) => item.aadharName },
-    { key: 'mobileNumber', header: 'Mobile Number', render: (item) => item.mobileNumber },
-    { key: 'designation', header: 'Designation', render: (item) => item.designation },
-  ]
-
   const confirmDelete = () => {
     if (deleteDriver) {
       deleteDriverMutation.mutate(deleteDriver.id)
@@ -408,59 +368,71 @@ export function EmployeesPage() {
       </div>
 
       {activeTab === 'driver' ? (
-        <EmployeesTablePanel
+        <EmployeesGrid
           items={sortedDrivers}
-          columns={driverColumns}
+          dataColumnDefs={driverDataColumnDefs}
+          mobileBadge={driverMobileBadge}
+          mobileFields={driverMobileFields}
           isLoading={isLoadingDrivers}
           isError={isDriversError}
           error={driversError as Error | null}
-          emptyIcon={<SteeringWheelIcon className="h-10 w-10 text-muted-foreground" />}
+          emptyIcon={<SteeringWheelIcon className="ticket-grid-empty__icon" strokeWidth={1.2} />}
           emptyTitle={tabConfig.driver.emptyTitle}
           emptyDescription={tabConfig.driver.emptyDescription}
           canEdit={tabActions.canEdit}
           canDelete={tabActions.canDelete}
-          minWidth="1100px"
+          onAdd={tabActions.canCreate ? openAddDialog : undefined}
+          emptyAddLabel={tabConfig.driver.addLabel}
           onView={openDriverView}
           onEdit={openDriverEdit}
           onDelete={openDriverDelete}
+          skeletonColumnCount={8}
         />
       ) : null}
 
       {activeTab === 'helper' ? (
-        <EmployeesTablePanel
+        <EmployeesGrid
           items={sortedHelpers}
-          columns={helperColumns}
+          dataColumnDefs={helperDataColumnDefs}
+          mobileBadge={helperMobileBadge}
+          mobileFields={helperMobileFields}
           isLoading={isLoadingHelpers}
           isError={isHelpersError}
           error={helpersError as Error | null}
-          emptyIcon={<HardHat className="h-10 w-10 text-muted-foreground" />}
+          emptyIcon={<HardHat className="ticket-grid-empty__icon" strokeWidth={1.2} />}
           emptyTitle={tabConfig.helper.emptyTitle}
           emptyDescription={tabConfig.helper.emptyDescription}
           canEdit={tabActions.canEdit}
           canDelete={tabActions.canDelete}
-          minWidth="900px"
+          onAdd={tabActions.canCreate ? openAddDialog : undefined}
+          emptyAddLabel={tabConfig.helper.addLabel}
           onView={openHelperView}
           onEdit={openHelperEdit}
           onDelete={openHelperDelete}
+          skeletonColumnCount={6}
         />
       ) : null}
 
       {activeTab === 'office-staff' ? (
-        <EmployeesTablePanel
+        <EmployeesGrid
           items={sortedOfficeStaff}
-          columns={officeStaffColumns}
+          dataColumnDefs={officeStaffDataColumnDefs}
+          mobileBadge={officeStaffMobileBadge}
+          mobileFields={officeStaffMobileFields}
           isLoading={isLoadingOfficeStaff}
           isError={isOfficeStaffError}
           error={officeStaffError as Error | null}
-          emptyIcon={<Users className="h-10 w-10 text-muted-foreground" />}
+          emptyIcon={<Users className="ticket-grid-empty__icon" strokeWidth={1.2} />}
           emptyTitle={tabConfig['office-staff'].emptyTitle}
           emptyDescription={tabConfig['office-staff'].emptyDescription}
           canEdit={tabActions.canEdit}
           canDelete={tabActions.canDelete}
-          minWidth="760px"
+          onAdd={tabActions.canCreate ? openAddDialog : undefined}
+          emptyAddLabel={tabConfig['office-staff'].addLabel}
           onView={openOfficeStaffView}
           onEdit={openOfficeStaffEdit}
           onDelete={openOfficeStaffDelete}
+          skeletonColumnCount={6}
         />
       ) : null}
 

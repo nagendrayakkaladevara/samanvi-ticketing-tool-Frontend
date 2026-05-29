@@ -29,6 +29,7 @@ import { UsersPage } from '@/pages/UsersPage'
 import { UserHistoryPage } from '@/pages/UserHistoryPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { RouteErrorPage } from '@/pages/RouteErrorPage'
 import { BusNoPage } from '@/pages/masters/BusNoPage'
 import { EmployeesPage } from '@/pages/masters/EmployeesPage'
 import { ServiceForPage } from '@/pages/masters/ServiceForPage'
@@ -78,7 +79,7 @@ export const appRouter = createBrowserRouter([
       {
         path: '/',
         element: <AppShell />,
-        errorElement: <NotFoundPage embedded />,
+        errorElement: <RouteErrorPage embedded />,
         children: [
           { index: true, element: <SmartHomeRedirect /> },
           {

@@ -601,6 +601,8 @@
   --ag-wrapper-border-radius: 0;
   --ag-cell-horizontal-padding: 16px;
   --ag-header-column-separator-display: none;
+  --ag-header-column-resize-handle-display: none;
+  --ag-borders-critical: none;
   --ag-font-size: 13px;
   --ag-foreground-color: hsl(var(--foreground));
   --ag-background-color: var(--ticket-grid-surface);
@@ -647,9 +649,14 @@
   z-index: 2;
 }
 
-.ticket-grid .ag-cell.ag-cell-last-left-pinned,
+.ticket-grid .ag-pinned-left-header,
+.ticket-grid .ag-cell.ag-cell-last-left-pinned:not(.ag-cell-range-right):not(.ag-cell-range-single-cell),
 .ticket-grid .ag-header-cell.ag-header-cell-last-left-pinned {
-  border-right: 1px solid hsl(var(--border) / 0.85);
+  border-right: none !important;
+}
+
+.ticket-grid .ag-pinned-left-header .ag-header-cell-resize::after {
+  display: none;
 }
 
 .ticket-grid .ag-header-cell {

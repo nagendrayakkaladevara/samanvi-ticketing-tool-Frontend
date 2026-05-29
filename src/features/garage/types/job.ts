@@ -6,7 +6,45 @@ export type JobStatus =
   | 'in_progress'
   | 'on_hold'
   | 'completed'
+  | 'closed'
   | 'cancelled'
+
+export type RepairJobActivityType =
+  | 'created'
+  | 'status_changed'
+  | 'commented'
+  | 'closed'
+  | 'cancelled'
+
+export type RepairJobActivityLog = {
+  id: string
+  actionType: RepairJobActivityType
+  fromStatus: JobStatus | null
+  toStatus: JobStatus | null
+  note: string | null
+  createdAt: string
+  actor: {
+    id: string
+    username: string
+    displayName: string
+  }
+}
+
+export type RepairJobPart = {
+  id: string
+  quantity: number
+  unitPrice: string
+  createdAt: string
+  repairPart: {
+    id: string
+    partName: string
+  }
+  addedBy: {
+    id: string
+    username: string
+    displayName: string
+  }
+}
 
 export type RepairJob = {
   id: string
@@ -16,6 +54,12 @@ export type RepairJob = {
   description: string
   status: JobStatus
   isRepeatJob: boolean
+  repeatScheduledFor: string | null
+  repeatProcessedAt: string | null
+  previousJob: {
+    id: string
+    jobIdNumber: string
+  } | null
   createdAt: string
   updatedAt: string
   bus: {
@@ -45,6 +89,19 @@ export type RepairJob = {
     username: string
     displayName: string
   }
+  parts: RepairJobPart[]
+  activityLogs: RepairJobActivityLog[]
+}
+
+export type AddJobCommentInput = {
+  jobId: string
+  note: string
+}
+
+export type AddJobPartInput = {
+  jobId: string
+  repairPartId: string
+  quantity?: number
 }
 
 export type CreateRepairJobInput = {
@@ -66,4 +123,5 @@ export type UpdateRepairJobInput = {
   reportedDriverId?: string | null
   assignedToOfficeStaffId?: string | null
   status?: JobStatus
+  scheduleRepeatFor?: string
 }
