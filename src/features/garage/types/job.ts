@@ -8,6 +8,22 @@ export type JobStatus =
   | 'completed'
   | 'cancelled'
 
+export type RepairJobPart = {
+  id: string
+  quantity: number
+  unitPrice: string
+  createdAt: string
+  repairPart: {
+    id: string
+    partName: string
+  }
+  addedBy: {
+    id: string
+    username: string
+    displayName: string
+  }
+}
+
 export type RepairJob = {
   id: string
   jobIdNumber: string
@@ -45,6 +61,7 @@ export type RepairJob = {
     username: string
     displayName: string
   }
+  parts?: RepairJobPart[]
 }
 
 export type CreateRepairJobInput = {

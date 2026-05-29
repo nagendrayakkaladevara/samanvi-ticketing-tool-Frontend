@@ -1,5 +1,10 @@
 import { apiClient } from '@/lib/api/client'
-import type { CreateRepairJobInput, RepairJob, UpdateRepairJobInput } from '@/features/garage/types/job'
+import type {
+  CreateRepairJobInput,
+  RepairJob,
+  RepairJobPart,
+  UpdateRepairJobInput,
+} from '@/features/garage/types/job'
 import type {
   CreateRepairPartInput,
   RepairPart,
@@ -124,6 +129,45 @@ export function collectLeafRepairCategories(
   return result
 }
 
+
+function normalizeRepairJobPart(raw: unknown): RepairJobPart | null {
+  if (!raw || typeof raw !== 'object') return null
+  const value = raw as Record<string, unknown>
+  const id = normalizeString(value.id)
+  const unitPrice = normalizeString(value.unitPrice)
+  const quantity = typeof value.quantity === 'number' ? value.quantity : Number(value.quantity)
+  const repairPartRaw = value.repairPart
+  const addedByRaw = value.addedBy
+
+  if (!id || !unitPrice || Number.isNaN(quantity) || !repairPartRaw || typeof repairPartRaw !== 'object') {
+    return null
+  }
+
+  const repairPart = repairPartRaw as Record<string, unknown>
+  const partId = normalizeString(repairPart.id)
+  const partName = normalizeString(repairPart.partName)
+
+  if (!partId || !partName) return null
+
+  const addedBy =
+    addedByRaw && typeof addedByRaw === 'object'
+      ? {
+          id: normalizeString((addedByRaw as Record<string, unknown>).id) ?? '',
+          username: normalizeString((addedByRaw as Record<string, unknown>).username) ?? '',
+          displayName: normalizeString((addedByRaw as Record<string, unknown>).displayName) ?? '',
+        }
+      : { id: '', username: '', displayName: '' }
+
+  return {
+    id,
+    quantity,
+    unitPrice,
+    createdAt: normalizeString(value.createdAt) ?? '',
+    repairPart: { id: partId, partName },
+    addedBy,
+  }
+}
+
 function normalizeRepairJob(raw: unknown): RepairJob | null {
   if (!raw || typeof raw !== 'object') return null
   const value = raw as Record<string, unknown>
@@ -194,6 +238,11 @@ function normalizeRepairJob(raw: unknown): RepairJob | null {
         }
       : { id: '', username: '', displayName: '' }
 
+  const partsRaw = Array.isArray(value.parts) ? value.parts : []
+  const parts = partsRaw
+    .map(normalizeRepairJobPart)
+    .filter((item): item is RepairJobPart => Boolean(item))
+
   return {
     id,
     jobIdNumber,
@@ -209,6 +258,7 @@ function normalizeRepairJob(raw: unknown): RepairJob | null {
     reportedDriver: reportedDriver?.id ? reportedDriver : null,
     assignedToOfficeStaff: assignedToOfficeStaff?.id ? assignedToOfficeStaff : null,
     createdBy,
+    ...(parts.length > 0 ? { parts } : {}),
   }
 }
 

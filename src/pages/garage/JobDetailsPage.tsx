@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Pencil, Wrench } from 'lucide-react'
+import { ArrowLeft, Download, Loader2, Pencil, Wrench } from 'lucide-react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { toast } from '@/lib/toast'
 
 import { MasterDetailGrid } from '@/components/master-detail-grid'
 import { Button } from '@/components/ui/button'
@@ -15,6 +17,7 @@ import {
   formatJobStatus,
   getPrioritySeverityClass,
 } from '@/features/garage/utils/job-list-model'
+import { downloadRepairJobPdf } from '@/features/garage/utils/download-repair-job-pdf'
 import { getJobEditPath, getRepairTrackingPath } from '@/features/garage/utils/job-routes'
 import { useSubmoduleActions } from '@/hooks/use-permissions'
 import { cn } from '@/lib/utils'
@@ -40,6 +43,7 @@ export function JobDetailsPage() {
   const navigate = useNavigate()
   const { jobId } = useParams()
   const jobActions = useSubmoduleActions('garage', 'repair_job')
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false)
 
   const {
     data: job,
@@ -92,6 +96,18 @@ export function JobDetailsPage() {
     ? `${job.reportedDriver.driverIdNumber} — ${job.reportedDriver.aadharName || job.reportedDriver.dlName}`
     : 'None'
 
+  const handleDownloadPdf = async () => {
+    setIsDownloadingPdf(true)
+    try {
+      await downloadRepairJobPdf(job)
+      toast.success('Repair job downloaded as PDF.')
+    } catch {
+      toast.error('Failed to download PDF file.')
+    } finally {
+      setIsDownloadingPdf(false)
+    }
+  }
+
   return (
     <section className="mx-auto w-full min-w-0 max-w-4xl space-y-5">
       <header className="space-y-3">
@@ -122,12 +138,28 @@ export function JobDetailsPage() {
               <p className="text-sm text-muted-foreground capitalize">{formatJobStatus(job.status)}</p>
             </div>
           </div>
-          {jobActions.canEdit ? (
-            <Button className="w-full sm:w-auto" onClick={() => navigate(getJobEditPath(job.id))}>
-              <Pencil className="h-4 w-4" />
-              Edit Job
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              disabled={isDownloadingPdf}
+              onClick={handleDownloadPdf}
+            >
+              {isDownloadingPdf ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Download PDF
             </Button>
-          ) : null}
+            {jobActions.canEdit ? (
+              <Button className="w-full sm:w-auto" onClick={() => navigate(getJobEditPath(job.id))}>
+                <Pencil className="h-4 w-4" />
+                Edit Job
+              </Button>
+            ) : null}
+          </div>
         </div>
       </header>
 
