@@ -55,6 +55,24 @@ export function extractPermissionPayload(raw: unknown): Record<string, unknown> 
   return record
 }
 
+const PERMISSION_MODULE_SORT_ORDER: Record<string, number> = {
+  masters: 0,
+  garage: 1,
+}
+
+function comparePermissionModules(a: string, b: string): number {
+  const orderA = PERMISSION_MODULE_SORT_ORDER[a] ?? Number.MAX_SAFE_INTEGER
+  const orderB = PERMISSION_MODULE_SORT_ORDER[b] ?? Number.MAX_SAFE_INTEGER
+  if (orderA !== orderB) {
+    return orderA - orderB
+  }
+  return a.localeCompare(b)
+}
+
+function sortPermissionTreeGroups(tree: PermissionTreeGroup[]): PermissionTreeGroup[] {
+  return [...tree].sort((a, b) => comparePermissionModules(a.module, b.module))
+}
+
 export function extractPermissionItems(raw: unknown): unknown[] {
   const payload = extractPermissionPayload(raw)
   if (Array.isArray(payload.items)) {
@@ -86,9 +104,8 @@ export function buildPermissionTreeFromItems(items: Permission[]): PermissionTre
     submoduleMap.get(submoduleKey)!.push(item)
   }
 
-  return Array.from(moduleMap.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([module, submoduleMap]) => ({
+  return sortPermissionTreeGroups(
+    Array.from(moduleMap.entries()).map(([module, submoduleMap]) => ({
       module,
       label: formatPermissionToken(module),
       submodules: Array.from(submoduleMap.entries())
@@ -98,7 +115,8 @@ export function buildPermissionTreeFromItems(items: Permission[]): PermissionTre
           label: submodule ? formatPermissionToken(submodule) : 'General',
           permissions: [...permissions].sort((a, b) => a.action.localeCompare(b.action)),
         })),
-    }))
+    })),
+  )
 }
 
 function normalizeTreeSubmodule(raw: unknown): PermissionTreeSubmodule | null {
@@ -164,7 +182,7 @@ export function normalizePermissionTree(raw: unknown, items: Permission[]): Perm
     .map(normalizeTreeGroup)
     .filter((group): group is PermissionTreeGroup => Boolean(group))
 
-  return tree.length > 0 ? tree : buildPermissionTreeFromItems(items)
+  return tree.length > 0 ? sortPermissionTreeGroups(tree) : buildPermissionTreeFromItems(items)
 }
 
 export function normalizePermissionsCatalog(raw: unknown): PermissionsCatalog {

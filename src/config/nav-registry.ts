@@ -179,7 +179,7 @@ export const NAV_REGISTRY: NavRegistryEntry[] = [
     label: 'Create Repair Job',
     group: 'garage',
     sortOrder: 10,
-    permission: { module: 'garage', submodule: 'repair_job', action: 'view' },
+    permission: { module: 'garage', submodule: 'repair_job', action: 'create' },
   },
   {
     id: 'garage-repair-tracking',
@@ -215,7 +215,7 @@ export const ROUTE_GUARD_REGISTRY: Array<{
   { pathPrefix: '/masters/bus-no', permission: { anyOf: BUS_NO_VIEW_CHECKS } },
   { pathPrefix: '/masters/service-no', permission: { module: 'masters', submodule: 'service_number', action: 'view' } },
   { pathPrefix: '/masters/employees', permission: { anyOf: EMPLOYEE_VIEW_CHECKS } },
-  { pathPrefix: '/garage/create-job', permission: { module: 'garage', submodule: 'repair_job', action: 'view' } },
+  { pathPrefix: '/garage/create-job', permission: { module: 'garage', submodule: 'repair_job', action: 'create' } },
   { pathPrefix: '/garage/repair-tracking', permission: { module: 'garage', submodule: 'repair_job', action: 'view' } },
   { pathPrefix: '/garage/reports', permission: { module: 'garage', submodule: 'repair_job', action: 'view' } },
   { pathPrefix: '/garage/masters', permission: { anyOf: GARAGE_MASTERS_VIEW_CHECKS } },

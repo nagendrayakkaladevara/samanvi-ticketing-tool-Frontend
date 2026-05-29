@@ -73,12 +73,14 @@ export function RepairTrackingPage() {
         />
       )}
 
-      <p className="text-center text-xs text-muted-foreground">
-        Need to log a new repair?{' '}
-        <Link to="/garage/create-job" className="font-medium text-primary hover:underline">
-          Create a repair job
-        </Link>
-      </p>
+      {jobActions.canCreate ? (
+        <p className="text-center text-xs text-muted-foreground">
+          Need to log a new repair?{' '}
+          <Link to="/garage/create-job" className="font-medium text-primary hover:underline">
+            Create a repair job
+          </Link>
+        </p>
+      ) : null}
     </section>
   )
 }
