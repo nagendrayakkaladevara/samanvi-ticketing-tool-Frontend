@@ -9,6 +9,7 @@ export function useNotificationsUnreadCountQuery() {
   return useQuery({
     queryKey: notificationQueryKeys.unreadCount(),
     queryFn: notificationsService.getUnreadCount,
+    enabled: false,
     refetchInterval: UNREAD_COUNT_POLL_INTERVAL_MS,
     refetchOnWindowFocus: true,
   })

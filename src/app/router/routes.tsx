@@ -197,7 +197,7 @@ export const appRouter = createBrowserRouter([
           {
             path: 'garage/create-job',
             element: (
-              <PermissionGuard module="garage" submodule="repair_job">
+              <PermissionGuard module="garage" submodule="repair_job" action="create">
                 <CreateJobPage />
               </PermissionGuard>
             ),

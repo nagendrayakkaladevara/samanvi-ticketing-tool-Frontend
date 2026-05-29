@@ -16,6 +16,7 @@ import {
   getPrioritySeverityClass,
 } from '@/features/garage/utils/job-list-model'
 import { getJobEditPath, getRepairTrackingPath } from '@/features/garage/utils/job-routes'
+import { useSubmoduleActions } from '@/hooks/use-permissions'
 import { cn } from '@/lib/utils'
 
 function DetailItem({
@@ -38,6 +39,7 @@ function DetailItem({
 export function JobDetailsPage() {
   const navigate = useNavigate()
   const { jobId } = useParams()
+  const jobActions = useSubmoduleActions('garage', 'repair_job')
 
   const {
     data: job,
@@ -120,10 +122,12 @@ export function JobDetailsPage() {
               <p className="text-sm text-muted-foreground capitalize">{formatJobStatus(job.status)}</p>
             </div>
           </div>
-          <Button className="w-full sm:w-auto" onClick={() => navigate(getJobEditPath(job.id))}>
-            <Pencil className="h-4 w-4" />
-            Edit Job
-          </Button>
+          {jobActions.canEdit ? (
+            <Button className="w-full sm:w-auto" onClick={() => navigate(getJobEditPath(job.id))}>
+              <Pencil className="h-4 w-4" />
+              Edit Job
+            </Button>
+          ) : null}
         </div>
       </header>
 
