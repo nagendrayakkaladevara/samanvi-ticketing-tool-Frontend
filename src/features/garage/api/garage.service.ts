@@ -3,10 +3,16 @@ import type {
   AddJobCommentInput,
   AddJobPartInput,
   CreateRepairJobInput,
+  PartActivityMetadata,
   RepairJob,
   RepairJobActivityLog,
+  RepairJobActivityMetadata,
+  RepairJobActivityType,
   RepairJobPart,
   RepairJobTimeline,
+  RepeatCreatedMetadata,
+  RepeatScheduledMetadata,
+  RepeatSourceMetadata,
   UpdateRepairJobInput,
 } from '@/features/garage/types/job'
 import type {
@@ -133,6 +139,77 @@ export function collectLeafRepairCategories(
   return result
 }
 
+function normalizeUnitPriceString(raw: unknown): string | undefined {
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim()
+    return trimmed.length > 0 ? trimmed : undefined
+  }
+  if (typeof raw === 'number' && !Number.isNaN(raw)) {
+    return raw.toFixed(2)
+  }
+  return undefined
+}
+
+function normalizeRepairJobActivityMetadata(
+  actionType: RepairJobActivityType,
+  raw: unknown,
+): RepairJobActivityMetadata | null {
+  if (raw === null || raw === undefined) return null
+  if (!raw || typeof raw !== 'object') return null
+
+  const value = raw as Record<string, unknown>
+
+  switch (actionType) {
+    case 'part_added':
+    case 'part_removed': {
+      const repairJobPartId = normalizeString(value.repairJobPartId)
+      const repairPartId = normalizeString(value.repairPartId)
+      const partName = normalizeString(value.partName)
+      const quantity =
+        typeof value.quantity === 'number' ? value.quantity : Number(value.quantity)
+      const unitPrice = normalizeUnitPriceString(value.unitPrice)
+      if (!repairJobPartId || !repairPartId || !partName || Number.isNaN(quantity) || !unitPrice) {
+        return null
+      }
+      const metadata: PartActivityMetadata = {
+        repairJobPartId,
+        repairPartId,
+        partName,
+        quantity,
+        unitPrice,
+      }
+      return metadata
+    }
+    case 'repeat_scheduled': {
+      const scheduledFor = normalizeString(value.scheduledFor)
+      if (!scheduledFor) return null
+      const metadata: RepeatScheduledMetadata = { scheduledFor }
+      return metadata
+    }
+    case 'repeat_created': {
+      const relatedJobId = normalizeString(value.relatedJobId)
+      const relatedJobIdNumber = normalizeString(value.relatedJobIdNumber)
+      if (!relatedJobId || !relatedJobIdNumber) return null
+      const metadata: RepeatCreatedMetadata = { relatedJobId, relatedJobIdNumber }
+      return metadata
+    }
+    case 'created': {
+      if (value.isRepeatJob !== true) return null
+      const previousJobId = normalizeString(value.previousJobId)
+      const previousJobIdNumber = normalizeString(value.previousJobIdNumber)
+      if (!previousJobId || !previousJobIdNumber) return null
+      const metadata: RepeatSourceMetadata = {
+        previousJobId,
+        previousJobIdNumber,
+        isRepeatJob: true,
+      }
+      return metadata
+    }
+    default:
+      return null
+  }
+}
+
 function normalizeRepairJobActivityLog(raw: unknown): RepairJobActivityLog | null {
   if (!raw || typeof raw !== 'object') return null
   const value = raw as Record<string, unknown>
@@ -162,12 +239,15 @@ function normalizeRepairJobActivityLog(raw: unknown): RepairJobActivityLog | nul
         }
       : { id: '', username: '', displayName: '' }
 
+  const metadata = normalizeRepairJobActivityMetadata(actionType, value.metadata)
+
   return {
     id,
     actionType,
     fromStatus: fromStatus ?? null,
     toStatus: toStatus ?? null,
     note,
+    metadata,
     createdAt,
     actor,
   }
