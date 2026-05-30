@@ -2,8 +2,10 @@ import { ChevronRight } from 'lucide-react'
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import type { PermissionTreeGroup } from '@/features/application-users/types/permission'
+import { filterVisiblePermissionTree } from '@/features/application-users/utils/permission-tree'
 import {
   formatPermissionAction,
+  formatPermissionModuleLabel,
   formatPermissionToken,
 } from '@/features/application-users/utils/permission-labels'
 import { cn } from '@/lib/utils'
@@ -31,7 +33,9 @@ function toggleGroup(selectedIds: string[], permissionIds: string[]): string[] {
 }
 
 export function PermissionPicker({ tree, selectedIds, onChange, disabled = false }: PermissionPickerProps) {
-  if (tree.length === 0) {
+  const visibleTree = filterVisiblePermissionTree(tree)
+
+  if (visibleTree.length === 0) {
     return (
       <p className="rounded-md border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
         No permissions available in the catalog.
@@ -41,11 +45,13 @@ export function PermissionPicker({ tree, selectedIds, onChange, disabled = false
 
   return (
     <div className="space-y-3">
-      {tree.map((group) => {
+      {visibleTree.map((group) => {
         const groupPermissionIds = group.submodules.flatMap((submodule) =>
           submodule.permissions.map((permission) => permission.id),
         )
         const selectedCount = groupPermissionIds.filter((id) => selectedIds.includes(id)).length
+
+        const groupLabel = formatPermissionModuleLabel(group.module, group.label)
 
         return (
           <Collapsible key={group.module} defaultOpen={selectedCount > 0} className="group/collapsible rounded-lg border">
@@ -61,11 +67,11 @@ export function PermissionPicker({ tree, selectedIds, onChange, disabled = false
                 }}
                 onChange={() => onChange(toggleGroup(selectedIds, groupPermissionIds))}
                 disabled={disabled}
-                aria-label={`Toggle all permissions for ${group.label}`}
+                aria-label={`Toggle all permissions for ${groupLabel}`}
               />
               <CollapsibleTrigger className="flex min-w-0 flex-1 items-center justify-between text-left">
                 <div className="min-w-0">
-                  <p className="font-medium">{group.label}</p>
+                  <p className="font-medium">{groupLabel}</p>
                   <p className="text-xs text-muted-foreground">
                     {selectedCount}/{groupPermissionIds.length} selected
                   </p>
@@ -131,7 +137,7 @@ export function PermissionPicker({ tree, selectedIds, onChange, disabled = false
                               </span>
                               <span className="mt-0.5 block text-xs text-muted-foreground">
                                 {permission.key ??
-                                  `${formatPermissionToken(permission.module)}${
+                                  `${formatPermissionModuleLabel(permission.module)}${
                                     permission.submodule ? ` / ${formatPermissionToken(permission.submodule)}` : ''
                                   } / ${formatPermissionAction(permission.action)}`}
                               </span>

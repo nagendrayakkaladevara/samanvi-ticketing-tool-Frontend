@@ -120,26 +120,41 @@ type PdfQrSectionOptions = {
 }
 
 export async function drawPdfQrSection(options: PdfQrSectionOptions): Promise<number> {
-  const { doc, margin, pageWidth, contentWidth, url } = options
+  const { doc, margin, contentWidth, url } = options
   let y = options.y
+  const cardHeight = QR_SIZE_MM + 8
+  const qrPadding = 4
 
-  doc.setFontSize(10)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(234, 88, 12)
-  doc.text('SCAN TO VIEW JOB', margin, y)
-  doc.setDrawColor(209, 213, 219)
-  doc.line(margin, y + 1.5, pageWidth - margin, y + 1.5)
-  y += 8
+  doc.setFillColor(249, 250, 251)
+  doc.setDrawColor(229, 231, 235)
+  doc.roundedRect(margin, y, contentWidth, cardHeight, 2, 2, 'FD')
 
   const qrDataUrl = await createQrDataUrl(url)
-  const qrX = margin
-  doc.addImage(qrDataUrl, 'PNG', qrX, y, QR_SIZE_MM, QR_SIZE_MM)
+  const qrX = margin + qrPadding
+  const qrY = y + qrPadding
+  doc.addImage(qrDataUrl, 'PNG', qrX, qrY, QR_SIZE_MM, QR_SIZE_MM)
+
+  const textX = qrX + QR_SIZE_MM + 6
+  const textWidth = contentWidth - QR_SIZE_MM - qrPadding * 2 - 6
+
+  doc.setFontSize(8.5)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(234, 88, 12)
+  doc.text('Scan to view this job', textX, qrY + 5)
 
   doc.setFontSize(8)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(75, 85, 99)
-  const urlLines = doc.splitTextToSize(url, contentWidth - QR_SIZE_MM - 6)
-  doc.text(urlLines, qrX + QR_SIZE_MM + 6, y + 6)
+  const introLines = doc.splitTextToSize(
+    'Open the repair job in Samanvi Ticketing using your phone camera or QR scanner.',
+    textWidth,
+  )
+  doc.text(introLines, textX, qrY + 10)
 
-  return y + QR_SIZE_MM + 8
+  doc.setFontSize(7)
+  doc.setTextColor(107, 114, 128)
+  const urlLines = doc.splitTextToSize(url, textWidth)
+  doc.text(urlLines, textX, qrY + 18)
+
+  return y + cardHeight + 6
 }

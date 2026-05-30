@@ -2,7 +2,8 @@ import { Shield } from 'lucide-react'
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import type { PermissionTreeGroup } from '@/features/application-users/types/permission'
-import { formatPermissionAction } from '@/features/application-users/utils/permission-labels'
+import { filterVisiblePermissionTree } from '@/features/application-users/utils/permission-tree'
+import { formatPermissionAction, formatPermissionModuleLabel } from '@/features/application-users/utils/permission-labels'
 import { cn } from '@/lib/utils'
 
 type PermissionSummaryReadonlyProps = {
@@ -13,8 +14,9 @@ type PermissionSummaryReadonlyProps = {
 
 export function PermissionSummaryReadonly({ tree, selectedIds, className }: PermissionSummaryReadonlyProps) {
   const selectedSet = new Set(selectedIds)
+  const visibleTree = filterVisiblePermissionTree(tree)
 
-  const groupsWithSelections = tree
+  const groupsWithSelections = visibleTree
     .map((group) => {
       const submodules = group.submodules
         .map((submodule) => ({
@@ -54,7 +56,7 @@ export function PermissionSummaryReadonly({ tree, selectedIds, className }: Perm
           <Collapsible key={group.module} defaultOpen className="group/collapsible rounded-lg border">
             <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left">
               <div className="min-w-0">
-                <p className="font-medium">{group.label}</p>
+                <p className="font-medium">{formatPermissionModuleLabel(group.module, group.label)}</p>
                 <p className="text-xs text-muted-foreground">
                   {groupCount} override{groupCount === 1 ? '' : 's'}
                 </p>

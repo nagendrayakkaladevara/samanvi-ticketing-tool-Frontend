@@ -4,7 +4,7 @@ import type {
   PermissionTreeSubmodule,
   PermissionsCatalog,
 } from '@/features/application-users/types/permission'
-import { formatPermissionToken } from '@/features/application-users/utils/permission-labels'
+import { formatPermissionModuleLabel, formatPermissionToken } from '@/features/application-users/utils/permission-labels'
 
 function normalizeString(value: unknown): string | undefined {
   if (typeof value !== 'string') {
@@ -107,7 +107,7 @@ export function buildPermissionTreeFromItems(items: Permission[]): PermissionTre
   return sortPermissionTreeGroups(
     Array.from(moduleMap.entries()).map(([module, submoduleMap]) => ({
       module,
-      label: formatPermissionToken(module),
+      label: formatPermissionModuleLabel(module),
       submodules: Array.from(submoduleMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([submodule, permissions]) => ({
@@ -169,7 +169,7 @@ function normalizeTreeGroup(raw: unknown): PermissionTreeGroup | null {
 
   return {
     module: moduleName,
-    label: normalizeString(value.label) ?? formatPermissionToken(moduleName),
+    label: formatPermissionModuleLabel(moduleName, normalizeString(value.label)),
     submodules,
   }
 }

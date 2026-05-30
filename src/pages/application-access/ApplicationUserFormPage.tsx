@@ -629,11 +629,8 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
                 <div>
                   <div className="flex items-center gap-2">
                     <Shield className="h-4 w-4 text-primary" />
-                    <h2 className="text-base font-semibold">Permission overrides</h2>
+                    <h2 className="text-base font-semibold">Permissions/Access</h2>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Direct permissions added here stack on top of the role template. Leave unchecked to rely on role defaults only.
-                  </p>
                 </div>
                 <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                   {values.permissionIds.length} selected
