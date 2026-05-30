@@ -1,13 +1,18 @@
 import { useQuery } from '@tanstack/react-query'
 import {
   ArrowRightLeft,
+  CalendarClock,
   CheckCircle2,
   History,
   MessageSquare,
+  PackageMinus,
+  PackagePlus,
   PlusCircle,
   RefreshCw,
+  Repeat,
   XCircle,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -23,12 +28,18 @@ import type { JobStatus, RepairJobActivityLog, RepairJobActivityType } from '@/f
 import {
   formatActivityActor,
   formatActivityLabel,
+  formatPartActivityDetail,
   formatStatusTransition,
   getActivityActorInitials,
   getActivityDotClass,
   getActivityToneClass,
+  getPartActivityMetadata,
+  getRepeatCreatedMetadata,
+  getRepeatScheduledMetadata,
+  getRepeatSourceMetadata,
 } from '@/features/garage/utils/job-activity-model'
 import { formatJobDate, formatJobStatus } from '@/features/garage/utils/job-list-model'
+import { getJobDetailsPath } from '@/features/garage/utils/job-routes'
 import { cn } from '@/lib/utils'
 
 type JobHistorySheetProps = {
@@ -45,6 +56,61 @@ const ACTIVITY_ICONS: Record<RepairJobActivityType, typeof History> = {
   commented: MessageSquare,
   closed: CheckCircle2,
   cancelled: XCircle,
+  part_added: PackagePlus,
+  part_removed: PackageMinus,
+  repeat_scheduled: CalendarClock,
+  repeat_created: Repeat,
+}
+
+function ActivityMetadataBlock({ entry }: { entry: RepairJobActivityLog }) {
+  const partMeta = getPartActivityMetadata(entry)
+  if (partMeta) {
+    return (
+      <p className="mt-2 rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-sm text-foreground">
+        {formatPartActivityDetail(partMeta)}
+      </p>
+    )
+  }
+
+  const repeatScheduled = getRepeatScheduledMetadata(entry)
+  if (repeatScheduled) {
+    return (
+      <p className="mt-2 rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-sm text-foreground">
+        Scheduled for {formatJobDate(repeatScheduled.scheduledFor)}
+      </p>
+    )
+  }
+
+  const repeatCreated = getRepeatCreatedMetadata(entry)
+  if (repeatCreated) {
+    return (
+      <p className="mt-2 text-sm text-foreground">
+        <Link
+          to={getJobDetailsPath(repeatCreated.relatedJobId)}
+          className="font-mono font-medium text-primary underline-offset-4 hover:underline"
+        >
+          {repeatCreated.relatedJobIdNumber}
+        </Link>
+      </p>
+    )
+  }
+
+  const repeatSource = getRepeatSourceMetadata(entry)
+  if (repeatSource) {
+    return (
+      <p className="mt-2 text-sm text-muted-foreground">
+        Created from repeat of{' '}
+        <Link
+          to={getJobDetailsPath(repeatSource.previousJobId)}
+          className="font-mono font-medium text-primary underline-offset-4 hover:underline"
+        >
+          {repeatSource.previousJobIdNumber}
+        </Link>
+      </p>
+    )
+  }
+
+  return null
 }
 
 function TimelineEntry({ entry, isLast }: { entry: RepairJobActivityLog; isLast: boolean }) {
@@ -95,6 +161,7 @@ function TimelineEntry({ entry, isLast }: { entry: RepairJobActivityLog; isLast:
             {statusTransition}
           </p>
         ) : null}
+        <ActivityMetadataBlock entry={entry} />
         {commentNote ? (
           <p className="mt-2 rounded-md border border-border bg-muted/30 p-2.5 text-sm leading-6 text-foreground">
             {commentNote}
@@ -175,7 +242,8 @@ export function JobHistorySheet({
               <History className="size-8 text-muted-foreground/60" />
               <p className="text-sm font-medium text-foreground">No activity yet</p>
               <p className="max-w-xs text-xs text-muted-foreground">
-                Status changes, comments, and other updates will appear here as the job progresses.
+                Status changes, parts, comments, repeat jobs, and other updates will appear here as the
+                job progresses.
               </p>
             </div>
           ) : (

@@ -15,6 +15,39 @@ export type RepairJobActivityType =
   | 'commented'
   | 'closed'
   | 'cancelled'
+  | 'part_added'
+  | 'part_removed'
+  | 'repeat_scheduled'
+  | 'repeat_created'
+
+export type PartActivityMetadata = {
+  repairJobPartId: string
+  repairPartId: string
+  partName: string
+  quantity: number
+  unitPrice: string
+}
+
+export type RepeatScheduledMetadata = {
+  scheduledFor: string
+}
+
+export type RepeatCreatedMetadata = {
+  relatedJobId: string
+  relatedJobIdNumber: string
+}
+
+export type RepeatSourceMetadata = {
+  previousJobId: string
+  previousJobIdNumber: string
+  isRepeatJob: true
+}
+
+export type RepairJobActivityMetadata =
+  | PartActivityMetadata
+  | RepeatScheduledMetadata
+  | RepeatCreatedMetadata
+  | RepeatSourceMetadata
 
 export type RepairJobActivityLog = {
   id: string
@@ -22,6 +55,7 @@ export type RepairJobActivityLog = {
   fromStatus: JobStatus | null
   toStatus: JobStatus | null
   note: string | null
+  metadata: RepairJobActivityMetadata | null
   createdAt: string
   actor: {
     id: string
