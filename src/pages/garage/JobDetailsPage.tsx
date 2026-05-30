@@ -7,6 +7,7 @@ import {
   History,
   Loader2,
   MessageSquarePlus,
+  MoreHorizontal,
   PackagePlus,
   Pencil,
   Repeat2,
@@ -29,6 +30,12 @@ import {
 import { MasterDetailGrid } from '@/components/master-detail-grid'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import '@/features/tickets/styles/tickets-grid.css'
@@ -249,12 +256,65 @@ export function JobDetailsPage() {
               <p className="text-sm text-muted-foreground capitalize">{formatJobStatus(job.status)}</p>
             </div>
           </div>
-          {jobActions.canEdit ? (
-            <Button className="w-full sm:w-auto" onClick={() => navigate(getJobEditPath(job.id))}>
-              <Pencil className="h-4 w-4" />
-              Edit Job
-            </Button>
-          ) : null}
+          <div className="flex w-full gap-2 sm:w-auto">
+            {jobActions.canEdit ? (
+              <Button
+                className="min-w-0 flex-1 sm:w-auto sm:flex-none"
+                onClick={() => navigate(getJobEditPath(job.id))}
+              >
+                <Pencil className="h-4 w-4 shrink-0" />
+                Edit Job
+              </Button>
+            ) : null}
+            {canViewJob ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn('shrink-0 gap-1.5 sm:hidden', !jobActions.canEdit && 'flex-1')}
+                    aria-label="Job actions"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                    Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem disabled={!canAddParts} onClick={() => setAddPartOpen(true)}>
+                    <PackagePlus className="h-4 w-4" />
+                    Add Spare Parts
+                  </DropdownMenuItem>
+                  {!job.isRepeatJob ? (
+                    <DropdownMenuItem
+                      disabled={!canAddParts}
+                      onClick={() => {
+                        if (!canAddParts) {
+                          toast.error('You do not have permission to schedule repeat jobs.')
+                          return
+                        }
+                        setRepeatJobOpen(true)
+                      }}
+                    >
+                      <Repeat2 className="h-4 w-4" />
+                      {isRepeatEditMode ? 'Edit Repeat Job' : 'Create Repeat Job'}
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuItem onClick={() => toast.info('Download will be available soon.')}>
+                    <Download className="h-4 w-4" />
+                    Download
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => toast.info('Job history will be available soon.')}>
+                    <History className="h-4 w-4" />
+                    History
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowCommentForm((open) => !open)}>
+                    <MessageSquarePlus className="h-4 w-4" />
+                    Add Comment
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -335,11 +395,10 @@ export function JobDetailsPage() {
         </div>
 
         {canViewJob ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="hidden flex-wrap gap-2 border-t pt-4 sm:flex">
             <Button
               type="button"
               variant="outline"
-              className="w-full sm:w-auto"
               onClick={() => setAddPartOpen(true)}
               disabled={!canAddParts}
             >
@@ -350,7 +409,6 @@ export function JobDetailsPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full sm:w-auto"
                 disabled={!canAddParts}
                 onClick={() => {
                   if (!canAddParts) {
@@ -367,7 +425,6 @@ export function JobDetailsPage() {
             <Button
               type="button"
               variant="outline"
-              className="w-full sm:w-auto"
               onClick={() => toast.info('Download will be available soon.')}
             >
               <Download className="h-4 w-4" />
@@ -376,7 +433,6 @@ export function JobDetailsPage() {
             <Button
               type="button"
               variant="outline"
-              className="w-full sm:w-auto"
               onClick={() => toast.info('Job history will be available soon.')}
             >
               <History className="h-4 w-4" />
@@ -385,7 +441,6 @@ export function JobDetailsPage() {
             <Button
               type="button"
               variant="outline"
-              className="w-full sm:w-auto"
               onClick={() => setShowCommentForm((open) => !open)}
             >
               <MessageSquarePlus className="h-4 w-4" />
