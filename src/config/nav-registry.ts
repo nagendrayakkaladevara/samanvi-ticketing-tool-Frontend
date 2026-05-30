@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import {
   Bus,
   Clipboard,
+  Home,
   KeyRound,
   LayoutDashboard,
   Mic,
@@ -61,12 +62,24 @@ export const GARAGE_MASTERS_VIEW_CHECKS: PermissionCheck[] = [
 
 export const NAV_REGISTRY: NavRegistryEntry[] = [
   {
+    id: 'welcome',
+    to: '/',
+    label: 'Home',
+    icon: Home,
+    group: 'main',
+    sortOrder: 5,
+    end: true,
+    authOnly: true,
+    permission: { authOnly: true },
+  },
+  {
     id: 'dashboard',
     to: '/dashboard',
     label: 'Dashboard',
     icon: LayoutDashboard,
     group: 'main',
     sortOrder: 10,
+    hidden: true,
     permission: { module: 'tickets', submodule: '', action: 'view' },
   },
   {
@@ -77,6 +90,7 @@ export const NAV_REGISTRY: NavRegistryEntry[] = [
     group: 'main',
     sortOrder: 20,
     end: true,
+    hidden: true,
     permission: { module: 'tickets', submodule: '', action: 'view' },
   },
   {

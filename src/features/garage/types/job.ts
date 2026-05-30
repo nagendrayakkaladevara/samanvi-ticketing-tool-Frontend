@@ -93,6 +93,11 @@ export type RepairJob = {
   activityLogs: RepairJobActivityLog[]
 }
 
+export type RepairJobTimeline = {
+  jobId: string
+  items: RepairJobActivityLog[]
+}
+
 export type AddJobCommentInput = {
   jobId: string
   note: string

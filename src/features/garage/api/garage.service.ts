@@ -6,6 +6,7 @@ import type {
   RepairJob,
   RepairJobActivityLog,
   RepairJobPart,
+  RepairJobTimeline,
   UpdateRepairJobInput,
 } from '@/features/garage/types/job'
 import type {
@@ -434,6 +435,20 @@ export const garageService = {
       throw new Error('Repair job not found.')
     }
     return job
+  },
+
+  async getJobTimeline(jobId: string): Promise<RepairJobTimeline> {
+    const { data } = await apiClient.get<unknown>(`${jobsEndpoint}/${jobId}/timeline`)
+    const payload = extractDataPayload(data)
+    const record = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {}
+    const items = extractArrayPayload(data)
+      .map(normalizeRepairJobActivityLog)
+      .filter((item): item is RepairJobActivityLog => Boolean(item))
+
+    return {
+      jobId: normalizeString(record.jobId) ?? jobId,
+      items,
+    }
   },
 
   async updateJob({ jobId, ...input }: UpdateRepairJobInput): Promise<RepairJob> {

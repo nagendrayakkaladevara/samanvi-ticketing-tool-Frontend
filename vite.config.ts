@@ -11,7 +11,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Samanvi Ticketing Tool',
+        name: 'Samanvi Internal Tool',
         short_name: 'Samanvi',
         description: 'Issue reporting and ticket management for your team',
         theme_color: '#ffffff',

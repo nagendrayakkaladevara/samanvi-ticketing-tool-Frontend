@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 
 import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { garageService } from '@/features/garage/api/garage.service'
 import {
@@ -22,7 +22,12 @@ import {
   repeatScheduleDateInputToIso,
   repeatScheduledForToDateInput,
 } from '@/features/garage/utils/job-repeat-model'
-import { formatMasterDateDisplay, inputValueToMasterDate } from '@/lib/utils/master-dates'
+import {
+  dateToInputValue,
+  formatMasterDateDisplay,
+  inputValueToDate,
+  inputValueToMasterDate,
+} from '@/lib/utils/master-dates'
 import { queryClient } from '@/lib/query/query-client'
 
 type ScheduleRepeatJobDialogProps = {
@@ -87,7 +92,9 @@ export function ScheduleRepeatJobDialog({
     }
   }
 
-  const minScheduleDate = getMinRepeatScheduleDateInput()
+  const minScheduleDateInput = getMinRepeatScheduleDateInput()
+  const minScheduleDate = inputValueToDate(minScheduleDateInput)
+  const selectedDate = inputValueToDate(scheduleDate)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -103,19 +110,19 @@ export function ScheduleRepeatJobDialog({
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="repeatJobDate">Repeat on</Label>
-            <Input
-              id="repeatJobDate"
-              type="date"
-              min={minScheduleDate}
-              value={scheduleDate}
-              onChange={(event) => setScheduleDate(event.target.value)}
-              disabled={isSaving}
-              required
-            />
+            <Label>Repeat on</Label>
+            <div className="flex justify-center rounded-md border bg-card p-2">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => setScheduleDate(date ? dateToInputValue(date) : '')}
+                disabled={isSaving || !minScheduleDate ? true : { before: minScheduleDate }}
+                defaultMonth={selectedDate ?? minScheduleDate}
+              />
+            </div>
             <p className="text-xs text-muted-foreground">
               Earliest date:{' '}
-              {formatMasterDateDisplay(inputValueToMasterDate(minScheduleDate))} (tomorrow).
+              {formatMasterDateDisplay(inputValueToMasterDate(minScheduleDateInput))} (tomorrow).
             </p>
           </div>
 

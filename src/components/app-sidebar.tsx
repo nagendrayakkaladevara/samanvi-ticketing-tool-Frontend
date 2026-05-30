@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ChevronRight, Database, LogOut, Wrench } from 'lucide-react'
+import { ChevronRight, Database, ExternalLink, LogOut, Wrench } from 'lucide-react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -26,6 +26,8 @@ import { useAuthStore } from '@/store/auth-store'
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { mainItems, mastersItems, garageItems } = useAppNavigation()
+  const homeItem = mainItems.find((item) => item.id === 'welcome')
+  const navigationItems = mainItems.filter((item) => item.id !== 'welcome')
   const location = useLocation()
   const { isMobile, setOpenMobile, state, setOpen } = useSidebar()
   const logout = useAuthStore((state) => state.logout)
@@ -84,6 +86,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              {homeItem ? (
+                <SidebarMenuItem key={homeItem.id}>
+                  <SidebarMenuButton asChild tooltip={homeItem.label}>
+                    <NavLink to={homeItem.to} end={homeItem.end} onClick={handleNavItemClick}>
+                      {homeItem.icon ? <homeItem.icon /> : null}
+                      <span>{homeItem.label}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ) : null}
               {mastersItems.length > 0 ? (
                 <Collapsible
                   asChild
@@ -146,7 +158,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuItem>
                 </Collapsible>
               ) : null}
-              {mainItems.map((item) => (
+              {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.id}>
                   <SidebarMenuButton asChild tooltip={item.label}>
                     {item.external ? (
@@ -158,6 +170,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       >
                         {item.icon ? <item.icon /> : null}
                         <span>{item.label}</span>
+                        <ExternalLink
+                          className="ml-auto shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                          aria-hidden
+                        />
                       </a>
                     ) : (
                       <NavLink to={item.to} end={item.end} onClick={handleNavItemClick}>

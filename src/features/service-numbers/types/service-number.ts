@@ -60,3 +60,13 @@ export type CreateServiceNumberInput = {
 export type UpdateServiceNumberInput = CreateServiceNumberInput & {
   serviceNumberId: string
 }
+
+export type ServiceNumberGridRow = {
+  id: string
+  serviceNo: string
+  serviceFor: string
+  route: string
+  via: string
+  distanceLabel: string
+  updatedAtLabel: string
+}

@@ -774,7 +774,7 @@ export function TicketDetailsPage() {
       </Card>
 
       <div className="print-only print-report-footer">
-        <span>Generated from Samanvi Ticketing Tool</span>
+        <span>Generated from Samanvi Internal Tool</span>
         <span className="print-page-number" />
       </div>
     </section>

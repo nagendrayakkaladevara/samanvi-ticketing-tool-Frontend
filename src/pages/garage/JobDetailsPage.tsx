@@ -15,6 +15,7 @@ import {
   Wrench,
 } from 'lucide-react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { QRCodeSVG } from 'qrcode.react'
 import { toast } from '@/lib/toast'
 
 import {
@@ -42,6 +43,7 @@ import '@/features/tickets/styles/tickets-grid.css'
 
 import { garageService } from '@/features/garage/api/garage.service'
 import { AddJobPartDialog } from '@/features/garage/components/add-job-part-dialog'
+import { JobHistorySheet } from '@/features/garage/components/job-history-sheet'
 import { ScheduleRepeatJobDialog } from '@/features/garage/components/schedule-repeat-job-dialog'
 import {
   formatJobDate,
@@ -56,11 +58,13 @@ import {
 } from '@/features/garage/utils/job-part-model'
 import { formatRepairPartPrice } from '@/features/garage/utils/repair-part-model'
 import { getJobDetailsPath, getJobEditPath, getRepairTrackingPath } from '@/features/garage/utils/job-routes'
+import { getJobShareUrl } from '@/features/garage/utils/job-share'
 import {
   formatCommentMeta,
   getJobComments,
   validateJobCommentNote,
 } from '@/features/garage/utils/job-activity-model'
+import { downloadRepairJobPdf } from '@/features/garage/utils/download-repair-job-pdf'
 import {
   formatRepeatScheduledDate,
   hasPendingRepeatSchedule,
@@ -97,6 +101,7 @@ export function JobDetailsPage() {
   const canAddParts = can('garage', 'repair_job', 'edit')
   const [addPartOpen, setAddPartOpen] = useState(false)
   const [repeatJobOpen, setRepeatJobOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [showCommentForm, setShowCommentForm] = useState(false)
   const [commentNote, setCommentNote] = useState('')
   const [removePartTarget, setRemovePartTarget] = useState<RepairJobPart | null>(null)
@@ -134,6 +139,7 @@ export function JobDetailsPage() {
       setCommentNote('')
       setShowCommentForm(false)
       queryClient.invalidateQueries({ queryKey: ['garage', 'jobs', jobId] })
+      queryClient.invalidateQueries({ queryKey: ['garage', 'jobs', jobId, 'timeline'] })
     },
     onError: (mutationError) => {
       toast.error(mutationError instanceof Error ? mutationError.message : 'Failed to add comment.')
@@ -152,6 +158,17 @@ export function JobDetailsPage() {
       return
     }
     commentMutation.mutate(commentNote.trim())
+  }
+
+  async function handleDownloadPdf() {
+    if (!job) return
+    try {
+      await downloadRepairJobPdf(job)
+      toast.success('Repair job downloaded as PDF.')
+    } catch (error) {
+      console.error('Repair job PDF download failed:', error)
+      toast.error('Failed to download PDF file.')
+    }
   }
 
   if (!jobId) {
@@ -198,6 +215,7 @@ export function JobDetailsPage() {
   const driverLabel = job.reportedDriver
     ? `${job.reportedDriver.driverIdNumber} — ${job.reportedDriver.aadharName || job.reportedDriver.dlName}`
     : 'None'
+  const jobViewUrl = getJobShareUrl(job.id)
 
   return (
     <section className="mx-auto w-full min-w-0 max-w-4xl space-y-5">
@@ -256,12 +274,9 @@ export function JobDetailsPage() {
               <p className="text-sm text-muted-foreground capitalize">{formatJobStatus(job.status)}</p>
             </div>
           </div>
-          <div className="flex w-full gap-2 sm:w-auto">
+          <div className="flex w-full gap-2 sm:hidden">
             {jobActions.canEdit ? (
-              <Button
-                className="min-w-0 flex-1 sm:w-auto sm:flex-none"
-                onClick={() => navigate(getJobEditPath(job.id))}
-              >
+              <Button className="min-w-0 flex-1" onClick={() => navigate(getJobEditPath(job.id))}>
                 <Pencil className="h-4 w-4 shrink-0" />
                 Edit Job
               </Button>
@@ -272,7 +287,7 @@ export function JobDetailsPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className={cn('shrink-0 gap-1.5 sm:hidden', !jobActions.canEdit && 'flex-1')}
+                    className={cn('shrink-0 gap-1.5', !jobActions.canEdit && 'flex-1')}
                     aria-label="Job actions"
                   >
                     <MoreHorizontal className="h-4 w-4" />
@@ -299,11 +314,11 @@ export function JobDetailsPage() {
                       {isRepeatEditMode ? 'Edit Repeat Job' : 'Create Repeat Job'}
                     </DropdownMenuItem>
                   ) : null}
-                  <DropdownMenuItem onClick={() => toast.info('Download will be available soon.')}>
+                  <DropdownMenuItem onClick={handleDownloadPdf}>
                     <Download className="h-4 w-4" />
                     Download
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => toast.info('Job history will be available soon.')}>
+                  <DropdownMenuItem onClick={() => setHistoryOpen(true)}>
                     <History className="h-4 w-4" />
                     History
                   </DropdownMenuItem>
@@ -316,6 +331,66 @@ export function JobDetailsPage() {
             ) : null}
           </div>
         </div>
+
+        {canViewJob || jobActions.canEdit ? (
+          <div className="hidden flex-wrap items-center justify-end gap-2 border-t pt-3 sm:flex">
+            {canViewJob ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAddPartOpen(true)}
+                  disabled={!canAddParts}
+                >
+                  <PackagePlus className="h-4 w-4" />
+                  Add Spare Parts
+                </Button>
+                {!job.isRepeatJob ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!canAddParts}
+                    onClick={() => {
+                      if (!canAddParts) {
+                        toast.error('You do not have permission to schedule repeat jobs.')
+                        return
+                      }
+                      setRepeatJobOpen(true)
+                    }}
+                  >
+                    <Repeat2 className="h-4 w-4" />
+                    {isRepeatEditMode ? 'Edit Repeat Job' : 'Create Repeat Job'}
+                  </Button>
+                ) : null}
+                <Button type="button" variant="outline" size="sm" onClick={handleDownloadPdf}>
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
+                  <History className="h-4 w-4" />
+                  History
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCommentForm((open) => !open)}
+                >
+                  <MessageSquarePlus className="h-4 w-4" />
+                  Add Comment
+                </Button>
+              </>
+            ) : null}
+            {jobActions.canEdit ? (
+              <Button size="sm" onClick={() => navigate(getJobEditPath(job.id))}>
+                <Pencil className="h-4 w-4 shrink-0" />
+                Edit Job
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
       <Card className="space-y-4 p-4 sm:p-5">
@@ -332,6 +407,16 @@ export function JobDetailsPage() {
           <DetailItem label="Updated At" value={formatJobDate(job.updatedAt)} />
           <DetailItem label="Repeat Job" value={job.isRepeatJob ? 'Yes' : 'No'} />
         </MasterDetailGrid>
+
+        <div className="space-y-2 rounded-lg border bg-background px-3 py-2.5">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Repair Job QR</p>
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
+            <div className="shrink-0 rounded-md border bg-white p-2">
+              <QRCodeSVG value={jobViewUrl} size={76} />
+            </div>
+            <p className="w-full break-all text-center text-xs text-muted-foreground sm:text-left">{jobViewUrl}</p>
+          </div>
+        </div>
 
         <div className="space-y-3">
           <div className="space-y-1 rounded-lg border bg-background px-3 py-2.5">
@@ -394,61 +479,6 @@ export function JobDetailsPage() {
           ) : null}
         </div>
 
-        {canViewJob ? (
-          <div className="hidden flex-wrap gap-2 border-t pt-4 sm:flex">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setAddPartOpen(true)}
-              disabled={!canAddParts}
-            >
-              <PackagePlus className="h-4 w-4" />
-              Add Spare Parts
-            </Button>
-            {!job.isRepeatJob ? (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!canAddParts}
-                onClick={() => {
-                  if (!canAddParts) {
-                    toast.error('You do not have permission to schedule repeat jobs.')
-                    return
-                  }
-                  setRepeatJobOpen(true)
-                }}
-              >
-                <Repeat2 className="h-4 w-4" />
-                {isRepeatEditMode ? 'Edit Repeat Job' : 'Create Repeat Job'}
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => toast.info('Download will be available soon.')}
-            >
-              <Download className="h-4 w-4" />
-              Download
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => toast.info('Job history will be available soon.')}
-            >
-              <History className="h-4 w-4" />
-              History
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowCommentForm((open) => !open)}
-            >
-              <MessageSquarePlus className="h-4 w-4" />
-              Add Comment
-            </Button>
-          </div>
-        ) : null}
-
         {jobParts.length > 0 ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
@@ -505,6 +535,13 @@ export function JobDetailsPage() {
               repeatProcessedAt={job.repeatProcessedAt ?? null}
             />
           ) : null}
+          <JobHistorySheet
+            open={historyOpen}
+            onOpenChange={setHistoryOpen}
+            jobId={job.id}
+            jobIdNumber={job.jobIdNumber}
+            currentStatus={job.status}
+          />
         </>
       ) : null}
 

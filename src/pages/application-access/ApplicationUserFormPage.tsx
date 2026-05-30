@@ -344,7 +344,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
 
     if (mode === 'create') {
       createMutation.mutate({
-        username: values.username.trim(),
+        username: values.username.trim().toLowerCase(),
         fullName: values.fullName.trim(),
         mobileNumber: values.mobileNumber.trim(),
         password: values.password.trim(),
@@ -363,7 +363,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
 
     updateMutation.mutate({
       userId,
-      username: values.username.trim(),
+      username: values.username.trim().toLowerCase(),
       fullName: values.fullName.trim(),
       mobileNumber: values.mobileNumber.trim(),
       isActive: values.isActive,
@@ -460,11 +460,12 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
                   <Input
                     id="username"
                     value={values.username}
-                    onChange={(event) => updateField('username', event.target.value)}
+                    onChange={(event) => updateField('username', event.target.value.toLowerCase())}
                     onBlur={() => blurField('username')}
                     disabled={isSaving}
                     placeholder="rajesh.kumar"
                     autoComplete="off"
+                    autoCapitalize="none"
                     maxLength={50}
                     aria-invalid={Boolean(fieldErrors.username)}
                     aria-busy={isCheckingUsername}

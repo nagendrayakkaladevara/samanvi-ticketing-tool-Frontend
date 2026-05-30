@@ -2,6 +2,7 @@ import type {
   CreateServiceNumberInput,
   ServiceNumber,
   ServiceNumberFormValues,
+  ServiceNumberGridRow,
 } from '@/features/service-numbers/types/service-number'
 
 export const defaultServiceNumberFormValues: ServiceNumberFormValues = {
@@ -42,6 +43,18 @@ export function serviceNumberToFormValues(item: ServiceNumber): ServiceNumberFor
 
 export function compareServiceNumbersByNo(a: ServiceNumber, b: ServiceNumber): number {
   return a.serviceNo.localeCompare(b.serviceNo, undefined, { numeric: true })
+}
+
+export function toServiceNumberGridRow(item: ServiceNumber): ServiceNumberGridRow {
+  return {
+    id: item.id,
+    serviceNo: item.serviceNo,
+    serviceFor: item.serviceFor.serviceFor,
+    route: `${item.from} → ${item.to}`,
+    via: item.via,
+    distanceLabel: formatDistance(item.distance),
+    updatedAtLabel: formatDateTime(item.updatedAt),
+  }
 }
 
 export function formatAmount(value: number): string {

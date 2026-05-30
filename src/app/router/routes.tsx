@@ -13,10 +13,10 @@ import {
   EMPLOYEE_VIEW_CHECKS,
   GARAGE_MASTERS_VIEW_CHECKS,
 } from '@/config/nav-registry'
-import { useFirstAllowedRoute } from '@/hooks/use-app-navigation'
 import { useCurrentUser } from '@/hooks/use-current-user'
 
 import { SettingsPage } from '@/pages/SettingsPage'
+import { WelcomePage } from '@/pages/WelcomePage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { TicketsPage } from '@/pages/TicketsPage'
 import { TicketsByStatusPage } from '@/pages/TicketsByStatusPage'
@@ -63,11 +63,6 @@ function RoleGuard({
   return <>{children}</>
 }
 
-function SmartHomeRedirect() {
-  const firstRoute = useFirstAllowedRoute()
-  return <Navigate to={firstRoute} replace />
-}
-
 export const appRouter = createBrowserRouter([
   {
     element: <PublicOnlyRoute />,
@@ -81,7 +76,7 @@ export const appRouter = createBrowserRouter([
         element: <AppShell />,
         errorElement: <RouteErrorPage embedded />,
         children: [
-          { index: true, element: <SmartHomeRedirect /> },
+          { index: true, element: <WelcomePage /> },
           {
             path: 'tickets',
             element: (

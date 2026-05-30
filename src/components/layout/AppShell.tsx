@@ -26,7 +26,7 @@ export function AppShell() {
           <div className="flex min-w-0 items-center gap-2">
             <SidebarTrigger />
             <Separator orientation="vertical" className="mr-1 hidden h-4 sm:mr-2 sm:block" />
-            <p className="hidden truncate text-sm font-medium sm:block">Samanvi Ticketing Tool</p>
+            <p className="hidden truncate text-sm font-medium sm:block">Samanvi Internal Tool</p>
             <p className="truncate text-sm font-medium sm:hidden">Samanvi</p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
