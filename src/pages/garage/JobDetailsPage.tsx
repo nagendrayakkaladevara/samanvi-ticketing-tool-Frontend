@@ -1,19 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import {
-  ArrowLeft,
-  CalendarClock,
-  Download,
-  History,
-  Loader2,
-  MessageSquarePlus,
-  MoreHorizontal,
-  PackagePlus,
-  Pencil,
-  Repeat2,
-  Trash2,
-  Wrench,
-} from 'lucide-react'
+import { ArrowLeft, Loader2, Trash2 } from 'lucide-react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { toast } from '@/lib/toast'
@@ -31,33 +18,23 @@ import {
 import { MasterDetailGrid } from '@/components/master-detail-grid'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import '@/features/tickets/styles/tickets-grid.css'
 
 import { garageService } from '@/features/garage/api/garage.service'
 import { AddJobPartDialog } from '@/features/garage/components/add-job-part-dialog'
+import { JobDetailsHeader } from '@/features/garage/components/job-details-header'
 import { JobHistorySheet } from '@/features/garage/components/job-history-sheet'
 import { ScheduleRepeatJobDialog } from '@/features/garage/components/schedule-repeat-job-dialog'
-import {
-  formatJobDate,
-  formatJobPriority,
-  formatJobStatus,
-  getPrioritySeverityClass,
-} from '@/features/garage/utils/job-list-model'
+import { formatJobDate, formatJobStatus } from '@/features/garage/utils/job-list-model'
 import {
   formatJobPartAddedAt,
   formatJobPartLineTotal,
   formatJobPartsTotal,
 } from '@/features/garage/utils/job-part-model'
 import { formatRepairPartPrice } from '@/features/garage/utils/repair-part-model'
-import { getJobDetailsPath, getJobEditPath, getRepairTrackingPath } from '@/features/garage/utils/job-routes'
+import { getJobEditPath, getRepairTrackingPath } from '@/features/garage/utils/job-routes'
 import { getJobShareUrl } from '@/features/garage/utils/job-share'
 import {
   formatCommentMeta,
@@ -65,11 +42,7 @@ import {
   validateJobCommentNote,
 } from '@/features/garage/utils/job-activity-model'
 import { downloadRepairJobPdf } from '@/features/garage/utils/download-repair-job-pdf'
-import {
-  formatRepeatScheduledDate,
-  hasPendingRepeatSchedule,
-  hasProcessedRepeatSchedule,
-} from '@/features/garage/utils/job-repeat-model'
+import { hasPendingRepeatSchedule } from '@/features/garage/utils/job-repeat-model'
 import type { RepairJobPart } from '@/features/garage/types/job'
 import { usePermissions, useSubmoduleActions } from '@/hooks/use-permissions'
 import { queryClient } from '@/lib/query/query-client'
@@ -208,7 +181,6 @@ export function JobDetailsPage() {
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
   )
   const isRepeatEditMode = hasPendingRepeatSchedule(job)
-  const prioritySeverity = getPrioritySeverityClass(job.priority)
   const assignedLabel = job.assignedToOfficeStaff
     ? `${job.assignedToOfficeStaff.nickName}${job.assignedToOfficeStaff.designation ? ` (${job.assignedToOfficeStaff.designation})` : ''}`
     : 'Unassigned'
@@ -219,179 +191,26 @@ export function JobDetailsPage() {
 
   return (
     <section className="mx-auto w-full min-w-0 max-w-4xl space-y-5">
-      <header className="space-y-3">
-        <Button
-          variant="ghost"
-          className="-ml-2 h-9 w-fit px-2 sm:-ml-3 sm:px-4"
-          onClick={() => navigate(getRepairTrackingPath())}
-        >
-          <ArrowLeft className="h-4 w-4 shrink-0" />
-          <span className="sm:hidden">Back</span>
-          <span className="hidden sm:inline">Back to repair tracking</span>
-        </Button>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 flex-1 items-start gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 shadow-sm dark:text-orange-400 sm:size-11">
-              <Wrench className="size-5" />
-            </div>
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="font-mono text-xl font-semibold tracking-tight sm:text-2xl">{job.jobIdNumber}</h1>
-                <span
-                  className={`ticket-grid__severity-badge ticket-grid__severity-badge--${prioritySeverity}`}
-                >
-                  {formatJobPriority(job.priority).toUpperCase()}
-                </span>
-                {job.isRepeatJob ? (
-                  <span className="ticket-grid__severity-badge ticket-grid__severity-badge--medium">
-                    Repeat job
-                  </span>
-                ) : null}
-                {hasPendingRepeatSchedule(job) ? (
-                  <span className="ticket-grid__severity-badge ticket-grid__severity-badge--high">
-                    <CalendarClock className="mr-1 inline h-3 w-3" />
-                    Repeat {formatRepeatScheduledDate(job.repeatScheduledFor)}
-                  </span>
-                ) : null}
-                {hasProcessedRepeatSchedule(job) ? (
-                  <span className="ticket-grid__severity-badge ticket-grid__severity-badge--low">
-                    Repeat created
-                  </span>
-                ) : null}
-              </div>
-              {job.isRepeatJob && job.previousJob ? (
-                <p className="text-sm text-muted-foreground">
-                  Follow-up from{' '}
-                  <Link
-                    to={getJobDetailsPath(job.previousJob.id)}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {job.previousJob.jobIdNumber}
-                  </Link>
-                </p>
-              ) : null}
-              <p className="text-sm text-muted-foreground capitalize">{formatJobStatus(job.status)}</p>
-            </div>
-          </div>
-          <div className="flex w-full gap-2 sm:hidden">
-            {jobActions.canEdit ? (
-              <Button className="min-w-0 flex-1" onClick={() => navigate(getJobEditPath(job.id))}>
-                <Pencil className="h-4 w-4 shrink-0" />
-                Edit Job
-              </Button>
-            ) : null}
-            {canViewJob ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={cn('shrink-0 gap-1.5', !jobActions.canEdit && 'flex-1')}
-                    aria-label="Job actions"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                    Actions
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem disabled={!canAddParts} onClick={() => setAddPartOpen(true)}>
-                    <PackagePlus className="h-4 w-4" />
-                    Add Spare Parts
-                  </DropdownMenuItem>
-                  {!job.isRepeatJob ? (
-                    <DropdownMenuItem
-                      disabled={!canAddParts}
-                      onClick={() => {
-                        if (!canAddParts) {
-                          toast.error('You do not have permission to schedule repeat jobs.')
-                          return
-                        }
-                        setRepeatJobOpen(true)
-                      }}
-                    >
-                      <Repeat2 className="h-4 w-4" />
-                      {isRepeatEditMode ? 'Edit Repeat Job' : 'Create Repeat Job'}
-                    </DropdownMenuItem>
-                  ) : null}
-                  <DropdownMenuItem onClick={handleDownloadPdf}>
-                    <Download className="h-4 w-4" />
-                    Download
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setHistoryOpen(true)}>
-                    <History className="h-4 w-4" />
-                    History
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowCommentForm((open) => !open)}>
-                    <MessageSquarePlus className="h-4 w-4" />
-                    Add Comment
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : null}
-          </div>
-        </div>
-
-        {canViewJob || jobActions.canEdit ? (
-          <div className="hidden flex-wrap items-center justify-end gap-2 border-t pt-3 sm:flex">
-            {canViewJob ? (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAddPartOpen(true)}
-                  disabled={!canAddParts}
-                >
-                  <PackagePlus className="h-4 w-4" />
-                  Add Spare Parts
-                </Button>
-                {!job.isRepeatJob ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!canAddParts}
-                    onClick={() => {
-                      if (!canAddParts) {
-                        toast.error('You do not have permission to schedule repeat jobs.')
-                        return
-                      }
-                      setRepeatJobOpen(true)
-                    }}
-                  >
-                    <Repeat2 className="h-4 w-4" />
-                    {isRepeatEditMode ? 'Edit Repeat Job' : 'Create Repeat Job'}
-                  </Button>
-                ) : null}
-                <Button type="button" variant="outline" size="sm" onClick={handleDownloadPdf}>
-                  <Download className="h-4 w-4" />
-                  Download
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
-                  <History className="h-4 w-4" />
-                  History
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCommentForm((open) => !open)}
-                >
-                  <MessageSquarePlus className="h-4 w-4" />
-                  Add Comment
-                </Button>
-              </>
-            ) : null}
-            {jobActions.canEdit ? (
-              <Button size="sm" onClick={() => navigate(getJobEditPath(job.id))}>
-                <Pencil className="h-4 w-4 shrink-0" />
-                Edit Job
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-      </header>
+      <JobDetailsHeader
+        job={job}
+        canViewJob={canViewJob}
+        canEditJob={jobActions.canEdit}
+        canAddParts={canAddParts}
+        isRepeatEditMode={isRepeatEditMode}
+        onBack={() => navigate(getRepairTrackingPath())}
+        onEdit={() => navigate(getJobEditPath(job.id))}
+        onAddPart={() => setAddPartOpen(true)}
+        onScheduleRepeat={() => {
+          if (!canAddParts) {
+            toast.error('You do not have permission to schedule repeat jobs.')
+            return
+          }
+          setRepeatJobOpen(true)
+        }}
+        onDownload={handleDownloadPdf}
+        onHistory={() => setHistoryOpen(true)}
+        onToggleComment={() => setShowCommentForm((open) => !open)}
+      />
 
       <Card className="space-y-4 p-4 sm:p-5">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Job Details</h2>
