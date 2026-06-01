@@ -1,4 +1,6 @@
 import { apiClient } from '@/lib/api/client'
+import { resolveEntityId } from '@/lib/utils/master-api'
+import type { JobPriority, JobStatus } from '@/features/garage/types/job'
 import type {
   AddJobCommentInput,
   AddJobPartInput,
@@ -137,6 +139,29 @@ export function collectLeafRepairCategories(
   }
 
   return result
+}
+
+const JOB_PRIORITIES: JobPriority[] = ['low', 'medium', 'high', 'urgent']
+const JOB_STATUSES: JobStatus[] = [
+  'created',
+  'assigned',
+  'in_progress',
+  'on_hold',
+  'completed',
+  'closed',
+  'cancelled',
+]
+
+function normalizeJobPriority(raw: unknown): JobPriority | undefined {
+  const normalized = normalizeString(raw)?.toLowerCase()
+  if (!normalized) return undefined
+  return JOB_PRIORITIES.includes(normalized as JobPriority) ? (normalized as JobPriority) : undefined
+}
+
+function normalizeJobStatus(raw: unknown): JobStatus | undefined {
+  const normalized = normalizeString(raw)?.toLowerCase().replace(/\s+/g, '_')
+  if (!normalized) return undefined
+  return JOB_STATUSES.includes(normalized as JobStatus) ? (normalized as JobStatus) : undefined
 }
 
 function normalizeUnitPriceString(raw: unknown): string | undefined {
@@ -299,11 +324,11 @@ function normalizeRepairJobPart(raw: unknown): RepairJobPart | null {
 function normalizeRepairJob(raw: unknown): RepairJob | null {
   if (!raw || typeof raw !== 'object') return null
   const value = raw as Record<string, unknown>
-  const id = normalizeString(value.id)
+  const id = resolveEntityId(value) ?? normalizeString(value.id)
   const jobIdNumber = normalizeString(value.jobIdNumber)
   const description = normalizeString(value.description)
-  const priority = normalizeString(value.priority) as RepairJob['priority'] | undefined
-  const status = normalizeString(value.status) as RepairJob['status'] | undefined
+  const priority = normalizeJobPriority(value.priority)
+  const status = normalizeJobStatus(value.status)
   const odometerReading =
     typeof value.odometerReading === 'number' ? value.odometerReading : Number(value.odometerReading)
 
@@ -321,9 +346,9 @@ function normalizeRepairJob(raw: unknown): RepairJob | null {
 
   const bus = busRaw as Record<string, unknown>
   const category = categoryRaw as Record<string, unknown>
-  const busId = normalizeString(bus.id)
+  const busId = resolveEntityId(bus)
   const busNumber = normalizeString(bus.busNumber)
-  const categoryId = normalizeString(category.id)
+  const categoryId = resolveEntityId(category)
   const categoryName = normalizeString(category.name)
   const categoryLevel = typeof category.level === 'number' ? category.level : Number(category.level)
 
@@ -331,31 +356,61 @@ function normalizeRepairJob(raw: unknown): RepairJob | null {
     return null
   }
 
+  const reportedDriverRaw = value.reportedDriver
+  const reportedDriverId =
+    reportedDriverRaw && typeof reportedDriverRaw === 'object'
+      ? resolveEntityId(reportedDriverRaw as Record<string, unknown>)
+      : normalizeString(value.reportedDriverId)
+
   const reportedDriver =
-    value.reportedDriver && typeof value.reportedDriver === 'object'
+    reportedDriverId && reportedDriverRaw && typeof reportedDriverRaw === 'object'
       ? {
-          id: normalizeString((value.reportedDriver as Record<string, unknown>).id) ?? '',
+          id: reportedDriverId,
           driverIdNumber:
-            normalizeString((value.reportedDriver as Record<string, unknown>).driverIdNumber) ?? '',
-          aadharName:
-            normalizeString((value.reportedDriver as Record<string, unknown>).aadharName) ?? '',
-          dlName: normalizeString((value.reportedDriver as Record<string, unknown>).dlName) ?? '',
+            normalizeString((reportedDriverRaw as Record<string, unknown>).driverIdNumber) ?? '',
+          aadharName: normalizeString((reportedDriverRaw as Record<string, unknown>).aadharName) ?? '',
+          dlName: normalizeString((reportedDriverRaw as Record<string, unknown>).dlName) ?? '',
         }
-      : null
+      : reportedDriverId
+        ? {
+            id: reportedDriverId,
+            driverIdNumber: '',
+            aadharName: '',
+            dlName: '',
+          }
+        : null
+
+  const assignedToOfficeStaffRaw = value.assignedToOfficeStaff
+  const assignedToOfficeStaffId =
+    assignedToOfficeStaffRaw && typeof assignedToOfficeStaffRaw === 'object'
+      ? resolveEntityId(assignedToOfficeStaffRaw as Record<string, unknown>)
+      : normalizeString(value.assignedToOfficeStaffId)
 
   const assignedToOfficeStaff =
-    value.assignedToOfficeStaff && typeof value.assignedToOfficeStaff === 'object'
+    assignedToOfficeStaffId &&
+    assignedToOfficeStaffRaw &&
+    typeof assignedToOfficeStaffRaw === 'object'
       ? {
-          id: normalizeString((value.assignedToOfficeStaff as Record<string, unknown>).id) ?? '',
+          id: assignedToOfficeStaffId,
           staffIdNumber:
-            normalizeString((value.assignedToOfficeStaff as Record<string, unknown>).staffIdNumber) ?? '',
-          nickName: normalizeString((value.assignedToOfficeStaff as Record<string, unknown>).nickName) ?? '',
+            normalizeString((assignedToOfficeStaffRaw as Record<string, unknown>).staffIdNumber) ??
+            '',
+          nickName:
+            normalizeString((assignedToOfficeStaffRaw as Record<string, unknown>).nickName) ?? '',
           aadharName:
-            normalizeString((value.assignedToOfficeStaff as Record<string, unknown>).aadharName) ?? '',
+            normalizeString((assignedToOfficeStaffRaw as Record<string, unknown>).aadharName) ?? '',
           designation:
-            normalizeString((value.assignedToOfficeStaff as Record<string, unknown>).designation) ?? '',
+            normalizeString((assignedToOfficeStaffRaw as Record<string, unknown>).designation) ?? '',
         }
-      : null
+      : assignedToOfficeStaffId
+        ? {
+            id: assignedToOfficeStaffId,
+            staffIdNumber: '',
+            nickName: '',
+            aadharName: '',
+            designation: '',
+          }
+        : null
 
   const createdBy =
     createdByRaw && typeof createdByRaw === 'object'
