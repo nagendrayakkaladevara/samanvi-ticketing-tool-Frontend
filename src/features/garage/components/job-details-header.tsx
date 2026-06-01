@@ -20,9 +20,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { EditableJobStatus } from '@/features/garage/components/editable-job-status'
 import {
   formatJobPriority,
-  formatJobStatus,
   getPrioritySeverityClass,
 } from '@/features/garage/utils/job-list-model'
 import {
@@ -31,7 +31,7 @@ import {
   hasProcessedRepeatSchedule,
 } from '@/features/garage/utils/job-repeat-model'
 import { getJobDetailsPath } from '@/features/garage/utils/job-routes'
-import type { JobPriority, JobStatus, RepairJob } from '@/features/garage/types/job'
+import type { JobPriority, RepairJob } from '@/features/garage/types/job'
 import { cn } from '@/lib/utils'
 
 type JobDetailsHeaderProps = {
@@ -49,13 +49,6 @@ type JobDetailsHeaderProps = {
   onToggleComment: () => void
 }
 
-function StatusPill({ status }: { status: JobStatus }) {
-  return (
-    <span className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-0.5 text-xs font-medium capitalize text-foreground">
-      {formatJobStatus(status)}
-    </span>
-  )
-}
 
 function PriorityPill({ priority }: { priority: JobPriority }) {
   const severity = getPrioritySeverityClass(priority)
@@ -231,7 +224,7 @@ export function JobDetailsHeader({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <StatusPill status={job.status} />
+              <EditableJobStatus jobId={job.id} status={job.status} canEdit={canEditJob} />
               <PriorityPill priority={job.priority} />
               {job.isRepeatJob ? (
                 <span className="inline-flex items-center rounded-md border border-dashed border-border bg-muted/30 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">

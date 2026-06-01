@@ -24,10 +24,11 @@ import '@/features/tickets/styles/tickets-grid.css'
 
 import { garageService } from '@/features/garage/api/garage.service'
 import { AddJobPartDialog } from '@/features/garage/components/add-job-part-dialog'
+import { EditableJobStatus } from '@/features/garage/components/editable-job-status'
 import { JobDetailsHeader } from '@/features/garage/components/job-details-header'
 import { JobHistorySheet } from '@/features/garage/components/job-history-sheet'
 import { ScheduleRepeatJobDialog } from '@/features/garage/components/schedule-repeat-job-dialog'
-import { formatJobDate, formatJobStatus } from '@/features/garage/utils/job-list-model'
+import { formatJobDate } from '@/features/garage/utils/job-list-model'
 import {
   formatJobPartAddedAt,
   formatJobPartLineTotal,
@@ -217,7 +218,15 @@ export function JobDetailsPage() {
         <MasterDetailGrid columns="threeColLg">
           <DetailItem label="Bus Number" value={job.bus.busNumber} />
           <DetailItem label="Repair Category" value={job.repairCategory.name} />
-          <DetailItem label="Status" value={formatJobStatus(job.status)} className="capitalize" />
+          <div className="space-y-1 rounded-lg border bg-muted/20 px-3 py-2.5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</p>
+            <EditableJobStatus
+              jobId={job.id}
+              status={job.status}
+              canEdit={jobActions.canEdit}
+              className="text-sm"
+            />
+          </div>
           <DetailItem label="Odometer (km)" value={job.odometerReading.toLocaleString()} />
           <DetailItem label="Assigned To" value={assignedLabel} />
           <DetailItem label="Reported Driver" value={driverLabel} />
