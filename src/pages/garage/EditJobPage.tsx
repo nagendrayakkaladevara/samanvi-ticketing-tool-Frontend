@@ -1,5 +1,5 @@
 import type { ComponentType, FormEventHandler } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Gauge, Loader2, UserRound, Wrench } from 'lucide-react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
@@ -19,7 +19,7 @@ import { useOfficeStaffQuery } from '@/features/employees/hooks/use-office-staff
 import { garageService } from '@/features/garage/api/garage.service'
 import { RepairCategoryPicker } from '@/features/garage/components/repair-category-picker'
 import { useRepairCategoriesQuery } from '@/features/garage/hooks/use-repair-categories-query'
-import type { JobPriority, JobStatus } from '@/features/garage/types/job'
+import type { JobPriority, JobStatus, RepairJob } from '@/features/garage/types/job'
 import { getCreateJobFieldError } from '@/features/garage/hooks/use-create-job-form'
 import { getJobDetailsPath, getRepairTrackingPath } from '@/features/garage/utils/job-routes'
 import { queryClient } from '@/lib/query/query-client'
@@ -44,6 +44,7 @@ const statusOptions: Array<{ value: JobStatus; label: string }> = [
   { value: 'in_progress', label: 'In progress' },
   { value: 'on_hold', label: 'On hold' },
   { value: 'completed', label: 'Completed' },
+  { value: 'closed', label: 'Closed' },
   { value: 'cancelled', label: 'Cancelled' },
 ]
 
@@ -69,28 +70,28 @@ function SectionHeader({
   )
 }
 
-export function EditJobPage() {
-  const navigate = useNavigate()
-  const { jobId } = useParams()
+type EditJobFormProps = {
+  job: RepairJob
+  jobId: string
+}
 
-  const [odometerReading, setOdometerReading] = useState('')
-  const [repairCategoryId, setRepairCategoryId] = useState('')
-  const [priority, setPriority] = useState<JobPriority>('medium')
-  const [status, setStatus] = useState<JobStatus>('created')
-  const [description, setDescription] = useState('')
-  const [reportedDriverId, setReportedDriverId] = useState('')
-  const [assignedToOfficeStaffId, setAssignedToOfficeStaffId] = useState('')
+function EditJobForm({ job, jobId }: EditJobFormProps) {
+  const navigate = useNavigate()
+
+  const [odometerReading, setOdometerReading] = useState(() => String(job.odometerReading))
+  const [repairCategoryId, setRepairCategoryId] = useState(() => job.repairCategory.id)
+  const [priority, setPriority] = useState<JobPriority>(() => job.priority)
+  const [status, setStatus] = useState<JobStatus>(() => job.status)
+  const [description, setDescription] = useState(() => job.description)
+  const [reportedDriverId, setReportedDriverId] = useState(() => job.reportedDriver?.id ?? '')
+  const [assignedToOfficeStaffId, setAssignedToOfficeStaffId] = useState(
+    () => job.assignedToOfficeStaff?.id ?? '',
+  )
   const [errors, setErrors] = useState<{
     odometerReading?: string
     repairCategoryId?: string
     description?: string
   }>({})
-
-  const { data: job, isLoading: isJobLoading, isError: isJobError } = useQuery({
-    queryKey: ['garage', 'jobs', jobId],
-    queryFn: () => garageService.getJob(jobId!),
-    enabled: Boolean(jobId),
-  })
 
   const { data: categoriesData, isLoading: isCategoriesLoading } = useRepairCategoriesQuery()
   const categoryTree = categoriesData?.tree ?? []
@@ -102,21 +103,18 @@ export function EditJobPage() {
     [officeStaffRaw],
   )
 
-  useEffect(() => {
-    if (!job) return
-    setOdometerReading(String(job.odometerReading))
-    setRepairCategoryId(job.repairCategory.id)
-    setPriority(job.priority)
-    setStatus(job.status)
-    setDescription(job.description)
-    setReportedDriverId(job.reportedDriver?.id ?? '')
-    setAssignedToOfficeStaffId(job.assignedToOfficeStaff?.id ?? '')
-  }, [job])
+  const currentDriverInList = Boolean(
+    job.reportedDriver?.id && drivers.some((driver) => driver.id === job.reportedDriver?.id),
+  )
+  const currentStaffInList = Boolean(
+    job.assignedToOfficeStaff?.id &&
+      officeStaff.some((staff) => staff.id === job.assignedToOfficeStaff?.id),
+  )
 
   const updateMutation = useMutation({
     mutationFn: () =>
       garageService.updateJob({
-        jobId: jobId!,
+        jobId,
         odometerReading: Number(odometerReading.trim()),
         repairCategoryId,
         priority,
@@ -183,35 +181,8 @@ export function EditJobPage() {
 
   const isSubmitting = updateMutation.isPending
 
-  if (!jobId) {
-    return <Navigate to={getRepairTrackingPath()} replace />
-  }
-
-  if (isJobLoading) {
-    return (
-      <section className="mx-auto w-full min-w-0 max-w-3xl space-y-6">
-        <Skeleton className="h-9 w-48" />
-        <Skeleton className="h-64 w-full rounded-xl" />
-      </section>
-    )
-  }
-
-  if (isJobError || !job) {
-    return (
-      <section className="mx-auto w-full min-w-0 max-w-3xl space-y-4">
-        <Button variant="ghost" onClick={() => navigate(getRepairTrackingPath())}>
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-        <Card className="border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          Repair job not found.
-        </Card>
-      </section>
-    )
-  }
-
   return (
-    <section className="mx-auto w-full min-w-0 max-w-3xl space-y-6">
+    <>
       <header className="space-y-3">
         <Button
           variant="ghost"
@@ -280,9 +251,13 @@ export function EditJobPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <FormLabel required>Priority</FormLabel>
-              <Select value={priority} onValueChange={(value) => setPriority(value as JobPriority)} disabled={isSubmitting}>
+              <Select
+                value={priority}
+                onValueChange={(value) => setPriority(value as JobPriority)}
+                disabled={isSubmitting}
+              >
                 <SelectTrigger className={selectTriggerClass}>
-                  <SelectValue />
+                  <SelectValue placeholder="Select priority" />
                 </SelectTrigger>
                 <SelectContent>
                   {priorityOptions.map((option) => (
@@ -295,9 +270,13 @@ export function EditJobPage() {
             </div>
             <div className="space-y-2">
               <FormLabel required>Status</FormLabel>
-              <Select value={status} onValueChange={(value) => setStatus(value as JobStatus)} disabled={isSubmitting}>
+              <Select
+                value={status}
+                onValueChange={(value) => setStatus(value as JobStatus)}
+                disabled={isSubmitting}
+              >
                 <SelectTrigger className={selectTriggerClass}>
-                  <SelectValue />
+                  <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
                   {statusOptions.map((option) => (
@@ -350,6 +329,12 @@ export function EditJobPage() {
                   <SelectItem value="__none" className={selectItemClass}>
                     None
                   </SelectItem>
+                  {job.reportedDriver && !currentDriverInList ? (
+                    <SelectItem value={job.reportedDriver.id} className={selectItemClass}>
+                      {job.reportedDriver.driverIdNumber || job.reportedDriver.id} —{' '}
+                      {job.reportedDriver.aadharName || job.reportedDriver.dlName || 'Current driver'}
+                    </SelectItem>
+                  ) : null}
                   {drivers.map((driver) => (
                     <SelectItem key={driver.id} value={driver.id} className={selectItemClass}>
                       {driver.driverIdNumber} — {driver.aadharName}
@@ -373,6 +358,14 @@ export function EditJobPage() {
                   <SelectItem value="__none" className={selectItemClass}>
                     None
                   </SelectItem>
+                  {job.assignedToOfficeStaff && !currentStaffInList ? (
+                    <SelectItem value={job.assignedToOfficeStaff.id} className={selectItemClass}>
+                      {job.assignedToOfficeStaff.staffIdNumber || job.assignedToOfficeStaff.id} —{' '}
+                      {job.assignedToOfficeStaff.nickName ||
+                        job.assignedToOfficeStaff.aadharName ||
+                        'Current assignee'}
+                    </SelectItem>
+                  ) : null}
                   {officeStaff.map((staff) => (
                     <SelectItem key={staff.id} value={staff.id} className={selectItemClass}>
                       {staff.staffIdNumber} — {staff.nickName}
@@ -402,6 +395,50 @@ export function EditJobPage() {
           </Card>
         </div>
       </form>
+    </>
+  )
+}
+
+export function EditJobPage() {
+  const navigate = useNavigate()
+  const { jobId } = useParams()
+
+  const { data: job, isLoading: isJobLoading, isError: isJobError } = useQuery({
+    queryKey: ['garage', 'jobs', jobId],
+    queryFn: () => garageService.getJob(jobId!),
+    enabled: Boolean(jobId),
+  })
+
+  if (!jobId) {
+    return <Navigate to={getRepairTrackingPath()} replace />
+  }
+
+  if (isJobLoading) {
+    return (
+      <section className="mx-auto w-full min-w-0 max-w-3xl space-y-6">
+        <Skeleton className="h-9 w-48" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </section>
+    )
+  }
+
+  if (isJobError || !job) {
+    return (
+      <section className="mx-auto w-full min-w-0 max-w-3xl space-y-4">
+        <Button variant="ghost" onClick={() => navigate(getRepairTrackingPath())}>
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+        <Card className="border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          Repair job not found.
+        </Card>
+      </section>
+    )
+  }
+
+  return (
+    <section className="mx-auto w-full min-w-0 max-w-3xl space-y-6">
+      <EditJobForm key={job.id} job={job} jobId={jobId} />
     </section>
   )
 }
