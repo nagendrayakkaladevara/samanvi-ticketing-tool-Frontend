@@ -22,6 +22,7 @@ import { useRepairCategoriesQuery } from '@/features/garage/hooks/use-repair-cat
 import type { JobPriority, JobStatus, RepairJob } from '@/features/garage/types/job'
 import { getCreateJobFieldError } from '@/features/garage/hooks/use-create-job-form'
 import { getJobDetailsPath, getRepairTrackingPath } from '@/features/garage/utils/job-routes'
+import { jobStatusOptions } from '@/features/garage/utils/job-status-options'
 import { queryClient } from '@/lib/query/query-client'
 import { invalidFieldClass } from '@/lib/form/form-field-styles'
 import { cn } from '@/lib/utils'
@@ -36,16 +37,6 @@ const priorityOptions: Array<{ value: JobPriority; label: string }> = [
   { value: 'medium', label: 'Medium' },
   { value: 'high', label: 'High' },
   { value: 'urgent', label: 'Urgent' },
-]
-
-const statusOptions: Array<{ value: JobStatus; label: string }> = [
-  { value: 'created', label: 'Created' },
-  { value: 'assigned', label: 'Assigned' },
-  { value: 'in_progress', label: 'In progress' },
-  { value: 'on_hold', label: 'On hold' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'closed', label: 'Closed' },
-  { value: 'cancelled', label: 'Cancelled' },
 ]
 
 function SectionHeader({
@@ -279,7 +270,7 @@ function EditJobForm({ job, jobId }: EditJobFormProps) {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {statusOptions.map((option) => (
+                  {jobStatusOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value} className={selectItemClass}>
                       {option.label}
                     </SelectItem>
