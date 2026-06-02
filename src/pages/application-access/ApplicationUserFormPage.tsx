@@ -25,6 +25,10 @@ import {
   type ApplicationUser,
 } from '@/features/application-users/types/application-user'
 import { applicationAccessRoutes } from '@/features/application-users/utils/application-access-routes'
+import {
+  mergePermissionIdsForSave,
+  partitionPermissionIds,
+} from '@/features/application-users/utils/permission-tree'
 import { usePermissions } from '@/hooks/use-permissions'
 import { invalidFieldClass } from '@/lib/form/form-field-styles'
 import { queryClient } from '@/lib/query/query-client'
@@ -143,6 +147,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [usernameAvailability, setUsernameAvailability] = useState<UsernameAvailabilityStatus>('idle')
   const originalUsernameRef = useRef('')
+  const preservedHiddenPermissionIdsRef = useRef<string[]>([])
   const initializedUserIdRef = useRef<string | null>(null)
   const usernameCheckRequestIdRef = useRef(0)
   const valuesRef = useRef(values)
@@ -173,22 +178,32 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
     if (mode === 'create') {
       initializedUserIdRef.current = null
       originalUsernameRef.current = ''
+      preservedHiddenPermissionIdsRef.current = []
       setValues(getDefaultValues())
       setUsernameAvailability('idle')
       setFieldErrors({})
       return
     }
 
-    if (!editingUser || initializedUserIdRef.current === editingUser.id) {
+    if (!editingUser || !permissionsCatalog || initializedUserIdRef.current === editingUser.id) {
       return
     }
 
+    const { visibleIds, hiddenIds } = partitionPermissionIds(
+      permissionsCatalog.items,
+      editingUser.permissionIds,
+    )
+    preservedHiddenPermissionIdsRef.current = hiddenIds
+
     initializedUserIdRef.current = editingUser.id
     originalUsernameRef.current = editingUser.username.trim()
-    setValues(getValuesFromEditingUser(editingUser))
+    setValues({
+      ...getValuesFromEditingUser(editingUser),
+      permissionIds: visibleIds,
+    })
     setUsernameAvailability('available')
     setFieldErrors({})
-  }, [mode, editingUser])
+  }, [mode, editingUser, permissionsCatalog])
 
   const updateField = <K extends ApplicationUserFormField>(field: K, value: ApplicationUserFormValues[K]) => {
     setValues((prev) => ({ ...prev, [field]: value }))
@@ -361,6 +376,10 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
       return
     }
 
+    const permissionIds = canManagePermissions
+      ? mergePermissionIdsForSave(values.permissionIds, preservedHiddenPermissionIdsRef.current)
+      : []
+
     updateMutation.mutate({
       userId,
       username: values.username.trim().toLowerCase(),
@@ -368,7 +387,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
       mobileNumber: values.mobileNumber.trim(),
       isActive: values.isActive,
       email: values.email.trim() ? values.email.trim() : null,
-      permissionIds: canManagePermissions ? values.permissionIds : [],
+      permissionIds,
       assignPermissions: canManagePermissions,
       ...(!isAdminUser ? { userType: values.userType } : {}),
       ...(values.password.trim() ? { password: values.password.trim() } : {}),
