@@ -27,6 +27,7 @@ import { AddJobPartDialog } from '@/features/garage/components/add-job-part-dial
 import { JobDetailsHeader } from '@/features/garage/components/job-details-header'
 import { JobHistorySheet } from '@/features/garage/components/job-history-sheet'
 import { ScheduleRepeatJobDialog } from '@/features/garage/components/schedule-repeat-job-dialog'
+import { UpdateJobStatusDialog } from '@/features/garage/components/update-job-status-dialog'
 import { formatJobDate, formatJobStatus } from '@/features/garage/utils/job-list-model'
 import {
   formatJobPartAddedAt,
@@ -75,6 +76,7 @@ export function JobDetailsPage() {
   const [addPartOpen, setAddPartOpen] = useState(false)
   const [repeatJobOpen, setRepeatJobOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false)
   const [showCommentForm, setShowCommentForm] = useState(false)
   const [commentNote, setCommentNote] = useState('')
   const [removePartTarget, setRemovePartTarget] = useState<RepairJobPart | null>(null)
@@ -210,6 +212,7 @@ export function JobDetailsPage() {
         onDownload={handleDownloadPdf}
         onHistory={() => setHistoryOpen(true)}
         onToggleComment={() => setShowCommentForm((open) => !open)}
+        onUpdateStatus={() => setStatusDialogOpen(true)}
       />
 
       <Card className="space-y-4 p-4 sm:p-5">
@@ -224,6 +227,9 @@ export function JobDetailsPage() {
           <DetailItem label="Created By" value={job.createdBy.displayName || job.createdBy.username || 'Unknown'} />
           <DetailItem label="Created At" value={formatJobDate(job.createdAt)} />
           <DetailItem label="Updated At" value={formatJobDate(job.updatedAt)} />
+          {job.closedAt ? (
+            <DetailItem label="Closed At" value={formatJobDate(job.closedAt)} />
+          ) : null}
           <DetailItem label="Repeat Job" value={job.isRepeatJob ? 'Yes' : 'No'} />
         </MasterDetailGrid>
 
@@ -360,6 +366,11 @@ export function JobDetailsPage() {
             jobId={job.id}
             jobIdNumber={job.jobIdNumber}
             currentStatus={job.status}
+          />
+          <UpdateJobStatusDialog
+            job={job}
+            open={statusDialogOpen}
+            onOpenChange={setStatusDialogOpen}
           />
         </>
       ) : null}

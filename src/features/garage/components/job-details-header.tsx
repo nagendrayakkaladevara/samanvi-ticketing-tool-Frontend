@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  ArrowRightLeft,
   CalendarClock,
   Download,
   History,
@@ -30,6 +31,7 @@ import {
   hasPendingRepeatSchedule,
   hasProcessedRepeatSchedule,
 } from '@/features/garage/utils/job-repeat-model'
+import { isTerminalJobStatus } from '@/features/garage/utils/job-status-transition'
 import { getJobDetailsPath } from '@/features/garage/utils/job-routes'
 import type { JobPriority, JobStatus, RepairJob } from '@/features/garage/types/job'
 import { cn } from '@/lib/utils'
@@ -47,6 +49,7 @@ type JobDetailsHeaderProps = {
   onDownload: () => void
   onHistory: () => void
   onToggleComment: () => void
+  onUpdateStatus: () => void
 }
 
 function StatusPill({ status }: { status: JobStatus }) {
@@ -115,6 +118,7 @@ function RepeatContext({ job }: { job: RepairJob }) {
 function JobActionsMenu({
   job,
   canViewJob,
+  canEditJob,
   canAddParts,
   isRepeatEditMode,
   onAddPart,
@@ -122,10 +126,12 @@ function JobActionsMenu({
   onDownload,
   onHistory,
   onToggleComment,
+  onUpdateStatus,
 }: Pick<
   JobDetailsHeaderProps,
   | 'job'
   | 'canViewJob'
+  | 'canEditJob'
   | 'canAddParts'
   | 'isRepeatEditMode'
   | 'onAddPart'
@@ -133,8 +139,11 @@ function JobActionsMenu({
   | 'onDownload'
   | 'onHistory'
   | 'onToggleComment'
+  | 'onUpdateStatus'
 >) {
   if (!canViewJob) return null
+
+  const canUpdateStatus = canEditJob && !isTerminalJobStatus(job.status)
 
   return (
     <DropdownMenu>
@@ -166,6 +175,12 @@ function JobActionsMenu({
               <History className="size-4" />
               View history
             </DropdownMenuItem>
+            {canUpdateStatus ? (
+              <DropdownMenuItem onClick={onUpdateStatus}>
+                <ArrowRightLeft className="size-4" />
+                Update status
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem onClick={onToggleComment}>
               <MessageSquarePlus className="size-4" />
               Add comment
@@ -190,6 +205,7 @@ export function JobDetailsHeader({
   onDownload,
   onHistory,
   onToggleComment,
+  onUpdateStatus,
 }: JobDetailsHeaderProps) {
   const repeatContext = <RepeatContext job={job} />
   const showActions = canViewJob || canEditJob
@@ -246,14 +262,29 @@ export function JobDetailsHeader({
           {showActions ? (
             <div className="flex w-full shrink-0 gap-2 sm:w-auto">
               {canEditJob ? (
-                <Button size="sm" className="min-w-0 flex-1 sm:flex-initial" onClick={onEdit}>
-                  <Pencil className="size-4 shrink-0" />
-                  Edit job
-                </Button>
+                <>
+                  {!isTerminalJobStatus(job.status) ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="min-w-0 flex-1 sm:flex-initial"
+                      onClick={onUpdateStatus}
+                    >
+                      <ArrowRightLeft className="size-4 shrink-0" />
+                      Update status
+                    </Button>
+                  ) : null}
+                  <Button size="sm" className="min-w-0 flex-1 sm:flex-initial" onClick={onEdit}>
+                    <Pencil className="size-4 shrink-0" />
+                    Edit job
+                  </Button>
+                </>
               ) : null}
               <JobActionsMenu
                 job={job}
                 canViewJob={canViewJob}
+                canEditJob={canEditJob}
                 canAddParts={canAddParts}
                 isRepeatEditMode={isRepeatEditMode}
                 onAddPart={onAddPart}
@@ -261,6 +292,7 @@ export function JobDetailsHeader({
                 onDownload={onDownload}
                 onHistory={onHistory}
                 onToggleComment={onToggleComment}
+                onUpdateStatus={onUpdateStatus}
               />
             </div>
           ) : null}
