@@ -22,6 +22,15 @@ import { useRepairCategoriesQuery } from '@/features/garage/hooks/use-repair-cat
 import type { JobPriority, JobStatus, RepairJob } from '@/features/garage/types/job'
 import { getCreateJobFieldError } from '@/features/garage/hooks/use-create-job-form'
 import { getJobDetailsPath, getRepairTrackingPath } from '@/features/garage/utils/job-routes'
+import { formatJobStatus } from '@/features/garage/utils/job-list-model'
+import {
+  getInvalidStatusTransitionMessage,
+  getSelectableStatusOptions,
+  isNoteRequiredForTransition,
+  isTerminalJobStatus,
+  STATUS_NOTE_MAX_LENGTH,
+  validateStatusChangeNote,
+} from '@/features/garage/utils/job-status-transition'
 import { queryClient } from '@/lib/query/query-client'
 import { invalidFieldClass } from '@/lib/form/form-field-styles'
 import { cn } from '@/lib/utils'
@@ -36,16 +45,6 @@ const priorityOptions: Array<{ value: JobPriority; label: string }> = [
   { value: 'medium', label: 'Medium' },
   { value: 'high', label: 'High' },
   { value: 'urgent', label: 'Urgent' },
-]
-
-const statusOptions: Array<{ value: JobStatus; label: string }> = [
-  { value: 'created', label: 'Created' },
-  { value: 'assigned', label: 'Assigned' },
-  { value: 'in_progress', label: 'In progress' },
-  { value: 'on_hold', label: 'On hold' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'closed', label: 'Closed' },
-  { value: 'cancelled', label: 'Cancelled' },
 ]
 
 function SectionHeader({
@@ -87,11 +86,27 @@ function EditJobForm({ job, jobId }: EditJobFormProps) {
   const [assignedToOfficeStaffId, setAssignedToOfficeStaffId] = useState(
     () => job.assignedToOfficeStaff?.id ?? '',
   )
+  const [statusChangeNote, setStatusChangeNote] = useState('')
   const [errors, setErrors] = useState<{
     odometerReading?: string
     repairCategoryId?: string
     description?: string
+    statusChangeNote?: string
   }>({})
+
+  const initialStatus = job.status
+  const hasStatusChanged = status !== initialStatus
+  const statusOptions = useMemo(
+    () =>
+      getSelectableStatusOptions(initialStatus).map((value) => ({
+        value,
+        label: formatJobStatus(value),
+      })),
+    [initialStatus],
+  )
+  const isStatusLocked = isTerminalJobStatus(initialStatus)
+  const isStatusNoteRequired = hasStatusChanged && isNoteRequiredForTransition(status)
+  const showStatusChangeNote = hasStatusChanged
 
   const { data: categoriesData, isLoading: isCategoriesLoading } = useRepairCategoriesQuery()
   const categoryTree = categoriesData?.tree ?? []
@@ -112,8 +127,9 @@ function EditJobForm({ job, jobId }: EditJobFormProps) {
   )
 
   const updateMutation = useMutation({
-    mutationFn: () =>
-      garageService.updateJob({
+    mutationFn: () => {
+      const trimmedNote = statusChangeNote.trim()
+      return garageService.updateJob({
         jobId,
         odometerReading: Number(odometerReading.trim()),
         repairCategoryId,
@@ -122,7 +138,9 @@ function EditJobForm({ job, jobId }: EditJobFormProps) {
         description: description.trim(),
         reportedDriverId: reportedDriverId.trim() ? reportedDriverId.trim() : null,
         assignedToOfficeStaffId: assignedToOfficeStaffId.trim() ? assignedToOfficeStaffId.trim() : null,
-      }),
+        ...(hasStatusChanged && trimmedNote ? { note: trimmedNote } : {}),
+      })
+    },
     onSuccess: (updated) => {
       toast.success(`Repair job ${updated.jobIdNumber} updated successfully.`)
       queryClient.invalidateQueries({ queryKey: ['garage', 'jobs'] })
@@ -165,6 +183,18 @@ function EditJobForm({ job, jobId }: EditJobFormProps) {
     if (odometerError) nextErrors.odometerReading = odometerError
     if (categoryError) nextErrors.repairCategoryId = categoryError
     if (descriptionError) nextErrors.description = descriptionError
+
+    if (hasStatusChanged) {
+      const invalidTransition = getInvalidStatusTransitionMessage(initialStatus, status)
+      if (invalidTransition) {
+        toast.error(invalidTransition)
+        return { ...nextErrors, statusChangeNote: invalidTransition }
+      }
+
+      const noteError = validateStatusChangeNote(status, statusChangeNote)
+      if (noteError) nextErrors.statusChangeNote = noteError
+    }
+
     setErrors(nextErrors)
     return nextErrors
   }
@@ -272,8 +302,12 @@ function EditJobForm({ job, jobId }: EditJobFormProps) {
               <FormLabel required>Status</FormLabel>
               <Select
                 value={status}
-                onValueChange={(value) => setStatus(value as JobStatus)}
-                disabled={isSubmitting}
+                onValueChange={(value) => {
+                  setStatus(value as JobStatus)
+                  setStatusChangeNote('')
+                  setErrors((prev) => ({ ...prev, statusChangeNote: undefined }))
+                }}
+                disabled={isSubmitting || isStatusLocked}
               >
                 <SelectTrigger className={selectTriggerClass}>
                   <SelectValue placeholder="Select status" />
@@ -282,12 +316,45 @@ function EditJobForm({ job, jobId }: EditJobFormProps) {
                   {statusOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value} className={selectItemClass}>
                       {option.label}
+                      {option.value === initialStatus ? ' (current)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {isStatusLocked ? (
+                <p className="text-xs text-muted-foreground">
+                  Closed and cancelled jobs cannot be moved to another status.
+                </p>
+              ) : null}
             </div>
           </div>
+
+          {showStatusChangeNote ? (
+            <div className="space-y-2">
+              <FormLabel htmlFor="statusChangeNote" required={isStatusNoteRequired}>
+                Status change note
+              </FormLabel>
+              <Textarea
+                id="statusChangeNote"
+                className="min-h-24"
+                value={statusChangeNote}
+                maxLength={STATUS_NOTE_MAX_LENGTH}
+                disabled={isSubmitting}
+                onChange={(event) => {
+                  setStatusChangeNote(event.target.value)
+                  setErrors((prev) => ({ ...prev, statusChangeNote: undefined }))
+                }}
+                placeholder={
+                  isStatusNoteRequired
+                    ? status === 'completed'
+                      ? 'Describe what was completed…'
+                      : 'Explain why the job is on hold…'
+                    : 'Optional note for the activity log'
+                }
+              />
+              <FieldError message={errors.statusChangeNote} />
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <FormLabel htmlFor="description" required>

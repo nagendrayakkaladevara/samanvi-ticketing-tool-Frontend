@@ -94,6 +94,7 @@ export type RepairJob = {
     id: string
     jobIdNumber: string
   } | null
+  closedAt: string | null
   createdAt: string
   updatedAt: string
   bus: {
@@ -162,5 +163,6 @@ export type UpdateRepairJobInput = {
   reportedDriverId?: string | null
   assignedToOfficeStaffId?: string | null
   status?: JobStatus
+  note?: string
   scheduleRepeatFor?: string
 }

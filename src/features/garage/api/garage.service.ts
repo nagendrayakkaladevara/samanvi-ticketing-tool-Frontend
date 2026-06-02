@@ -450,6 +450,7 @@ function normalizeRepairJob(raw: unknown): RepairJob | null {
     isRepeatJob: Boolean(value.isRepeatJob),
     repeatScheduledFor: normalizeString(value.repeatScheduledFor) ?? null,
     repeatProcessedAt: normalizeString(value.repeatProcessedAt) ?? null,
+    closedAt: normalizeString(value.closedAt) ?? null,
     createdAt: normalizeString(value.createdAt) ?? '',
     updatedAt: normalizeString(value.updatedAt) ?? '',
     bus: { id: busId, busNumber },
@@ -597,6 +598,7 @@ export const garageService = {
       payload.assignedToOfficeStaffId = input.assignedToOfficeStaffId
     }
     if (input.status !== undefined) payload.status = input.status
+    if (input.note !== undefined) payload.note = input.note.trim()
     if (input.scheduleRepeatFor !== undefined) payload.scheduleRepeatFor = input.scheduleRepeatFor
 
     const { data } = await apiClient.patch<unknown>(`${jobsEndpoint}/${jobId}`, payload)
