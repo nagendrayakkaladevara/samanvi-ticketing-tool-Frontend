@@ -39,6 +39,17 @@ export const applicationUserDataColumnDefs: ColDef<ApplicationUser>[] = [
   textColumn('mobileNumber', 'Mobile', 130),
   textColumn('email', 'Email', 180),
   {
+    colId: 'linkedEmployee',
+    headerName: 'Linked Employee',
+    headerClass: 'ticket-grid__header-cell',
+    minWidth: 180,
+    flex: 1,
+    sortable: true,
+    filter: true,
+    valueGetter: (params) => params.data?.linkedEmployee?.name,
+    valueFormatter: (params) => (params.value?.toString().trim() ? String(params.value) : '—'),
+  },
+  {
     field: 'userType',
     headerName: 'User Type',
     headerClass: 'ticket-grid__header-cell',
@@ -81,6 +92,7 @@ export const applicationUserMobileFields: EmployeeMobileField<ApplicationUser>[]
   { label: 'Username', getValue: (item) => item.username || '—' },
   { label: 'Mobile', getValue: (item) => item.mobileNumber },
   { label: 'Email', getValue: (item) => item.email ?? '—' },
+  { label: 'Linked Employee', getValue: (item) => item.linkedEmployee?.name ?? '—' },
   {
     label: 'User Type',
     getValue: (item) => applicationUserTypeLabels[item.userType] ?? item.userType,
