@@ -24,3 +24,14 @@ dist-ssr
 *.sw?
 
 .env
+
+# Capacitor / native builds
+android/app/build/
+android/.gradle/
+android/build/
+android/local.properties
+ios/App/build/
+ios/Pods/
+*.apk
+*.aab
+!.github/**/*.apk
