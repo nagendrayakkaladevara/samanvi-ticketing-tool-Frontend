@@ -11,6 +11,10 @@ import { AlertTriangle, Eye, Inbox, Pencil, Route, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  ServiceNumberMobileCard,
+  ServiceNumberMobileCardSkeleton,
+} from '@/features/service-numbers/components/service-number-mobile-card'
 import type { ServiceNumber, ServiceNumberGridRow } from '@/features/service-numbers/types/service-number'
 import {
   compareServiceNumbersByNo,
@@ -248,9 +252,9 @@ export function ServiceNumbersGrid({
     <>
       {isLoading ? (
         <>
-          <div className="space-y-3 md:hidden">
+          <div className="service-number-mobile-list md:hidden">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-24 w-full rounded-xl" />
+              <ServiceNumberMobileCardSkeleton key={index} />
             ))}
           </div>
           <DesktopTableLoader />
@@ -271,49 +275,23 @@ export function ServiceNumbersGrid({
 
       {!isLoading && !isError && rowData.length > 0 ? (
         <>
-          <div className="space-y-3 md:hidden">
+          <div className="service-number-mobile-list md:hidden">
             {rowData.map((row, index) => {
               const item = itemById.get(row.id)
+              if (!item) return null
+
               return (
-                <Card key={row.id} className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 space-y-1.5">
-                      <p className="text-xs text-muted-foreground">S.No {index + 1}</p>
-                      <span className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-sm font-medium">
-                        <Route className="h-3.5 w-3.5 text-muted-foreground" />
-                        {row.serviceNo}
-                      </span>
-                      <p className="text-sm text-muted-foreground">{row.serviceFor}</p>
-                      <p className="text-sm">{row.route}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Via {row.via} · {row.distanceLabel}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Updated {row.updatedAtLabel}</p>
-                    </div>
-                    {item ? (
-                      <div className="flex shrink-0 gap-1.5">
-                        <Button variant="outline" size="sm" onClick={() => onView(item)}>
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                        {canEdit ? (
-                          <Button variant="outline" size="sm" onClick={() => onEdit(item)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        ) : null}
-                        {canDelete ? (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                            onClick={() => onDelete(item)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-                </Card>
+                <div key={row.id} className="space-y-1">
+                  <p className="px-1 text-xs text-muted-foreground">S.No {index + 1}</p>
+                  <ServiceNumberMobileCard
+                    item={item}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
+                    onView={() => onView(item)}
+                    onEdit={() => onEdit(item)}
+                    onDelete={() => onDelete(item)}
+                  />
+                </div>
               )
             })}
           </div>
