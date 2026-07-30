@@ -1,13 +1,4 @@
-import {
-  Banknote,
-  ClipboardList,
-  Eye,
-  MapPin,
-  Pencil,
-  Route,
-  Trash2,
-  Users,
-} from 'lucide-react'
+import { Eye, MapPin, Pencil, Route, Trash2 } from 'lucide-react'
 import type { MouseEvent, ReactNode } from 'react'
 
 import '@/features/tickets/styles/tickets-grid.css'
@@ -15,11 +6,7 @@ import '@/features/tickets/styles/tickets-grid.css'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import type { ServiceNumber } from '@/features/service-numbers/types/service-number'
-import {
-  formatAmount,
-  formatDateTime,
-  formatDistance,
-} from '@/features/service-numbers/utils/service-number-model'
+import { formatDistance } from '@/features/service-numbers/utils/service-number-model'
 import { cn } from '@/lib/utils'
 
 type ServiceNumberMobileCardProps = {
@@ -88,9 +75,6 @@ export function ServiceNumberMobileCard({
   onDelete,
   className,
 }: ServiceNumberMobileCardProps) {
-  const remarks = item.remarks?.trim()
-  const hasCrew = Boolean(item.optDriver?.trim() || item.optHelper?.trim())
-
   return (
     <Card
       className={cn('service-number-mobile-card', className)}
@@ -115,37 +99,6 @@ export function ServiceNumberMobileCard({
           <DetailCell label="To" value={item.to} />
           <DetailCell label="Via" value={item.via} fullWidth />
         </Section>
-
-        <Section title="Amounts" icon={Banknote}>
-          <DetailCell label="Parking" value={formatAmount(item.parkingAmount)} />
-          <DetailCell label="Driver 1 Beta" value={formatAmount(item.driverOneBeta)} />
-          <DetailCell label="Driver 2 Beta" value={formatAmount(item.driverTwoBeta)} />
-          <DetailCell label="Helper Beta" value={formatAmount(item.helperBeta)} />
-          <DetailCell label="Conductor Beta" value={formatAmount(item.conductorBeta)} />
-        </Section>
-
-        {hasCrew ? (
-          <Section title="Crew" icon={Users}>
-            <DetailCell label="Opt. Driver" value={item.optDriver || '—'} />
-            <DetailCell label="Opt. Helper" value={item.optHelper || '—'} />
-          </Section>
-        ) : null}
-
-        {remarks ? (
-          <section className="service-number-mobile-card__section">
-            <h4 className="service-number-mobile-card__section-title">
-              <ClipboardList className="service-number-mobile-card__section-icon" aria-hidden />
-              Remarks
-            </h4>
-            <p className="service-number-mobile-card__remarks">{remarks}</p>
-          </section>
-        ) : null}
-
-        <section className="service-number-mobile-card__section service-number-mobile-card__section--meta">
-          <p className="service-number-mobile-card__updated">
-            Updated {formatDateTime(item.updatedAt)}
-          </p>
-        </section>
       </div>
 
       <div className="service-number-mobile-card__actions">
@@ -175,11 +128,11 @@ export function ServiceNumberMobileCard({
           <Button
             size="sm"
             variant="destructive"
-            className="service-number-mobile-card__action-delete shrink-0 border-red-600 bg-red-600 text-white hover:bg-red-700"
+            className="service-number-mobile-card__action flex-1 border-red-600 bg-red-600 text-white hover:bg-red-700"
             onClick={onDelete}
-            aria-label={`Delete service number ${item.serviceNo}`}
           >
-            <Trash2 className="h-4 w-4" aria-hidden />
+            <Trash2 className="h-3.5 w-3.5" aria-hidden />
+            Delete
           </Button>
         ) : null}
       </div>
@@ -200,13 +153,9 @@ export function ServiceNumberMobileCardSkeleton() {
             <div key={index} className="h-12 rounded-md bg-muted/70" />
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-12 rounded-md bg-muted/50" />
-          ))}
-        </div>
       </div>
       <div className="service-number-mobile-card__actions">
+        <div className="h-9 flex-1 rounded-md bg-muted" />
         <div className="h-9 flex-1 rounded-md bg-muted" />
         <div className="h-9 flex-1 rounded-md bg-muted" />
       </div>
