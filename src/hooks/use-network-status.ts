@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 
+export const RECONNECTED_VISIBLE_MS = 4000
+const RECONNECTED_EXIT_BUFFER_MS = 250
+
 function readIsOnline(): boolean {
   if (typeof navigator === 'undefined') {
     return true
@@ -37,7 +40,10 @@ export function useNetworkStatus() {
       return
     }
 
-    const timer = window.setTimeout(() => setShowReconnected(false), 4000)
+    const timer = window.setTimeout(
+      () => setShowReconnected(false),
+      RECONNECTED_VISIBLE_MS + RECONNECTED_EXIT_BUFFER_MS,
+    )
     return () => window.clearTimeout(timer)
   }, [showReconnected])
 
