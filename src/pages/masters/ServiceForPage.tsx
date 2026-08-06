@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { FileSpreadsheet, Layers, Loader2, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { useMasterDialogParams } from '@/hooks/use-master-dialog-params'
 import { usePermissions } from '@/hooks/use-permissions'
 import { toast } from '@/lib/toast'
@@ -37,6 +39,50 @@ import { queryClient } from '@/lib/query/query-client'
 
 type FormMode = 'create' | 'edit'
 
+const easeOutExpo = [0.22, 1, 0.36, 1] as const
+
+const mobileHeaderVariants = {
+  hidden: { opacity: 0, y: -14 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: easeOutExpo },
+  },
+}
+
+const mobileListVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.055, delayChildren: 0.08 },
+  },
+}
+
+const mobileCardVariants = {
+  hidden: { opacity: 0, y: 18, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.38, ease: easeOutExpo },
+  },
+  exit: {
+    opacity: 0,
+    y: -8,
+    scale: 0.98,
+    transition: { duration: 0.2, ease: 'easeIn' as const },
+  },
+}
+
+const mobileStateVariants = {
+  hidden: { opacity: 0, y: 12, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.4, ease: easeOutExpo },
+  },
+}
+
 function formatDateTime(rawDate?: string): string {
   if (!rawDate) return '—'
   const parsed = new Date(rawDate)
@@ -64,6 +110,9 @@ export function ServiceForPage() {
   const canEdit = can('masters', 'service_for', 'edit')
   const canDelete = can('masters', 'service_for', 'delete')
   const { data: items = [], isLoading, isFetching, isError, error } = useServiceForQuery()
+  const isMobile = useIsMobile()
+  const shouldReduceMotion = useReducedMotion()
+  const animateMobile = isMobile && !shouldReduceMotion
 
   const { action, id, openDialog, closeDialog } = useMasterDialogParams()
 
@@ -197,16 +246,72 @@ export function ServiceForPage() {
     }
   }
 
+  const headerMotionProps = animateMobile
+    ? {
+        variants: mobileHeaderVariants,
+        initial: 'hidden' as const,
+        animate: 'visible' as const,
+      }
+    : {}
+
+  const stateMotionProps = animateMobile
+    ? {
+        variants: mobileStateVariants,
+        initial: 'hidden' as const,
+        animate: 'visible' as const,
+      }
+    : {}
+
+  const listMotionProps = animateMobile
+    ? {
+        variants: mobileListVariants,
+        initial: 'hidden' as const,
+        animate: 'visible' as const,
+      }
+    : {}
+
+  const cardMotionProps = animateMobile
+    ? {
+        variants: mobileCardVariants,
+        exit: 'exit' as const,
+        layout: true,
+        whileTap: { scale: 0.985, transition: { duration: 0.12 } },
+      }
+    : {}
+
   return (
     <section className="space-y-6">
-      <header className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-sky-500/10 via-background to-violet-500/10 p-6 shadow-sm">
-        <div
+      <motion.header
+        className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-sky-500/10 via-background to-violet-500/10 p-6 shadow-sm"
+        {...headerMotionProps}
+      >
+        <motion.div
           aria-hidden
           className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-sky-400/25 blur-3xl dark:bg-sky-500/15"
+          animate={
+            animateMobile
+              ? { scale: [1, 1.12, 1], opacity: [0.7, 1, 0.7] }
+              : undefined
+          }
+          transition={
+            animateMobile
+              ? { duration: 6, repeat: Infinity, ease: 'easeInOut' }
+              : undefined
+          }
         />
-        <div
+        <motion.div
           aria-hidden
           className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-violet-400/20 blur-3xl dark:bg-violet-500/10"
+          animate={
+            animateMobile
+              ? { scale: [1, 1.08, 1], opacity: [0.55, 0.9, 0.55] }
+              : undefined
+          }
+          transition={
+            animateMobile
+              ? { duration: 7.5, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }
+              : undefined
+          }
         />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5">
@@ -227,39 +332,65 @@ export function ServiceForPage() {
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="shrink-0"
-                      onClick={handleDownloadExcel}
-                      disabled={isLoading || sortedItems.length === 0}
-                      aria-label="Download Excel"
+                    <motion.div
+                      className="inline-flex"
+                      whileTap={animateMobile ? { scale: 0.92 } : undefined}
+                      transition={{ type: 'spring', stiffness: 500, damping: 28 }}
                     >
-                      <FileSpreadsheet className="h-4 w-4" aria-hidden />
-                    </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={handleDownloadExcel}
+                        disabled={isLoading || sortedItems.length === 0}
+                        aria-label="Download Excel"
+                      >
+                        <FileSpreadsheet className="h-4 w-4" aria-hidden />
+                      </Button>
+                    </motion.div>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">Download Excel</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               {canCreate ? (
-                <Button className="min-w-0 flex-1 sm:w-auto sm:flex-none" onClick={openCreateForm}>
-                  <Plus className="h-4 w-4" />
-                  Add Service For
-                </Button>
+                <motion.div
+                  className="min-w-0 flex-1 sm:w-auto sm:flex-none"
+                  whileTap={animateMobile ? { scale: 0.97 } : undefined}
+                  transition={{ type: 'spring', stiffness: 480, damping: 30 }}
+                >
+                  <Button className="w-full" onClick={openCreateForm}>
+                    <Plus className="h-4 w-4" />
+                    Add Service For
+                  </Button>
+                </motion.div>
               ) : null}
             </div>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {isLoading ? (
         <>
-          <div className="space-y-3 md:hidden">
+          <motion.div
+            className="space-y-3 md:hidden"
+            {...(animateMobile
+              ? {
+                  variants: mobileListVariants,
+                  initial: 'hidden' as const,
+                  animate: 'visible' as const,
+                }
+              : {})}
+          >
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-20 w-full rounded-xl" />
+              <motion.div
+                key={index}
+                variants={animateMobile ? mobileCardVariants : undefined}
+              >
+                <Skeleton className="h-20 w-full rounded-xl" />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
           <Card className="hidden space-y-3 p-4 md:block">
             {Array.from({ length: 6 }).map((_, index) => (
               <Skeleton key={index} className="h-10 w-full" />
@@ -269,60 +400,92 @@ export function ServiceForPage() {
       ) : null}
 
       {isError ? (
-        <Card className="space-y-2 p-5">
-          <p className="font-semibold text-destructive">Unable to load Service For entries</p>
-          <p className="text-sm text-muted-foreground">{(error as Error)?.message ?? 'Unexpected error occurred.'}</p>
-        </Card>
+        <motion.div {...stateMotionProps}>
+          <Card className="space-y-2 p-5">
+            <p className="font-semibold text-destructive">Unable to load Service For entries</p>
+            <p className="text-sm text-muted-foreground">{(error as Error)?.message ?? 'Unexpected error occurred.'}</p>
+          </Card>
+        </motion.div>
       ) : null}
 
       {!isLoading && !isError && sortedItems.length === 0 ? (
-        <Card className="flex flex-col items-center gap-3 p-10 text-center">
-          <Layers className="h-10 w-10 text-muted-foreground" />
-          <h2 className="text-lg font-semibold">No Service For entries yet</h2>
-          <p className="max-w-md text-sm text-muted-foreground">
-            Create your first service type to use it in service number forms and dropdowns.
-          </p>
-          {canCreate ? (
-            <Button onClick={openCreateForm}>
-              <Plus className="h-4 w-4" />
-              Add Service For
-            </Button>
-          ) : null}
-        </Card>
+        <motion.div {...stateMotionProps}>
+          <Card className="flex flex-col items-center gap-3 p-10 text-center">
+            <motion.span
+              className="inline-flex"
+              animate={
+                animateMobile
+                  ? { y: [0, -4, 0] }
+                  : undefined
+              }
+              transition={
+                animateMobile
+                  ? { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }
+                  : undefined
+              }
+            >
+              <Layers className="h-10 w-10 text-muted-foreground" />
+            </motion.span>
+            <h2 className="text-lg font-semibold">No Service For entries yet</h2>
+            <p className="max-w-md text-sm text-muted-foreground">
+              Create your first service type to use it in service number forms and dropdowns.
+            </p>
+            {canCreate ? (
+              <motion.div whileTap={animateMobile ? { scale: 0.97 } : undefined}>
+                <Button onClick={openCreateForm}>
+                  <Plus className="h-4 w-4" />
+                  Add Service For
+                </Button>
+              </motion.div>
+            ) : null}
+          </Card>
+        </motion.div>
       ) : null}
 
       {!isLoading && !isError && sortedItems.length > 0 ? (
         <>
-          <div className="space-y-3 md:hidden">
-            {sortedItems.map((item, index) => (
-              <Card key={item.id} className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-xs text-muted-foreground">S.No {index + 1}</p>
-                    <p className="truncate font-medium">{item.serviceFor}</p>
-                    <p className="text-xs text-muted-foreground">Updated {formatDateTime(item.updatedAt)}</p>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    {canEdit ? (
-                      <Button variant="outline" size="sm" onClick={() => openEditForm(item)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    ) : null}
-                    {canDelete ? (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                        onClick={() => openDeleteDialog(item)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <motion.div className="space-y-3 md:hidden" {...listMotionProps}>
+            <AnimatePresence initial={false} mode="popLayout">
+              {sortedItems.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  {...cardMotionProps}
+                  className="origin-center"
+                >
+                  <Card className="p-4 shadow-sm transition-shadow active:shadow-md">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-xs text-muted-foreground">S.No {index + 1}</p>
+                        <p className="truncate font-medium">{item.serviceFor}</p>
+                        <p className="text-xs text-muted-foreground">Updated {formatDateTime(item.updatedAt)}</p>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        {canEdit ? (
+                          <motion.div whileTap={animateMobile ? { scale: 0.9 } : undefined}>
+                            <Button variant="outline" size="sm" onClick={() => openEditForm(item)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          </motion.div>
+                        ) : null}
+                        {canDelete ? (
+                          <motion.div whileTap={animateMobile ? { scale: 0.9 } : undefined}>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                              onClick={() => openDeleteDialog(item)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </motion.div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
 
           <Card className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[640px] border-collapse text-sm">
