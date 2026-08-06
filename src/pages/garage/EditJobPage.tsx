@@ -129,16 +129,20 @@ function EditJobForm({ job, jobId }: EditJobFormProps) {
   const updateMutation = useMutation({
     mutationFn: () => {
       const trimmedNote = statusChangeNote.trim()
+      // Only include status when the user actually changed it. Always sending the
+      // form's loaded status can overwrite concurrent status updates (e.g. from the
+      // Update status dialog) or fail the whole PATCH on an invalid reverse transition.
       return garageService.updateJob({
         jobId,
         odometerReading: Number(odometerReading.trim()),
         repairCategoryId,
         priority,
-        status,
         description: description.trim(),
         reportedDriverId: reportedDriverId.trim() ? reportedDriverId.trim() : null,
         assignedToOfficeStaffId: assignedToOfficeStaffId.trim() ? assignedToOfficeStaffId.trim() : null,
-        ...(hasStatusChanged && trimmedNote ? { note: trimmedNote } : {}),
+        ...(hasStatusChanged
+          ? { status, ...(trimmedNote ? { note: trimmedNote } : {}) }
+          : {}),
       })
     },
     onSuccess: (updated) => {
