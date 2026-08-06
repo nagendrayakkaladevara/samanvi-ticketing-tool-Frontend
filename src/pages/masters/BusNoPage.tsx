@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { BusFront, Download, FileSpreadsheet, FileText, Fuel, Plus, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -21,12 +22,47 @@ import { useSpareTanksQuery } from '@/features/spare-tanks/hooks/use-spare-tanks
 import type { SpareTank } from '@/features/spare-tanks/types/spare-tank'
 import { downloadSpareTanksExcel } from '@/features/spare-tanks/utils/download-spare-tanks-excel'
 import { downloadSpareTanksPdf } from '@/features/spare-tanks/utils/download-spare-tanks-pdf'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { usePermissions, useSubmoduleActions } from '@/hooks/use-permissions'
 import { useMasterDialogParams } from '@/hooks/use-master-dialog-params'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 
 type BusNoTab = 'normal' | 'spare'
+
+const easeOutExpo = [0.22, 1, 0.36, 1] as const
+
+const mobileHeaderVariants = {
+  hidden: { opacity: 0, y: -14 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: easeOutExpo },
+  },
+}
+
+const mobileToolbarVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: easeOutExpo, delay: 0.06 },
+  },
+}
+
+const tabPanelVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: easeOutExpo },
+  },
+  exit: {
+    opacity: 0,
+    y: -8,
+    transition: { duration: 0.18, ease: 'easeIn' as const },
+  },
+}
 
 function parseBusNoTab(value: string | null): BusNoTab {
   return value === 'spare' ? 'spare' : 'normal'
@@ -39,6 +75,9 @@ export function BusNoPage() {
   const busActions = useSubmoduleActions('masters', 'bus_number')
   const spareActions = useSubmoduleActions('masters', 'spare_tank')
   const { action, id, tab: tabParam, openDialog, closeDialog, setTabParam } = useMasterDialogParams()
+  const isMobile = useIsMobile()
+  const shouldReduceMotion = useReducedMotion()
+  const animateMobile = isMobile && !shouldReduceMotion
 
   const activeTab = parseBusNoTab(tabParam)
 
@@ -160,16 +199,55 @@ export function BusNoPage() {
 
   const exportsDisabled = isLoading || exportCount === 0
 
+  const headerMotionProps = animateMobile
+    ? {
+        variants: mobileHeaderVariants,
+        initial: 'hidden' as const,
+        animate: 'visible' as const,
+      }
+    : {}
+
+  const toolbarMotionProps = animateMobile
+    ? {
+        variants: mobileToolbarVariants,
+        initial: 'hidden' as const,
+        animate: 'visible' as const,
+      }
+    : {}
+
   return (
     <section className="space-y-6">
-      <header className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-amber-500/10 via-background to-teal-500/10 p-6 shadow-sm">
-        <div
+      <motion.header
+        className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-amber-500/10 via-background to-teal-500/10 p-6 shadow-sm"
+        {...headerMotionProps}
+      >
+        <motion.div
           aria-hidden
           className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-amber-400/25 blur-3xl dark:bg-amber-500/15"
+          animate={
+            animateMobile
+              ? { scale: [1, 1.12, 1], opacity: [0.7, 1, 0.7] }
+              : undefined
+          }
+          transition={
+            animateMobile
+              ? { duration: 6, repeat: Infinity, ease: 'easeInOut' }
+              : undefined
+          }
         />
-        <div
+        <motion.div
           aria-hidden
           className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-teal-400/20 blur-3xl dark:bg-teal-500/10"
+          animate={
+            animateMobile
+              ? { scale: [1, 1.08, 1], opacity: [0.55, 0.9, 0.55] }
+              : undefined
+          }
+          transition={
+            animateMobile
+              ? { duration: 7.5, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }
+              : undefined
+          }
         />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5">
@@ -189,21 +267,28 @@ export function BusNoPage() {
               </span>
             ) : null}
             {tabActions.canCreate ? (
-              <Button className="w-full sm:w-auto" onClick={openAddDialog}>
-                <Plus className="h-4 w-4" />
-                {activeTab === 'normal' ? 'Add Bus' : 'Add Spare Tank'}
-              </Button>
+              <motion.div
+                className="w-full sm:w-auto"
+                whileTap={animateMobile ? { scale: 0.97 } : undefined}
+                transition={{ type: 'spring', stiffness: 480, damping: 30 }}
+              >
+                <Button className="w-full sm:w-auto" onClick={openAddDialog}>
+                  <Plus className="h-4 w-4" />
+                  {activeTab === 'normal' ? 'Add Bus' : 'Add Spare Tank'}
+                </Button>
+              </motion.div>
             ) : null}
           </div>
         </div>
-      </header>
+      </motion.header>
 
-      <div className="flex w-full items-center gap-2 sm:justify-between">
+      <motion.div className="flex w-full items-center gap-2 sm:justify-between" {...toolbarMotionProps}>
         <div className="inline-flex min-w-0 flex-1 rounded-xl border border-border bg-muted/30 p-1 sm:flex-none">
           {canViewBus ? (
-            <button
+            <motion.button
               type="button"
               onClick={() => setTabParam('normal')}
+              whileTap={animateMobile ? { scale: 0.98 } : undefined}
               className={cn(
                 'inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:gap-2 sm:px-4',
                 activeTab === 'normal'
@@ -213,12 +298,13 @@ export function BusNoPage() {
             >
               <BusFront className="h-4 w-4 shrink-0" />
               <span className="truncate">Normal Bus</span>
-            </button>
+            </motion.button>
           ) : null}
           {canViewSpare ? (
-            <button
+            <motion.button
               type="button"
               onClick={() => setTabParam('spare')}
+              whileTap={animateMobile ? { scale: 0.98 } : undefined}
               className={cn(
                 'inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:gap-2 sm:px-4',
                 activeTab === 'spare'
@@ -228,7 +314,7 @@ export function BusNoPage() {
             >
               <Fuel className="h-4 w-4 shrink-0" />
               <span className="truncate">Spare Tank</span>
-            </button>
+            </motion.button>
           ) : null}
         </div>
 
@@ -305,32 +391,58 @@ export function BusNoPage() {
             </Tooltip>
           </TooltipProvider>
         </div>
-      </div>
+      </motion.div>
 
-      {activeTab === 'normal' && canViewBus ? (
-        <MasterBusesGrid
-          buses={buses}
-          isLoading={isLoadingBuses}
-          isError={isBusesError}
-          error={busesError as Error | null}
-          canEdit={busActions.canEdit}
-          canDelete={busActions.canDelete}
-          onAdd={busActions.canCreate ? openBusCreate : undefined}
-          onEdit={openBusEdit}
-        />
-      ) : null}
-      {activeTab === 'spare' && canViewSpare ? (
-        <SpareTanksGrid
-          spareTanks={spareTanks}
-          isLoading={isLoadingSpareTanks}
-          isError={isSpareTanksError}
-          error={spareTanksError as Error | null}
-          canEdit={spareActions.canEdit}
-          canDelete={spareActions.canDelete}
-          onAdd={spareActions.canCreate ? openSpareCreate : undefined}
-          onEdit={openSpareEdit}
-        />
-      ) : null}
+      <AnimatePresence mode="wait" initial={false}>
+        {activeTab === 'normal' && canViewBus ? (
+          <motion.div
+            key="normal-bus-panel"
+            {...(animateMobile
+              ? {
+                  variants: tabPanelVariants,
+                  initial: 'hidden' as const,
+                  animate: 'visible' as const,
+                  exit: 'exit' as const,
+                }
+              : {})}
+          >
+            <MasterBusesGrid
+              buses={buses}
+              isLoading={isLoadingBuses}
+              isError={isBusesError}
+              error={busesError as Error | null}
+              canEdit={busActions.canEdit}
+              canDelete={busActions.canDelete}
+              onAdd={busActions.canCreate ? openBusCreate : undefined}
+              onEdit={openBusEdit}
+            />
+          </motion.div>
+        ) : null}
+        {activeTab === 'spare' && canViewSpare ? (
+          <motion.div
+            key="spare-tank-panel"
+            {...(animateMobile
+              ? {
+                  variants: tabPanelVariants,
+                  initial: 'hidden' as const,
+                  animate: 'visible' as const,
+                  exit: 'exit' as const,
+                }
+              : {})}
+          >
+            <SpareTanksGrid
+              spareTanks={spareTanks}
+              isLoading={isLoadingSpareTanks}
+              isError={isSpareTanksError}
+              error={spareTanksError as Error | null}
+              canEdit={spareActions.canEdit}
+              canDelete={spareActions.canDelete}
+              onAdd={spareActions.canCreate ? openSpareCreate : undefined}
+              onEdit={openSpareEdit}
+            />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <MasterBusFormDialog
         open={isBusFormOpen}

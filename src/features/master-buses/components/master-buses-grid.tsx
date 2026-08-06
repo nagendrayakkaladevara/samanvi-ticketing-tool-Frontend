@@ -7,8 +7,10 @@ import {
   type ColDef,
   type ICellRendererParams,
 } from 'ag-grid-community'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { AlertTriangle, Inbox, Pencil, Trash2 } from 'lucide-react'
 import { toast } from '@/lib/toast'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 import {
   AlertDialog,
@@ -44,6 +46,34 @@ import 'ag-grid-community/styles/ag-theme-quartz.css'
 import '@/features/tickets/styles/tickets-grid.css'
 
 ModuleRegistry.registerModules([AllCommunityModule])
+
+const easeOutExpo = [0.22, 1, 0.36, 1] as const
+
+const mobileListVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.07, delayChildren: 0.04 },
+  },
+  exit: {
+    transition: { staggerChildren: 0.03, staggerDirection: -1 },
+  },
+}
+
+const mobileItemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.4, ease: easeOutExpo },
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    scale: 0.98,
+    transition: { duration: 0.2, ease: 'easeIn' as const },
+  },
+}
 
 function BusNumberCell({ value }: ICellRendererParams<MasterBusGridRow>) {
   return <span className="ticket-grid__bus-badge">{value}</span>
@@ -165,6 +195,9 @@ export function MasterBusesGrid({
   onEdit,
 }: MasterBusesGridProps) {
   const isDarkMode = useDarkMode()
+  const isMobile = useIsMobile()
+  const shouldReduceMotion = useReducedMotion()
+  const animateMobile = isMobile && !shouldReduceMotion
   const [deleteTarget, setDeleteTarget] = useState<MasterBusGridRow | null>(null)
 
   const busById = useMemo(() => new Map(buses.map((bus) => [bus.id, bus])), [buses])
@@ -339,17 +372,64 @@ export function MasterBusesGrid({
 
   return (
     <>
+      <div className="md:hidden">
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <motion.div
+              key="bus-mobile-loading"
+              className="master-bus-mobile-list"
+              variants={animateMobile ? mobileListVariants : undefined}
+              initial={animateMobile ? 'hidden' : false}
+              animate={animateMobile ? 'visible' : undefined}
+              exit={animateMobile ? 'exit' : undefined}
+            >
+              {Array.from({ length: 4 }).map((_, index) => (
+                <motion.div key={index} variants={animateMobile ? mobileItemVariants : undefined}>
+                  <MasterBusMobileCardSkeleton />
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : null}
+
+          {!isLoading && !isError && rowData.length > 0 ? (
+            <motion.div
+              key="bus-mobile-data"
+              className="master-bus-mobile-list"
+              variants={animateMobile ? mobileListVariants : undefined}
+              initial={animateMobile ? 'hidden' : false}
+              animate={animateMobile ? 'visible' : undefined}
+              exit={animateMobile ? 'exit' : undefined}
+            >
+              {rowData.map((row, index) => {
+                const bus = busById.get(row.id)
+                return (
+                  <motion.div
+                    key={row.id}
+                    className="space-y-1"
+                    variants={animateMobile ? mobileItemVariants : undefined}
+                    layout={animateMobile}
+                  >
+                    <p className="px-1 text-xs text-muted-foreground">S.No {index + 1}</p>
+                    <MasterBusMobileCard
+                      row={row}
+                      animationDelay={animateMobile ? index * 0.05 : 0}
+                      canEdit={canEdit && Boolean(bus)}
+                      canDelete={canDelete && Boolean(bus)}
+                      onEdit={bus ? () => onEdit(bus) : undefined}
+                      onDelete={canDelete ? () => setDeleteTarget(row) : undefined}
+                    />
+                  </motion.div>
+                )
+              })}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
+
       {isLoading ? (
-        <>
-          <div className="master-bus-mobile-list md:hidden">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <MasterBusMobileCardSkeleton key={index} />
-            ))}
-          </div>
-          <div className="hidden md:block">
-            <TableSkeleton />
-          </div>
-        </>
+        <div className="hidden md:block">
+          <TableSkeleton />
+        </div>
       ) : null}
 
       {isError ? (
@@ -367,49 +447,29 @@ export function MasterBusesGrid({
       ) : null}
 
       {!isLoading && !isError && rowData.length > 0 ? (
-        <>
-          <div className="master-bus-mobile-list md:hidden">
-            {rowData.map((row, index) => {
-              const bus = busById.get(row.id)
-              return (
-                <div key={row.id} className="space-y-1">
-                  <p className="px-1 text-xs text-muted-foreground">S.No {index + 1}</p>
-                  <MasterBusMobileCard
-                    row={row}
-                    canEdit={canEdit && Boolean(bus)}
-                    canDelete={canDelete && Boolean(bus)}
-                    onEdit={bus ? () => onEdit(bus) : undefined}
-                    onDelete={canDelete ? () => setDeleteTarget(row) : undefined}
-                  />
-                </div>
-              )
-            })}
+        <Card className="ticket-grid-wrapper hidden md:block">
+          <div
+            className={cn(isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'ticket-grid')}
+            style={gridStyle}
+          >
+            <AgGridReact<MasterBusGridRow>
+              rowData={rowData}
+              columnDefs={columnDefs}
+              defaultColDef={{
+                sortable: true,
+                filter: true,
+                resizable: true,
+                floatingFilter: true,
+              }}
+              animateRows
+              suppressCellFocus
+              domLayout="autoHeight"
+              rowHeight={52}
+              headerHeight={44}
+              floatingFiltersHeight={44}
+            />
           </div>
-
-          <Card className="ticket-grid-wrapper hidden md:block">
-            <div
-              className={cn(isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'ticket-grid')}
-              style={gridStyle}
-            >
-              <AgGridReact<MasterBusGridRow>
-                rowData={rowData}
-                columnDefs={columnDefs}
-                defaultColDef={{
-                  sortable: true,
-                  filter: true,
-                  resizable: true,
-                  floatingFilter: true,
-                }}
-                animateRows
-                suppressCellFocus
-                domLayout="autoHeight"
-                rowHeight={52}
-                headerHeight={44}
-                floatingFiltersHeight={44}
-              />
-            </div>
-          </Card>
-        </>
+        </Card>
       ) : null}
 
       <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>

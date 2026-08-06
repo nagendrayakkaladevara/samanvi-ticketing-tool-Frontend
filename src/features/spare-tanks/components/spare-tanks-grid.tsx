@@ -7,6 +7,7 @@ import {
   type ColDef,
   type ICellRendererParams,
 } from 'ag-grid-community'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { AlertTriangle, Fuel, Inbox, Pencil, Trash2 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 
@@ -31,6 +32,7 @@ import {
   toSpareTankGridRow,
 } from '@/features/spare-tanks/utils/spare-tank-model'
 import { useDarkMode } from '@/hooks/use-dark-mode'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { queryClient } from '@/lib/query/query-client'
 import { cn } from '@/lib/utils'
 
@@ -39,6 +41,50 @@ import 'ag-grid-community/styles/ag-theme-quartz.css'
 import '@/features/tickets/styles/tickets-grid.css'
 
 ModuleRegistry.registerModules([AllCommunityModule])
+
+const easeOutExpo = [0.22, 1, 0.36, 1] as const
+
+const mobileListVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.07, delayChildren: 0.04 },
+  },
+  exit: {
+    transition: { staggerChildren: 0.03, staggerDirection: -1 },
+  },
+}
+
+const mobileCardVariants = {
+  hidden: { opacity: 0, y: 18, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.38, ease: easeOutExpo },
+  },
+  exit: {
+    opacity: 0,
+    y: -8,
+    scale: 0.98,
+    transition: { duration: 0.2, ease: 'easeIn' as const },
+  },
+}
+
+const fieldPopulateVariants = {
+  hidden: {},
+  visible: (delay = 0) => ({
+    transition: { staggerChildren: 0.05, delayChildren: 0.12 + delay },
+  }),
+}
+
+const fieldItemVariants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.28, ease: easeOutExpo },
+  },
+}
 
 function BusNumberCell({ value }: ICellRendererParams<SpareTankGridRow>) {
   return <span className="ticket-grid__bus-badge">{value}</span>
@@ -95,6 +141,9 @@ export function SpareTanksGrid({
   onEdit,
 }: SpareTanksGridProps) {
   const isDarkMode = useDarkMode()
+  const isMobile = useIsMobile()
+  const shouldReduceMotion = useReducedMotion()
+  const animateMobile = isMobile && !shouldReduceMotion
   const [deleteTarget, setDeleteTarget] = useState<SpareTankGridRow | null>(null)
 
   const itemById = useMemo(() => new Map(spareTanks.map((item) => [item.id, item])), [spareTanks])
@@ -229,16 +278,138 @@ export function SpareTanksGrid({
 
   return (
     <>
-      {isLoading ? (
-        <>
-          <div className="space-y-3 md:hidden">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-20 w-full rounded-xl" />
-            ))}
-          </div>
-          <DesktopTableLoader />
-        </>
-      ) : null}
+      <div className="md:hidden">
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <motion.div
+              key="spare-mobile-loading"
+              className="space-y-3"
+              variants={animateMobile ? mobileListVariants : undefined}
+              initial={animateMobile ? 'hidden' : false}
+              animate={animateMobile ? 'visible' : undefined}
+              exit={animateMobile ? 'exit' : undefined}
+            >
+              {Array.from({ length: 3 }).map((_, index) => (
+                <motion.div key={index} variants={animateMobile ? mobileCardVariants : undefined}>
+                  <Skeleton className="h-20 w-full rounded-xl" />
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : null}
+
+          {!isLoading && !isError && rowData.length > 0 ? (
+            <motion.div
+              key="spare-mobile-data"
+              className="space-y-3"
+              variants={animateMobile ? mobileListVariants : undefined}
+              initial={animateMobile ? 'hidden' : false}
+              animate={animateMobile ? 'visible' : undefined}
+              exit={animateMobile ? 'exit' : undefined}
+            >
+              {rowData.map((row, index) => {
+                const item = itemById.get(row.id)
+                return (
+                  <motion.div
+                    key={row.id}
+                    variants={animateMobile ? mobileCardVariants : undefined}
+                    layout={animateMobile}
+                    whileTap={animateMobile ? { scale: 0.985 } : undefined}
+                  >
+                    <Card className="p-4 shadow-sm">
+                      {animateMobile ? (
+                        <motion.div
+                          className="flex items-start justify-between gap-3"
+                          custom={index * 0.04}
+                          variants={fieldPopulateVariants}
+                          initial="hidden"
+                          animate="visible"
+                        >
+                          <div className="min-w-0 space-y-1.5">
+                            <motion.p className="text-xs text-muted-foreground" variants={fieldItemVariants}>
+                              S.No {index + 1}
+                            </motion.p>
+                            <motion.span
+                              className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-sm font-medium"
+                              variants={fieldItemVariants}
+                            >
+                              <Fuel className="h-3.5 w-3.5 text-muted-foreground" />
+                              {row.busNumber}
+                            </motion.span>
+                            <motion.p className="text-sm font-medium" variants={fieldItemVariants}>
+                              {row.ownerName}
+                            </motion.p>
+                            <motion.p className="text-xs text-muted-foreground" variants={fieldItemVariants}>
+                              Updated {formatSpareTankUpdatedAt(item?.updatedAt)}
+                            </motion.p>
+                          </div>
+                          {item && (canEdit || canDelete) ? (
+                            <motion.div className="flex shrink-0 gap-2" variants={fieldItemVariants}>
+                              {canEdit ? (
+                                <motion.div whileTap={{ scale: 0.9 }}>
+                                  <Button variant="outline" size="sm" onClick={() => onEdit(item)}>
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                </motion.div>
+                              ) : null}
+                              {canDelete ? (
+                                <motion.div whileTap={{ scale: 0.9 }}>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                                    onClick={() => setDeleteTarget(row)}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </motion.div>
+                              ) : null}
+                            </motion.div>
+                          ) : null}
+                        </motion.div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 space-y-1.5">
+                            <p className="text-xs text-muted-foreground">S.No {index + 1}</p>
+                            <span className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-sm font-medium">
+                              <Fuel className="h-3.5 w-3.5 text-muted-foreground" />
+                              {row.busNumber}
+                            </span>
+                            <p className="text-sm font-medium">{row.ownerName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Updated {formatSpareTankUpdatedAt(item?.updatedAt)}
+                            </p>
+                          </div>
+                          {item && (canEdit || canDelete) ? (
+                            <div className="flex shrink-0 gap-2">
+                              {canEdit ? (
+                                <Button variant="outline" size="sm" onClick={() => onEdit(item)}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              ) : null}
+                              {canDelete ? (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                                  onClick={() => setDeleteTarget(row)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+                    </Card>
+                  </motion.div>
+                )
+              })}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
+
+      {isLoading ? <DesktopTableLoader /> : null}
 
       {isError ? (
         <Card className="ticket-page__error">
@@ -255,73 +426,29 @@ export function SpareTanksGrid({
       ) : null}
 
       {!isLoading && !isError && rowData.length > 0 ? (
-        <>
-          <div className="space-y-3 md:hidden">
-            {rowData.map((row, index) => {
-              const item = itemById.get(row.id)
-              return (
-                <Card key={row.id} className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 space-y-1.5">
-                      <p className="text-xs text-muted-foreground">S.No {index + 1}</p>
-                      <span className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-sm font-medium">
-                        <Fuel className="h-3.5 w-3.5 text-muted-foreground" />
-                        {row.busNumber}
-                      </span>
-                      <p className="text-sm font-medium">{row.ownerName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Updated {formatSpareTankUpdatedAt(item?.updatedAt)}
-                      </p>
-                    </div>
-                    {item && (canEdit || canDelete) ? (
-                      <div className="flex shrink-0 gap-2">
-                        {canEdit ? (
-                          <Button variant="outline" size="sm" onClick={() => onEdit(item)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        ) : null}
-                        {canDelete ? (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-                            onClick={() => setDeleteTarget(row)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-                </Card>
-              )
-            })}
+        <Card className="ticket-grid-wrapper hidden md:block">
+          <div
+            className={cn(isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'ticket-grid')}
+            style={gridStyle}
+          >
+            <AgGridReact<SpareTankGridRow>
+              rowData={rowData}
+              columnDefs={columnDefs}
+              defaultColDef={{
+                sortable: true,
+                filter: true,
+                resizable: true,
+                floatingFilter: true,
+              }}
+              animateRows
+              suppressCellFocus
+              domLayout="autoHeight"
+              rowHeight={52}
+              headerHeight={44}
+              floatingFiltersHeight={44}
+            />
           </div>
-
-          <Card className="ticket-grid-wrapper hidden md:block">
-            <div
-              className={cn(isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'ticket-grid')}
-              style={gridStyle}
-            >
-              <AgGridReact<SpareTankGridRow>
-                rowData={rowData}
-                columnDefs={columnDefs}
-                defaultColDef={{
-                  sortable: true,
-                  filter: true,
-                  resizable: true,
-                  floatingFilter: true,
-                }}
-                animateRows
-                suppressCellFocus
-                domLayout="autoHeight"
-                rowHeight={52}
-                headerHeight={44}
-                floatingFiltersHeight={44}
-              />
-            </div>
-          </Card>
-        </>
+        </Card>
       ) : null}
 
       <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
