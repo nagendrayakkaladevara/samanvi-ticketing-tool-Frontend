@@ -1,6 +1,7 @@
-import type { ComponentType, FormEventHandler } from 'react'
+import type { ComponentType, FormEventHandler, ReactNode } from 'react'
 import { useMemo } from 'react'
 import { useMutation } from '@tanstack/react-query'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Gauge, Loader2, UserRound, Wrench } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '@/lib/toast'
@@ -40,17 +41,64 @@ const priorityOptions: Array<{ value: JobPriority; label: string; hint: string; 
   { value: 'urgent', label: 'Urgent', hint: 'Immediate action', accent: 'border-rose-500/40 bg-rose-500/5' },
 ]
 
+const easeOutExpo = [0.22, 1, 0.36, 1] as const
+
+const cardBlockVariants = {
+  hidden: { opacity: 0, y: 18, scale: 0.985 },
+  visible: (delay = 0) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.4,
+      ease: easeOutExpo,
+      delay,
+      when: 'beforeChildren' as const,
+      staggerChildren: 0.055,
+      delayChildren: 0.08,
+    },
+  }),
+}
+
+const fieldVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.3, ease: easeOutExpo },
+  },
+}
+
+const priorityListVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.045, delayChildren: 0.04 },
+  },
+}
+
+const priorityItemVariants = {
+  hidden: { opacity: 0, y: 8, scale: 0.96 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.28, ease: easeOutExpo },
+  },
+}
+
 function SectionHeader({
   icon: Icon,
   title,
   description,
+  animate,
 }: {
   icon: ComponentType<{ className?: string }>
   title: string
   description: string
+  animate: boolean
 }) {
-  return (
-    <div className="flex items-start gap-3 border-b border-border/70 pb-4">
+  const content = (
+    <>
       <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary sm:size-10">
         <Icon className="size-4" />
       </div>
@@ -58,7 +106,29 @@ function SectionHeader({
         <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
         <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
       </div>
-    </div>
+    </>
+  )
+
+  if (!animate) {
+    return <div className="flex items-start gap-3 border-b border-border/70 pb-4">{content}</div>
+  }
+
+  return (
+    <motion.div className="flex items-start gap-3 border-b border-border/70 pb-4" variants={fieldVariants}>
+      {content}
+    </motion.div>
+  )
+}
+
+function AnimatedField({ animate, children, className }: { animate: boolean; children: ReactNode; className?: string }) {
+  if (!animate) {
+    return <div className={className}>{children}</div>
+  }
+
+  return (
+    <motion.div className={className} variants={fieldVariants}>
+      {children}
+    </motion.div>
   )
 }
 
@@ -68,6 +138,8 @@ export function CreateJobPage() {
   const { can } = usePermissions()
   const canCreateJob = can('garage', 'repair_job', 'create')
   const form = useCreateJobForm()
+  const shouldReduceMotion = useReducedMotion()
+  const animate = !shouldReduceMotion
 
   const { data: categoriesData, isLoading: isCategoriesLoading } = useRepairCategoriesQuery()
   const categoryTree = categoriesData?.tree ?? []
@@ -107,241 +179,333 @@ export function CreateJobPage() {
   const isSubmitting = createJobMutation.isPending
   const selectedPriority = priorityOptions.find((option) => option.value === form.values.priority)
 
+  const headerMotionProps = animate
+    ? {
+        variants: {
+          hidden: { opacity: 0, y: -14 },
+          visible: {
+            opacity: 1,
+            y: 0,
+            transition: { duration: 0.45, ease: easeOutExpo },
+          },
+        },
+        initial: 'hidden' as const,
+        animate: 'visible' as const,
+      }
+    : {}
+
+  const cardMotionProps = (delay: number) =>
+    animate
+      ? {
+          variants: cardBlockVariants,
+          initial: 'hidden' as const,
+          animate: 'visible' as const,
+          custom: delay,
+        }
+      : {}
+
   return (
     <section className="mx-auto w-full min-w-0 max-w-3xl space-y-6">
-      <PageGradientHeader
-        accent="orange"
-        eyebrow="Garage"
-        title="Create Repair Job"
-        description="Log a new garage repair with vehicle details, category, and optional assignment."
-      />
+      <motion.div {...headerMotionProps}>
+        <PageGradientHeader
+          accent="orange"
+          eyebrow="Garage"
+          title="Create Repair Job"
+          description="Log a new garage repair with vehicle details, category, and optional assignment."
+        />
+      </motion.div>
 
       <form onSubmit={handleSubmit} className="space-y-4 pb-28 sm:pb-4" noValidate>
-        <Card className="space-y-4 p-4 sm:space-y-5 sm:p-5">
-          <SectionHeader
-            icon={Gauge}
-            title="Vehicle details"
-            description="Identify the bus and record its current odometer reading."
-          />
+        <motion.div {...cardMotionProps(0.05)}>
+          <Card className="space-y-4 overflow-hidden p-4 sm:space-y-5 sm:p-5">
+            <SectionHeader
+              icon={Gauge}
+              title="Vehicle details"
+              description="Identify the bus and record its current odometer reading."
+              animate={animate}
+            />
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <FormLabel htmlFor="busNumber" required>
-                Bus Number
-              </FormLabel>
-              <Select
-                value={form.values.busNumber}
-                onValueChange={(value) => form.setField('busNumber', value)}
-                disabled={isSubmitting || isBusNumbersLoading}
-              >
-                <SelectTrigger
-                  id="busNumber"
-                  aria-invalid={Boolean(form.errors.busNumber)}
-                  className={cn(selectTriggerClass, form.errors.busNumber && invalidFieldClass)}
-                  onBlur={() => form.blurField('busNumber')}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <AnimatedField animate={animate} className="space-y-2 sm:col-span-2">
+                <FormLabel htmlFor="busNumber" required>
+                  Bus Number
+                </FormLabel>
+                <Select
+                  value={form.values.busNumber}
+                  onValueChange={(value) => form.setField('busNumber', value)}
+                  disabled={isSubmitting || isBusNumbersLoading}
                 >
-                  <SelectValue placeholder={isBusNumbersLoading ? 'Loading bus numbers…' : 'Select bus number'} />
-                </SelectTrigger>
-                <SelectContent position="popper" className="max-h-[min(24rem,70vh)] w-[var(--radix-select-trigger-width)]">
-                  {busNumbers.length === 0 ? (
-                    <SelectItem value="__empty" disabled className={selectItemClass}>
-                      No buses available
-                    </SelectItem>
-                  ) : (
-                    busNumbers.map((busNumber) => (
-                      <SelectItem key={busNumber} value={busNumber} className={selectItemClass}>
-                        {busNumber}
+                  <SelectTrigger
+                    id="busNumber"
+                    aria-invalid={Boolean(form.errors.busNumber)}
+                    className={cn(selectTriggerClass, form.errors.busNumber && invalidFieldClass)}
+                    onBlur={() => form.blurField('busNumber')}
+                  >
+                    <SelectValue placeholder={isBusNumbersLoading ? 'Loading bus numbers…' : 'Select bus number'} />
+                  </SelectTrigger>
+                  <SelectContent
+                    position="popper"
+                    className="max-h-[min(24rem,70vh)] w-[var(--radix-select-trigger-width)]"
+                  >
+                    {busNumbers.length === 0 ? (
+                      <SelectItem value="__empty" disabled className={selectItemClass}>
+                        No buses available
                       </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              <FieldError message={form.errors.busNumber} />
-            </div>
+                    ) : (
+                      busNumbers.map((busNumber) => (
+                        <SelectItem key={busNumber} value={busNumber} className={selectItemClass}>
+                          {busNumber}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <FieldError message={form.errors.busNumber} />
+              </AnimatedField>
 
-            <div className="space-y-2 sm:col-span-2">
-              <FormLabel htmlFor="odometerReading" required>
-                Odometer Reading (km)
+              <AnimatedField animate={animate} className="space-y-2 sm:col-span-2">
+                <FormLabel htmlFor="odometerReading" required>
+                  Odometer Reading (km)
+                </FormLabel>
+                <Input
+                  id="odometerReading"
+                  type="number"
+                  min={0}
+                  step={1}
+                  inputMode="numeric"
+                  placeholder="e.g., 125000"
+                  className={cn(form.errors.odometerReading && invalidFieldClass)}
+                  value={form.values.odometerReading}
+                  onChange={(event) => form.setField('odometerReading', event.target.value)}
+                  onBlur={() => form.blurField('odometerReading')}
+                  aria-invalid={Boolean(form.errors.odometerReading)}
+                  disabled={isSubmitting}
+                />
+                <FieldError message={form.errors.odometerReading} />
+              </AnimatedField>
+            </div>
+          </Card>
+        </motion.div>
+
+        <motion.div {...cardMotionProps(0.14)}>
+          <Card className="space-y-4 overflow-hidden p-4 sm:space-y-5 sm:p-5">
+            <SectionHeader
+              icon={Wrench}
+              title="Repair details"
+              description="Select a leaf repair category, set priority, and describe the work needed."
+              animate={animate}
+            />
+
+            <AnimatedField animate={animate} className="space-y-2">
+              <RepairCategoryPicker
+                id="repairCategoryId"
+                tree={categoryTree}
+                value={form.values.repairCategoryId}
+                onValueChange={(value) => form.setField('repairCategoryId', value)}
+                onBlur={() => form.blurField('repairCategoryId')}
+                disabled={isSubmitting || isCategoriesLoading}
+                invalid={Boolean(form.errors.repairCategoryId)}
+                placeholder={isCategoriesLoading ? 'Loading categories…' : 'Select repair category'}
+                className={cn(form.errors.repairCategoryId && invalidFieldClass)}
+              />
+              <p className="text-xs text-muted-foreground">Only leaf categories (no subcategories) can be selected.</p>
+              <FieldError message={form.errors.repairCategoryId} />
+            </AnimatedField>
+
+            <AnimatedField animate={animate} className="space-y-2">
+              <FormLabel required>Priority</FormLabel>
+              <motion.div
+                className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+                {...(animate
+                  ? {
+                      variants: priorityListVariants,
+                    }
+                  : {})}
+              >
+                {priorityOptions.map((option) => {
+                  const isSelected = form.values.priority === option.value
+                  const buttonClassName = cn(
+                    'touch-manipulation w-full rounded-lg border px-2.5 py-3 text-left transition-all sm:px-3 sm:py-2.5',
+                    isSelected
+                      ? option.accent
+                      : 'border-border bg-background hover:bg-muted/50 active:bg-muted/70',
+                    isSelected && 'ring-1 ring-primary/30',
+                  )
+
+                  if (!animate) {
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={() => form.setField('priority', option.value)}
+                        className={buttonClassName}
+                      >
+                        <span className="block text-sm font-medium">{option.label}</span>
+                        <span className="mt-0.5 block text-[10px] leading-tight text-muted-foreground">
+                          {option.hint}
+                        </span>
+                      </button>
+                    )
+                  }
+
+                  return (
+                    <motion.div
+                      key={option.value}
+                      variants={priorityItemVariants}
+                      whileTap={{ scale: 0.97 }}
+                      whileHover={{ y: -1 }}
+                    >
+                      <button
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={() => form.setField('priority', option.value)}
+                        className={buttonClassName}
+                      >
+                        <span className="block text-sm font-medium">{option.label}</span>
+                        <span className="mt-0.5 block text-[10px] leading-tight text-muted-foreground">
+                          {option.hint}
+                        </span>
+                      </button>
+                    </motion.div>
+                  )
+                })}
+              </motion.div>
+              {selectedPriority ? (
+                <p className="hidden text-xs text-muted-foreground sm:block">
+                  Selected: <span className="font-medium text-foreground">{selectedPriority.label}</span> —{' '}
+                  {selectedPriority.hint}
+                </p>
+              ) : null}
+            </AnimatedField>
+
+            <AnimatedField animate={animate} className="space-y-2">
+              <FormLabel htmlFor="description" required>
+                Description
               </FormLabel>
-              <Input
-                id="odometerReading"
-                type="number"
-                min={0}
-                step={1}
-                inputMode="numeric"
-                placeholder="e.g., 125000"
-                className={cn(form.errors.odometerReading && invalidFieldClass)}
-                value={form.values.odometerReading}
-                onChange={(event) => form.setField('odometerReading', event.target.value)}
-                onBlur={() => form.blurField('odometerReading')}
-                aria-invalid={Boolean(form.errors.odometerReading)}
+              <Textarea
+                id="description"
+                placeholder="Describe the issue, symptoms, and any immediate safety concerns."
+                className={cn('min-h-28', form.errors.description && invalidFieldClass)}
+                value={form.values.description}
+                onChange={(event) => form.setField('description', event.target.value)}
+                onBlur={() => form.blurField('description')}
+                aria-invalid={Boolean(form.errors.description)}
                 disabled={isSubmitting}
               />
-              <FieldError message={form.errors.odometerReading} />
-            </div>
-          </div>
-        </Card>
+              <FieldError message={form.errors.description} />
+            </AnimatedField>
+          </Card>
+        </motion.div>
 
-        <Card className="space-y-4 p-4 sm:space-y-5 sm:p-5">
-          <SectionHeader
-            icon={Wrench}
-            title="Repair details"
-            description="Select a leaf repair category, set priority, and describe the work needed."
-          />
-
-          <div className="space-y-2">
-            <RepairCategoryPicker
-              id="repairCategoryId"
-              tree={categoryTree}
-              value={form.values.repairCategoryId}
-              onValueChange={(value) => form.setField('repairCategoryId', value)}
-              onBlur={() => form.blurField('repairCategoryId')}
-              disabled={isSubmitting || isCategoriesLoading}
-              invalid={Boolean(form.errors.repairCategoryId)}
-              placeholder={isCategoriesLoading ? 'Loading categories…' : 'Select repair category'}
-              className={cn(form.errors.repairCategoryId && invalidFieldClass)}
+        <motion.div {...cardMotionProps(0.23)}>
+          <Card className="space-y-4 overflow-hidden p-4 sm:space-y-5 sm:p-5">
+            <SectionHeader
+              icon={UserRound}
+              title="People & assignment"
+              description="Optionally link the reporting driver and assign an office staff member."
+              animate={animate}
             />
-            <p className="text-xs text-muted-foreground">Only leaf categories (no subcategories) can be selected.</p>
-            <FieldError message={form.errors.repairCategoryId} />
-          </div>
 
-          <div className="space-y-2">
-            <FormLabel required>Priority</FormLabel>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {priorityOptions.map((option) => {
-                const isSelected = form.values.priority === option.value
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={() => form.setField('priority', option.value)}
-                    className={cn(
-                      'touch-manipulation rounded-lg border px-2.5 py-3 text-left transition-all sm:px-3 sm:py-2.5',
-                      isSelected ? option.accent : 'border-border bg-background hover:bg-muted/50 active:bg-muted/70',
-                      isSelected && 'ring-1 ring-primary/30',
-                    )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <AnimatedField animate={animate} className="space-y-2">
+                <Label htmlFor="reportedDriverId">Reported Driver</Label>
+                <Select
+                  value={form.values.reportedDriverId}
+                  onValueChange={(value) => form.setField('reportedDriverId', value === '__none' ? '' : value)}
+                  disabled={isSubmitting || isDriversLoading}
+                >
+                  <SelectTrigger id="reportedDriverId" className={selectTriggerClass}>
+                    <SelectValue placeholder="Select driver (optional)" />
+                  </SelectTrigger>
+                  <SelectContent
+                    position="popper"
+                    className="max-h-[min(24rem,70vh)] w-[var(--radix-select-trigger-width)]"
                   >
-                    <span className="block text-sm font-medium">{option.label}</span>
-                    <span className="mt-0.5 block text-[10px] leading-tight text-muted-foreground">{option.hint}</span>
-                  </button>
-                )
-              })}
-            </div>
-            {selectedPriority ? (
-              <p className="hidden text-xs text-muted-foreground sm:block">
-                Selected: <span className="font-medium text-foreground">{selectedPriority.label}</span> —{' '}
-                {selectedPriority.hint}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="space-y-2">
-            <FormLabel htmlFor="description" required>
-              Description
-            </FormLabel>
-            <Textarea
-              id="description"
-              placeholder="Describe the issue, symptoms, and any immediate safety concerns."
-              className={cn('min-h-28', form.errors.description && invalidFieldClass)}
-              value={form.values.description}
-              onChange={(event) => form.setField('description', event.target.value)}
-              onBlur={() => form.blurField('description')}
-              aria-invalid={Boolean(form.errors.description)}
-              disabled={isSubmitting}
-            />
-            <FieldError message={form.errors.description} />
-          </div>
-        </Card>
-
-        <Card className="space-y-4 p-4 sm:space-y-5 sm:p-5">
-          <SectionHeader
-            icon={UserRound}
-            title="People & assignment"
-            description="Optionally link the reporting driver and assign an office staff member."
-          />
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="reportedDriverId">Reported Driver</Label>
-              <Select
-                value={form.values.reportedDriverId}
-                onValueChange={(value) => form.setField('reportedDriverId', value === '__none' ? '' : value)}
-                disabled={isSubmitting || isDriversLoading}
-              >
-                <SelectTrigger id="reportedDriverId" className={selectTriggerClass}>
-                  <SelectValue placeholder="Select driver (optional)" />
-                </SelectTrigger>
-                <SelectContent position="popper" className="max-h-[min(24rem,70vh)] w-[var(--radix-select-trigger-width)]">
-                  <SelectItem value="__none" className={selectItemClass}>
-                    None
-                  </SelectItem>
-                  {drivers.map((driver) => (
-                    <SelectItem key={driver.id} value={driver.id} className={selectItemClass}>
-                      {driver.driverIdNumber} — {driver.aadharName}
+                    <SelectItem value="__none" className={selectItemClass}>
+                      None
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                    {drivers.map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id} className={selectItemClass}>
+                        {driver.driverIdNumber} — {driver.aadharName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </AnimatedField>
 
-            <div className="space-y-2">
-              <Label htmlFor="assignedToOfficeStaffId">Assign To (Office Staff)</Label>
-              <Select
-                value={form.values.assignedToOfficeStaffId}
-                onValueChange={(value) => form.setField('assignedToOfficeStaffId', value === '__none' ? '' : value)}
-                disabled={isSubmitting || isStaffLoading}
-              >
-                <SelectTrigger id="assignedToOfficeStaffId" className={selectTriggerClass}>
-                  <SelectValue placeholder="Select staff (optional)" />
-                </SelectTrigger>
-                <SelectContent position="popper" className="max-h-[min(24rem,70vh)] w-[var(--radix-select-trigger-width)]">
-                  <SelectItem value="__none" className={selectItemClass}>
-                    None
-                  </SelectItem>
-                  {officeStaff.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.id} className={selectItemClass}>
-                      {staff.staffIdNumber} — {staff.nickName}
-                      {staff.designation ? ` (${staff.designation})` : ''}
+              <AnimatedField animate={animate} className="space-y-2">
+                <Label htmlFor="assignedToOfficeStaffId">Assign To (Office Staff)</Label>
+                <Select
+                  value={form.values.assignedToOfficeStaffId}
+                  onValueChange={(value) =>
+                    form.setField('assignedToOfficeStaffId', value === '__none' ? '' : value)
+                  }
+                  disabled={isSubmitting || isStaffLoading}
+                >
+                  <SelectTrigger id="assignedToOfficeStaffId" className={selectTriggerClass}>
+                    <SelectValue placeholder="Select staff (optional)" />
+                  </SelectTrigger>
+                  <SelectContent
+                    position="popper"
+                    className="max-h-[min(24rem,70vh)] w-[var(--radix-select-trigger-width)]"
+                  >
+                    <SelectItem value="__none" className={selectItemClass}>
+                      None
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Assigning staff sets the job status to &ldquo;assigned&rdquo; automatically.
-              </p>
+                    {officeStaff.map((staff) => (
+                      <SelectItem key={staff.id} value={staff.id} className={selectItemClass}>
+                        {staff.staffIdNumber} — {staff.nickName}
+                        {staff.designation ? ` (${staff.designation})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Assigning staff sets the job status to &ldquo;assigned&rdquo; automatically.
+                </p>
+              </AnimatedField>
             </div>
-          </div>
 
-          <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
-            <span className="text-muted-foreground">Created By: </span>
-            <span className="font-medium text-foreground">{currentUser?.name ?? 'Current user'}</span>
-          </div>
-        </Card>
+            <AnimatedField animate={animate}>
+              <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Created By: </span>
+                <span className="font-medium text-foreground">{currentUser?.name ?? 'Current user'}</span>
+              </div>
+            </AnimatedField>
+          </Card>
+        </motion.div>
 
-        <div className="sticky bottom-0 z-10 -mx-4 border-t border-border/80 bg-background/95 px-4 pb-4 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/85 sm:bottom-3 sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-0">
+        <motion.div
+          className="sticky bottom-0 z-10 -mx-4 border-t border-border/80 bg-background/95 px-4 pb-4 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/85 sm:bottom-3 sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-0"
+          {...cardMotionProps(0.32)}
+        >
           <Card className="flex flex-col gap-3 border border-border bg-background/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/85 dark:shadow-black/30 sm:flex-row sm:items-center sm:justify-between">
             <p className="hidden text-xs text-muted-foreground sm:block">
               Required fields must be completed before submitting.
             </p>
             <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 w-full sm:w-auto"
-                onClick={() => navigate('/garage/repair-tracking')}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" className="h-10 w-full sm:w-auto" disabled={isSubmitting || !canCreateJob}>
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                <span className="sm:hidden">Create Job</span>
-                <span className="hidden sm:inline">Create Repair Job</span>
-              </Button>
+              <motion.div whileTap={animate ? { scale: 0.97 } : undefined} className="w-full sm:w-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 w-full sm:w-auto"
+                  onClick={() => navigate('/garage/repair-tracking')}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+              </motion.div>
+              <motion.div whileTap={animate ? { scale: 0.97 } : undefined} className="w-full sm:w-auto">
+                <Button type="submit" className="h-10 w-full sm:w-auto" disabled={isSubmitting || !canCreateJob}>
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  <span className="sm:hidden">Create Job</span>
+                  <span className="hidden sm:inline">Create Repair Job</span>
+                </Button>
+              </motion.div>
             </div>
           </Card>
-        </div>
+        </motion.div>
       </form>
     </section>
   )
