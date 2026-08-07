@@ -6,6 +6,7 @@ import {
   type ColDef,
   type ICellRendererParams,
 } from 'ag-grid-community'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { AlertTriangle, Eye, Inbox, Pencil, Route, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,7 @@ import {
   toServiceNumberGridRow,
 } from '@/features/service-numbers/utils/service-number-model'
 import { useDarkMode } from '@/hooks/use-dark-mode'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
 
 import 'ag-grid-community/styles/ag-grid.css'
@@ -28,6 +30,34 @@ import 'ag-grid-community/styles/ag-theme-quartz.css'
 import '@/features/tickets/styles/tickets-grid.css'
 
 ModuleRegistry.registerModules([AllCommunityModule])
+
+const easeOutExpo = [0.22, 1, 0.36, 1] as const
+
+const mobileListVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.07, delayChildren: 0.04 },
+  },
+  exit: {
+    transition: { staggerChildren: 0.03, staggerDirection: -1 },
+  },
+}
+
+const mobileItemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.4, ease: easeOutExpo },
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    scale: 0.98,
+    transition: { duration: 0.2, ease: 'easeIn' as const },
+  },
+}
 
 function ServiceNoCell({ value }: ICellRendererParams<ServiceNumberGridRow>) {
   return (
@@ -93,6 +123,9 @@ export function ServiceNumbersGrid({
   onDelete,
 }: ServiceNumbersGridProps) {
   const isDarkMode = useDarkMode()
+  const isMobile = useIsMobile()
+  const shouldReduceMotion = useReducedMotion()
+  const animateMobile = isMobile && !shouldReduceMotion
 
   const itemById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
 
@@ -250,16 +283,64 @@ export function ServiceNumbersGrid({
 
   return (
     <>
-      {isLoading ? (
-        <>
-          <div className="service-number-mobile-list md:hidden">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <ServiceNumberMobileCardSkeleton key={index} />
-            ))}
-          </div>
-          <DesktopTableLoader />
-        </>
-      ) : null}
+      <div className="md:hidden">
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <motion.div
+              key="service-no-mobile-loading"
+              className="service-number-mobile-list"
+              variants={animateMobile ? mobileListVariants : undefined}
+              initial={animateMobile ? 'hidden' : false}
+              animate={animateMobile ? 'visible' : undefined}
+              exit={animateMobile ? 'exit' : undefined}
+            >
+              {Array.from({ length: 4 }).map((_, index) => (
+                <motion.div key={index} variants={animateMobile ? mobileItemVariants : undefined}>
+                  <ServiceNumberMobileCardSkeleton />
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : null}
+
+          {!isLoading && !isError && rowData.length > 0 ? (
+            <motion.div
+              key="service-no-mobile-data"
+              className="service-number-mobile-list"
+              variants={animateMobile ? mobileListVariants : undefined}
+              initial={animateMobile ? 'hidden' : false}
+              animate={animateMobile ? 'visible' : undefined}
+              exit={animateMobile ? 'exit' : undefined}
+            >
+              {rowData.map((row, index) => {
+                const item = itemById.get(row.id)
+                if (!item) return null
+
+                return (
+                  <motion.div
+                    key={row.id}
+                    className="space-y-1"
+                    variants={animateMobile ? mobileItemVariants : undefined}
+                    layout={animateMobile}
+                  >
+                    <p className="px-1 text-xs text-muted-foreground">S.No {index + 1}</p>
+                    <ServiceNumberMobileCard
+                      item={item}
+                      animationDelay={animateMobile ? index * 0.05 : 0}
+                      canEdit={canEdit}
+                      canDelete={canDelete}
+                      onView={() => onView(item)}
+                      onEdit={() => onEdit(item)}
+                      onDelete={() => onDelete(item)}
+                    />
+                  </motion.div>
+                )
+              })}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
+
+      {isLoading ? <DesktopTableLoader /> : null}
 
       {isError ? (
         <Card className="ticket-page__error">
@@ -274,52 +355,29 @@ export function ServiceNumbersGrid({
       {!isLoading && !isError && rowData.length === 0 ? <EmptyState onAdd={onAdd} /> : null}
 
       {!isLoading && !isError && rowData.length > 0 ? (
-        <>
-          <div className="service-number-mobile-list md:hidden">
-            {rowData.map((row, index) => {
-              const item = itemById.get(row.id)
-              if (!item) return null
-
-              return (
-                <div key={row.id} className="space-y-1">
-                  <p className="px-1 text-xs text-muted-foreground">S.No {index + 1}</p>
-                  <ServiceNumberMobileCard
-                    item={item}
-                    canEdit={canEdit}
-                    canDelete={canDelete}
-                    onView={() => onView(item)}
-                    onEdit={() => onEdit(item)}
-                    onDelete={() => onDelete(item)}
-                  />
-                </div>
-              )
-            })}
+        <Card className="ticket-grid-wrapper hidden md:block">
+          <div
+            className={cn(isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'ticket-grid')}
+            style={gridStyle}
+          >
+            <AgGridReact<ServiceNumberGridRow>
+              rowData={rowData}
+              columnDefs={columnDefs}
+              defaultColDef={{
+                sortable: true,
+                filter: true,
+                resizable: true,
+                floatingFilter: true,
+              }}
+              animateRows
+              suppressCellFocus
+              domLayout="autoHeight"
+              rowHeight={52}
+              headerHeight={44}
+              floatingFiltersHeight={44}
+            />
           </div>
-
-          <Card className="ticket-grid-wrapper hidden md:block">
-            <div
-              className={cn(isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'ticket-grid')}
-              style={gridStyle}
-            >
-              <AgGridReact<ServiceNumberGridRow>
-                rowData={rowData}
-                columnDefs={columnDefs}
-                defaultColDef={{
-                  sortable: true,
-                  filter: true,
-                  resizable: true,
-                  floatingFilter: true,
-                }}
-                animateRows
-                suppressCellFocus
-                domLayout="autoHeight"
-                rowHeight={52}
-                headerHeight={44}
-                floatingFiltersHeight={44}
-              />
-            </div>
-          </Card>
-        </>
+        </Card>
       ) : null}
     </>
   )
