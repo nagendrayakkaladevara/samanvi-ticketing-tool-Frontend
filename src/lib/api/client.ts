@@ -9,18 +9,32 @@ export const apiClient = axios.create({
   timeout: 20_000,
 })
 
-function hasAuthorizationHeader(config: { headers?: unknown }): boolean {
-  const headers = config.headers
-  if (!headers) {
-    return false
+function readHeaderValue(headers: unknown, name: string): string | undefined {
+  if (!headers || typeof headers !== 'object') {
+    return undefined
   }
 
-  if (typeof headers === 'object' && headers !== null && 'get' in headers && typeof headers.get === 'function') {
-    return Boolean(headers.get('Authorization') ?? headers.get('authorization'))
+  if ('get' in headers && typeof (headers as { get: (key: string) => unknown }).get === 'function') {
+    const value = (headers as { get: (key: string) => unknown }).get(name)
+    return typeof value === 'string' ? value : undefined
   }
 
   const record = headers as Record<string, unknown>
-  return Boolean(record.Authorization ?? record.authorization)
+  const direct = record[name] ?? record[name.toLowerCase()]
+  return typeof direct === 'string' ? direct : undefined
+}
+
+function hasAuthorizationHeader(config: { headers?: unknown }): boolean {
+  return Boolean(readHeaderValue(config.headers, 'Authorization'))
+}
+
+function bearerTokenFromAuthorization(value: string | undefined): string | null {
+  if (!value) {
+    return null
+  }
+
+  const match = /^Bearer\s+(.+)$/i.exec(value.trim())
+  return match?.[1]?.trim() || null
 }
 
 apiClient.interceptors.request.use((config) => {
@@ -43,7 +57,16 @@ apiClient.interceptors.response.use(
     const message = error.response?.data?.message ?? error.message ?? 'Unexpected API error'
 
     if (status === 401) {
-      useAuthStore.getState().logout()
+      const requestToken = bearerTokenFromAuthorization(
+        readHeaderValue(error.config?.headers, 'Authorization'),
+      )
+      const currentToken = useAuthStore.getState().accessToken
+
+      // Only clear the session when the failing request used the active token.
+      // Otherwise a stale in-flight 401 from a prior session can log out the new user.
+      if (!requestToken || !currentToken || requestToken === currentToken) {
+        useAuthStore.getState().logout()
+      }
     }
 
     throw new ApiError(message, status, error.response?.data)

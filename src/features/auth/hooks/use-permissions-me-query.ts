@@ -6,12 +6,13 @@ import { useAuthStore } from '@/store/auth-store'
 
 export function usePermissionsMeQuery() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const userId = useAuthStore((state) => state.user?.id)
   const updatePermissions = useAuthStore((state) => state.updatePermissions)
 
   const query = useQuery({
-    queryKey: ['permissions', 'me'],
-    queryFn: fetchMyPermissions,
-    enabled: isAuthenticated,
+    queryKey: ['permissions', 'me', userId],
+    queryFn: () => fetchMyPermissions(),
+    enabled: isAuthenticated && Boolean(userId),
     staleTime: 5 * 60 * 1000,
     retry: 1,
   })
