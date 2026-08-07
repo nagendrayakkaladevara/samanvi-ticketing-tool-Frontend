@@ -7,6 +7,7 @@ import {
   type ColDef,
   type ICellRendererParams,
 } from 'ag-grid-community'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { AlertTriangle, ArrowRight, Inbox, Pencil, Trash2, User, Wrench } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '@/lib/toast'
@@ -36,6 +37,7 @@ import {
 } from '@/features/garage/utils/job-list-model'
 import { getJobDetailsPath, getJobEditPath } from '@/features/garage/utils/job-routes'
 import { useDarkMode } from '@/hooks/use-dark-mode'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { queryClient } from '@/lib/query/query-client'
 import { cn } from '@/lib/utils'
 
@@ -44,6 +46,34 @@ import 'ag-grid-community/styles/ag-theme-quartz.css'
 import '@/features/tickets/styles/tickets-grid.css'
 
 ModuleRegistry.registerModules([AllCommunityModule])
+
+const easeOutExpo = [0.22, 1, 0.36, 1] as const
+
+const mobileListVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.07, delayChildren: 0.04 },
+  },
+  exit: {
+    transition: { staggerChildren: 0.03, staggerDirection: -1 },
+  },
+}
+
+const mobileItemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.4, ease: easeOutExpo },
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    scale: 0.98,
+    transition: { duration: 0.2, ease: 'easeIn' as const },
+  },
+}
 
 function JobNumberCell({ value }: ICellRendererParams<JobGridRow>) {
   return <span className="ticket-grid__ticket-number">{value}</span>
@@ -184,6 +214,9 @@ export function RepairJobsListView({
 }: RepairJobsListViewProps) {
   const isDarkMode = useDarkMode()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
+  const shouldReduceMotion = useReducedMotion()
+  const animateMobile = isMobile && !shouldReduceMotion
   const [deleteTarget, setDeleteTarget] = useState<JobGridRow | null>(null)
 
   const rowData = useMemo(() => [...jobs].sort(compareJobsNewestFirst).map(toJobGridRow), [jobs])
@@ -338,17 +371,67 @@ export function RepairJobsListView({
 
   return (
     <>
+      <div className="md:hidden">
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <motion.div
+              key="repair-jobs-mobile-loading"
+              className="ticket-mobile-list"
+              variants={animateMobile ? mobileListVariants : undefined}
+              initial={animateMobile ? 'hidden' : false}
+              animate={animateMobile ? 'visible' : undefined}
+              exit={animateMobile ? 'exit' : undefined}
+            >
+              {Array.from({ length: 5 }).map((_, index) => (
+                <motion.div key={index} variants={animateMobile ? mobileItemVariants : undefined}>
+                  <JobMobileCardSkeleton />
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : null}
+
+          {!isLoading && !isError && rowData.length > 0 ? (
+            <motion.div
+              key="repair-jobs-mobile-data"
+              className="ticket-mobile-list"
+              variants={animateMobile ? mobileListVariants : undefined}
+              initial={animateMobile ? 'hidden' : false}
+              animate={animateMobile ? 'visible' : undefined}
+              exit={animateMobile ? 'exit' : undefined}
+            >
+              {rowData.map((row, index) => (
+                <motion.div
+                  key={row.id}
+                  variants={animateMobile ? mobileItemVariants : undefined}
+                  layout={animateMobile}
+                >
+                  <JobMobileCard
+                    jobId={row.id}
+                    jobIdNumber={row.jobIdNumber}
+                    description={row.description}
+                    busNumber={row.busNumber}
+                    category={row.category}
+                    priority={row.priorityRaw}
+                    status={row.status}
+                    assignedTo={row.assignedTo}
+                    createdBy={row.createdBy}
+                    createdAt={row.createdAt}
+                    animationDelay={animateMobile ? index * 0.05 : 0}
+                    onView={() => navigate(getJobDetailsPath(row.id))}
+                    onEdit={canEdit ? () => navigate(getJobEditPath(row.id)) : undefined}
+                    onDelete={canDelete ? (event) => openDeleteDialog(row, event) : undefined}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
+
       {isLoading ? (
-        <>
-          <div className="ticket-mobile-list md:hidden">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <JobMobileCardSkeleton key={index} />
-            ))}
-          </div>
-          <div className="hidden md:block">
-            <TableSkeleton />
-          </div>
-        </>
+        <div className="hidden md:block">
+          <TableSkeleton />
+        </div>
       ) : null}
 
       {isError ? (
@@ -364,60 +447,37 @@ export function RepairJobsListView({
       {!isLoading && !isError && rowData.length === 0 ? <EmptyState description={emptyDescription} /> : null}
 
       {!isLoading && !isError && rowData.length > 0 ? (
-        <>
-          <div className="ticket-mobile-list md:hidden">
-            {rowData.map((row) => (
-              <JobMobileCard
-                key={row.id}
-                jobId={row.id}
-                jobIdNumber={row.jobIdNumber}
-                description={row.description}
-                busNumber={row.busNumber}
-                category={row.category}
-                priority={row.priorityRaw}
-                status={row.status}
-                assignedTo={row.assignedTo}
-                createdBy={row.createdBy}
-                createdAt={row.createdAt}
-                onView={() => navigate(getJobDetailsPath(row.id))}
-                onEdit={canEdit ? () => navigate(getJobEditPath(row.id)) : undefined}
-                onDelete={canDelete ? (event) => openDeleteDialog(row, event) : undefined}
-              />
-            ))}
+        <Card className="ticket-grid-wrapper hidden md:block">
+          <div
+            className={cn(isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'ticket-grid')}
+            style={gridStyle}
+          >
+            <AgGridReact<JobGridRow>
+              rowData={rowData}
+              columnDefs={columnDefs}
+              defaultColDef={{
+                sortable: true,
+                filter: true,
+                resizable: true,
+                floatingFilter: true,
+              }}
+              rowSelection="single"
+              animateRows
+              suppressCellFocus
+              domLayout="autoHeight"
+              rowHeight={52}
+              headerHeight={44}
+              floatingFiltersHeight={44}
+              onRowClicked={(event) => {
+                const clickTarget = event.event?.target as HTMLElement | null
+                if (clickTarget?.closest('button')) return
+                if (event.data?.id) {
+                  navigate(getJobDetailsPath(event.data.id))
+                }
+              }}
+            />
           </div>
-
-          <Card className="ticket-grid-wrapper hidden md:block">
-            <div
-              className={cn(isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'ticket-grid')}
-              style={gridStyle}
-            >
-              <AgGridReact<JobGridRow>
-                rowData={rowData}
-                columnDefs={columnDefs}
-                defaultColDef={{
-                  sortable: true,
-                  filter: true,
-                  resizable: true,
-                  floatingFilter: true,
-                }}
-                rowSelection="single"
-                animateRows
-                suppressCellFocus
-                domLayout="autoHeight"
-                rowHeight={52}
-                headerHeight={44}
-                floatingFiltersHeight={44}
-                onRowClicked={(event) => {
-                  const clickTarget = event.event?.target as HTMLElement | null
-                  if (clickTarget?.closest('button')) return
-                  if (event.data?.id) {
-                    navigate(getJobDetailsPath(event.data.id))
-                  }
-                }}
-              />
-            </div>
-          </Card>
-        </>
+        </Card>
       ) : null}
 
       <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
