@@ -7,7 +7,7 @@ import { MasterDateCell } from '@/features/master-buses/components/master-date-d
 import type { Driver } from '@/features/employees/types/driver'
 import type { Helper } from '@/features/employees/types/helper'
 import type { OfficeStaff } from '@/features/employees/types/office-staff'
-import type { EmployeeMobileField } from '@/features/employees/components/employees-grid'
+import type { EmployeeMobileField } from '@/features/employees/components/employee-mobile-card'
 import { formatMasterDateDisplay } from '@/lib/utils/master-dates'
 
 function EmployeeIdBadge({
@@ -97,24 +97,26 @@ export const officeStaffDataColumnDefs: ColDef<OfficeStaff>[] = [
 ]
 
 export const driverMobileFields: EmployeeMobileField<Driver>[] = [
-  { label: 'Aadhar Name', getValue: (item) => item.aadharName },
+  { label: 'Aadhar Name', getValue: (item) => item.aadharName, fullWidth: true },
   { label: 'Mobile Number', getValue: (item) => item.mobileNumber },
   { label: 'DL Name', getValue: (item) => item.dlName },
   { label: 'DL Number', getValue: (item) => item.dlNumber },
   {
     label: 'Transport Valid To',
     getValue: (item) => formatMasterDateDisplay(item.transportValidTo),
+    getDateValue: (item) => item.transportValidTo,
+    fullWidth: true,
   },
 ]
 
 export const helperMobileFields: EmployeeMobileField<Helper>[] = [
-  { label: 'Aadhar Name', getValue: (item) => item.aadharName },
+  { label: 'Aadhar Name', getValue: (item) => item.aadharName, fullWidth: true },
   { label: 'Mobile Number', getValue: (item) => item.mobileNumber },
   { label: 'Aadhar Number', getValue: (item) => item.aadharNumber },
 ]
 
 export const officeStaffMobileFields: EmployeeMobileField<OfficeStaff>[] = [
-  { label: 'Full Name', getValue: (item) => item.aadharName },
+  { label: 'Full Name', getValue: (item) => item.aadharName, fullWidth: true },
   { label: 'Mobile Number', getValue: (item) => item.mobileNumber },
   { label: 'Designation', getValue: (item) => item.designation },
 ]
@@ -129,4 +131,16 @@ export function helperMobileBadge(item: Helper) {
 
 export function officeStaffMobileBadge(item: OfficeStaff) {
   return <EmployeeIdBadge icon={BriefcaseBusiness} value={item.staffIdNumber} />
+}
+
+export function driverMobileMeta(item: Driver) {
+  return item.mobileNumber
+}
+
+export function helperMobileMeta(item: Helper) {
+  return item.mobileNumber
+}
+
+export function officeStaffMobileMeta(item: OfficeStaff) {
+  return item.mobileNumber
 }

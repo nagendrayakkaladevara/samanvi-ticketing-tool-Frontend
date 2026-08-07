@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { BriefcaseBusiness, HardHat, Loader2, Plus, RefreshCw, Users } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { BriefcaseBusiness, HardHat, IdCard, Loader2, Plus, RefreshCw, Users } from 'lucide-react'
 import { SteeringWheelIcon } from '@/components/icons/steering-wheel-icon'
 import { toast } from '@/lib/toast'
 
@@ -24,12 +25,15 @@ import {
   driverDataColumnDefs,
   driverMobileBadge,
   driverMobileFields,
+  driverMobileMeta,
   helperDataColumnDefs,
   helperMobileBadge,
   helperMobileFields,
+  helperMobileMeta,
   officeStaffDataColumnDefs,
   officeStaffMobileBadge,
   officeStaffMobileFields,
+  officeStaffMobileMeta,
 } from '@/features/employees/components/employees-grid-columns'
 import { EmployeesGrid } from '@/features/employees/components/employees-grid'
 import { HelperFormDialog } from '@/features/employees/components/helper-form-dialog'
@@ -42,12 +46,47 @@ import { useOfficeStaffQuery } from '@/features/employees/hooks/use-office-staff
 import type { Driver } from '@/features/employees/types/driver'
 import type { Helper } from '@/features/employees/types/helper'
 import type { OfficeStaff } from '@/features/employees/types/office-staff'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { usePermissions, useSubmoduleActions } from '@/hooks/use-permissions'
 import { useMasterDialogParams } from '@/hooks/use-master-dialog-params'
 import { queryClient } from '@/lib/query/query-client'
 import { cn } from '@/lib/utils'
 
 type EmployeeTab = 'driver' | 'helper' | 'office-staff'
+
+const easeOutExpo = [0.22, 1, 0.36, 1] as const
+
+const mobileHeaderVariants = {
+  hidden: { opacity: 0, y: -14 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: easeOutExpo },
+  },
+}
+
+const mobileToolbarVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: easeOutExpo, delay: 0.06 },
+  },
+}
+
+const tabPanelVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: easeOutExpo },
+  },
+  exit: {
+    opacity: 0,
+    y: -8,
+    transition: { duration: 0.18, ease: 'easeIn' as const },
+  },
+}
 
 function parseEmployeeTab(value: string | null): EmployeeTab {
   if (value === 'helper' || value === 'office-staff') {
@@ -63,6 +102,8 @@ const tabConfig = {
     addLabel: 'Add Driver',
     emptyTitle: 'No drivers yet',
     emptyDescription: 'Add your first driver to manage crew identity, license, and transport records.',
+    sectionTitle: 'Driver details',
+    sectionIcon: SteeringWheelIcon,
   },
   helper: {
     label: 'Helper',
@@ -70,6 +111,8 @@ const tabConfig = {
     addLabel: 'Add Helper',
     emptyTitle: 'No helpers yet',
     emptyDescription: 'Add helpers to track crew support staff across your fleet operations.',
+    sectionTitle: 'Helper details',
+    sectionIcon: HardHat,
   },
   'office-staff': {
     label: 'Office Staff',
@@ -77,6 +120,8 @@ const tabConfig = {
     addLabel: 'Add Office Staff',
     emptyTitle: 'No office staff yet',
     emptyDescription: 'Register office staff members with designation and contact details.',
+    sectionTitle: 'Staff details',
+    sectionIcon: IdCard,
   },
 } as const
 
@@ -88,6 +133,9 @@ export function EmployeesPage() {
   const driverActions = useSubmoduleActions('masters', 'driver')
   const helperActions = useSubmoduleActions('masters', 'helper')
   const officeStaffActions = useSubmoduleActions('masters', 'office_staff')
+  const isMobile = useIsMobile()
+  const shouldReduceMotion = useReducedMotion()
+  const animateMobile = isMobile && !shouldReduceMotion
 
   const { action, id, tab: tabParam, openDialog, closeDialog, setTabParam } = useMasterDialogParams()
   const activeTab = parseEmployeeTab(tabParam)
@@ -305,16 +353,64 @@ export function EmployeesPage() {
     (activeTab === 'helper' && Boolean(deleteHelper)) ||
     (activeTab === 'office-staff' && Boolean(deleteOfficeStaff))
 
+  const headerMotionProps = animateMobile
+    ? {
+        variants: mobileHeaderVariants,
+        initial: 'hidden' as const,
+        animate: 'visible' as const,
+      }
+    : {}
+
+  const toolbarMotionProps = animateMobile
+    ? {
+        variants: mobileToolbarVariants,
+        initial: 'hidden' as const,
+        animate: 'visible' as const,
+      }
+    : {}
+
+  const tabPanelMotionProps = animateMobile
+    ? {
+        variants: tabPanelVariants,
+        initial: 'hidden' as const,
+        animate: 'visible' as const,
+        exit: 'exit' as const,
+      }
+    : {}
+
   return (
     <section className="space-y-6">
-      <header className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-violet-500/10 via-background to-sky-500/10 p-6 shadow-sm">
-        <div
+      <motion.header
+        className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-violet-500/10 via-background to-sky-500/10 p-6 shadow-sm"
+        {...headerMotionProps}
+      >
+        <motion.div
           aria-hidden
           className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-violet-400/25 blur-3xl dark:bg-violet-500/15"
+          animate={
+            animateMobile
+              ? { scale: [1, 1.12, 1], opacity: [0.7, 1, 0.7] }
+              : undefined
+          }
+          transition={
+            animateMobile
+              ? { duration: 6, repeat: Infinity, ease: 'easeInOut' }
+              : undefined
+          }
         />
-        <div
+        <motion.div
           aria-hidden
           className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-sky-400/20 blur-3xl dark:bg-sky-500/10"
+          animate={
+            animateMobile
+              ? { scale: [1, 1.08, 1], opacity: [0.55, 0.9, 0.55] }
+              : undefined
+          }
+          transition={
+            animateMobile
+              ? { duration: 7.5, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }
+              : undefined
+          }
         />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5">
@@ -335,24 +431,31 @@ export function EmployeesPage() {
               </span>
             ) : null}
             {tabActions.canCreate ? (
-              <Button className="w-full sm:w-auto" onClick={openAddDialog}>
-                <Plus className="h-4 w-4" />
-                {tabConfig[activeTab].addLabel}
-              </Button>
+              <motion.div
+                className="w-full sm:w-auto"
+                whileTap={animateMobile ? { scale: 0.97 } : undefined}
+                transition={{ type: 'spring', stiffness: 480, damping: 30 }}
+              >
+                <Button className="w-full sm:w-auto" onClick={openAddDialog}>
+                  <Plus className="h-4 w-4" />
+                  {tabConfig[activeTab].addLabel}
+                </Button>
+              </motion.div>
             ) : null}
           </div>
         </div>
-      </header>
+      </motion.header>
 
-      <div className="inline-flex flex-wrap rounded-xl border border-border bg-muted/30 p-1">
+      <motion.div className="inline-flex flex-wrap rounded-xl border border-border bg-muted/30 p-1" {...toolbarMotionProps}>
         {(Object.keys(tabConfig) as EmployeeTab[]).filter((tab) => tabVisibility[tab]).map((tab) => {
           const config = tabConfig[tab]
           const Icon = config.icon
           return (
-            <button
+            <motion.button
               key={tab}
               type="button"
               onClick={() => setTabParam(tab)}
+              whileTap={animateMobile ? { scale: 0.98 } : undefined}
               className={cn(
                 'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
                 activeTab === tab
@@ -362,79 +465,96 @@ export function EmployeesPage() {
             >
               <Icon className="h-4 w-4" />
               {config.label}
-            </button>
+            </motion.button>
           )
         })}
-      </div>
+      </motion.div>
 
-      {activeTab === 'driver' ? (
-        <EmployeesGrid
-          items={sortedDrivers}
-          dataColumnDefs={driverDataColumnDefs}
-          mobileBadge={driverMobileBadge}
-          mobileFields={driverMobileFields}
-          isLoading={isLoadingDrivers}
-          isError={isDriversError}
-          error={driversError as Error | null}
-          emptyIcon={<SteeringWheelIcon className="ticket-grid-empty__icon" strokeWidth={1.2} />}
-          emptyTitle={tabConfig.driver.emptyTitle}
-          emptyDescription={tabConfig.driver.emptyDescription}
-          canEdit={tabActions.canEdit}
-          canDelete={tabActions.canDelete}
-          onAdd={tabActions.canCreate ? openAddDialog : undefined}
-          emptyAddLabel={tabConfig.driver.addLabel}
-          onView={openDriverView}
-          onEdit={openDriverEdit}
-          onDelete={openDriverDelete}
-          skeletonColumnCount={8}
-        />
-      ) : null}
+      <AnimatePresence mode="wait" initial={false}>
+        {activeTab === 'driver' ? (
+          <motion.div key="driver-panel" {...tabPanelMotionProps}>
+            <EmployeesGrid
+              items={sortedDrivers}
+              dataColumnDefs={driverDataColumnDefs}
+              mobileBadge={driverMobileBadge}
+              mobileMeta={driverMobileMeta}
+              mobileFields={driverMobileFields}
+              mobileSectionTitle={tabConfig.driver.sectionTitle}
+              mobileSectionIcon={tabConfig.driver.sectionIcon}
+              isLoading={isLoadingDrivers}
+              isError={isDriversError}
+              error={driversError as Error | null}
+              emptyIcon={<SteeringWheelIcon className="ticket-grid-empty__icon" strokeWidth={1.2} />}
+              emptyTitle={tabConfig.driver.emptyTitle}
+              emptyDescription={tabConfig.driver.emptyDescription}
+              canEdit={tabActions.canEdit}
+              canDelete={tabActions.canDelete}
+              onAdd={tabActions.canCreate ? openAddDialog : undefined}
+              emptyAddLabel={tabConfig.driver.addLabel}
+              onView={openDriverView}
+              onEdit={openDriverEdit}
+              onDelete={openDriverDelete}
+              skeletonColumnCount={8}
+            />
+          </motion.div>
+        ) : null}
 
-      {activeTab === 'helper' ? (
-        <EmployeesGrid
-          items={sortedHelpers}
-          dataColumnDefs={helperDataColumnDefs}
-          mobileBadge={helperMobileBadge}
-          mobileFields={helperMobileFields}
-          isLoading={isLoadingHelpers}
-          isError={isHelpersError}
-          error={helpersError as Error | null}
-          emptyIcon={<HardHat className="ticket-grid-empty__icon" strokeWidth={1.2} />}
-          emptyTitle={tabConfig.helper.emptyTitle}
-          emptyDescription={tabConfig.helper.emptyDescription}
-          canEdit={tabActions.canEdit}
-          canDelete={tabActions.canDelete}
-          onAdd={tabActions.canCreate ? openAddDialog : undefined}
-          emptyAddLabel={tabConfig.helper.addLabel}
-          onView={openHelperView}
-          onEdit={openHelperEdit}
-          onDelete={openHelperDelete}
-          skeletonColumnCount={6}
-        />
-      ) : null}
+        {activeTab === 'helper' ? (
+          <motion.div key="helper-panel" {...tabPanelMotionProps}>
+            <EmployeesGrid
+              items={sortedHelpers}
+              dataColumnDefs={helperDataColumnDefs}
+              mobileBadge={helperMobileBadge}
+              mobileMeta={helperMobileMeta}
+              mobileFields={helperMobileFields}
+              mobileSectionTitle={tabConfig.helper.sectionTitle}
+              mobileSectionIcon={tabConfig.helper.sectionIcon}
+              isLoading={isLoadingHelpers}
+              isError={isHelpersError}
+              error={helpersError as Error | null}
+              emptyIcon={<HardHat className="ticket-grid-empty__icon" strokeWidth={1.2} />}
+              emptyTitle={tabConfig.helper.emptyTitle}
+              emptyDescription={tabConfig.helper.emptyDescription}
+              canEdit={tabActions.canEdit}
+              canDelete={tabActions.canDelete}
+              onAdd={tabActions.canCreate ? openAddDialog : undefined}
+              emptyAddLabel={tabConfig.helper.addLabel}
+              onView={openHelperView}
+              onEdit={openHelperEdit}
+              onDelete={openHelperDelete}
+              skeletonColumnCount={6}
+            />
+          </motion.div>
+        ) : null}
 
-      {activeTab === 'office-staff' ? (
-        <EmployeesGrid
-          items={sortedOfficeStaff}
-          dataColumnDefs={officeStaffDataColumnDefs}
-          mobileBadge={officeStaffMobileBadge}
-          mobileFields={officeStaffMobileFields}
-          isLoading={isLoadingOfficeStaff}
-          isError={isOfficeStaffError}
-          error={officeStaffError as Error | null}
-          emptyIcon={<Users className="ticket-grid-empty__icon" strokeWidth={1.2} />}
-          emptyTitle={tabConfig['office-staff'].emptyTitle}
-          emptyDescription={tabConfig['office-staff'].emptyDescription}
-          canEdit={tabActions.canEdit}
-          canDelete={tabActions.canDelete}
-          onAdd={tabActions.canCreate ? openAddDialog : undefined}
-          emptyAddLabel={tabConfig['office-staff'].addLabel}
-          onView={openOfficeStaffView}
-          onEdit={openOfficeStaffEdit}
-          onDelete={openOfficeStaffDelete}
-          skeletonColumnCount={6}
-        />
-      ) : null}
+        {activeTab === 'office-staff' ? (
+          <motion.div key="office-staff-panel" {...tabPanelMotionProps}>
+            <EmployeesGrid
+              items={sortedOfficeStaff}
+              dataColumnDefs={officeStaffDataColumnDefs}
+              mobileBadge={officeStaffMobileBadge}
+              mobileMeta={officeStaffMobileMeta}
+              mobileFields={officeStaffMobileFields}
+              mobileSectionTitle={tabConfig['office-staff'].sectionTitle}
+              mobileSectionIcon={tabConfig['office-staff'].sectionIcon}
+              isLoading={isLoadingOfficeStaff}
+              isError={isOfficeStaffError}
+              error={officeStaffError as Error | null}
+              emptyIcon={<Users className="ticket-grid-empty__icon" strokeWidth={1.2} />}
+              emptyTitle={tabConfig['office-staff'].emptyTitle}
+              emptyDescription={tabConfig['office-staff'].emptyDescription}
+              canEdit={tabActions.canEdit}
+              canDelete={tabActions.canDelete}
+              onAdd={tabActions.canCreate ? openAddDialog : undefined}
+              emptyAddLabel={tabConfig['office-staff'].addLabel}
+              onView={openOfficeStaffView}
+              onEdit={openOfficeStaffEdit}
+              onDelete={openOfficeStaffDelete}
+              skeletonColumnCount={6}
+            />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <DriverFormDialog
         open={isDriverFormOpen}

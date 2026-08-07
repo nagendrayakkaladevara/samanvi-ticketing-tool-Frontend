@@ -19,6 +19,7 @@ import {
   applicationUserDataColumnDefs,
   applicationUserMobileBadge,
   applicationUserMobileFields,
+  applicationUserMobileMeta,
 } from '@/features/application-users/components/application-users-grid-columns'
 import { useApplicationUsersQuery } from '@/features/application-users/hooks/use-application-users-query'
 import type { ApplicationUser } from '@/features/application-users/types/application-user'
@@ -107,7 +108,9 @@ export function ApplicationAccessPage() {
         items={sortedUsers}
         dataColumnDefs={applicationUserDataColumnDefs}
         mobileBadge={applicationUserMobileBadge}
+        mobileMeta={applicationUserMobileMeta}
         mobileFields={applicationUserMobileFields}
+        mobileSectionTitle="User details"
         isLoading={isLoading}
         isError={isError}
         error={error as Error | null}
