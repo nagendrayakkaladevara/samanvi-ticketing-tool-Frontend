@@ -119,18 +119,25 @@ export function useCreateTicketForm() {
     setErrors({})
   }
 
-  const payload = useMemo<CreateTicketInput>(
-    () => ({
+  const payload = useMemo<CreateTicketInput | null>(() => {
+    const slaDueAtLocal = values.slaDueAtLocal.trim()
+    const slaDueAtDate = new Date(slaDueAtLocal)
+    // Avoid calling toISOString() on empty/invalid dates during render — clearing
+    // the datetime-local field would otherwise throw RangeError and crash the page.
+    if (!slaDueAtLocal || Number.isNaN(slaDueAtDate.getTime())) {
+      return null
+    }
+
+    return {
       title: values.title.trim(),
       description: values.description.trim(),
       severity: values.severity,
       priority: values.priority,
       categoryId: values.categoryId,
       busNumber: values.busNumber.trim(),
-      slaDueAt: new Date(values.slaDueAtLocal).toISOString(),
-    }),
-    [values],
-  )
+      slaDueAt: slaDueAtDate.toISOString(),
+    }
+  }, [values])
 
   return {
     values,

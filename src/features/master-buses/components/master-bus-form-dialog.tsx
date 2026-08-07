@@ -41,39 +41,40 @@ function buildPayload(values: MasterBusFormValues, mode: FormMode): CreateMaster
   const odometerRaw = values.odometer.trim()
   const insuranceValidity = inputValueToMasterDate(values.insuranceValidity)
 
-  if (mode === 'create') {
-    if (!busNumber) {
-      toast.error('Bus number is required.')
-      return null
-    }
-    if (!engineNumber) {
-      toast.error('Engine number is required.')
-      return null
-    }
-    if (!chassisNumber) {
-      toast.error('Chassis number is required.')
-      return null
-    }
-    if (!odometerRaw) {
-      toast.error('Odometer reading is required.')
-      return null
-    }
-    const odometer = Number(odometerRaw)
-    if (!Number.isInteger(odometer) || odometer < 0) {
-      toast.error('Odometer must be a whole number greater than or equal to 0.')
-      return null
-    }
-    if (!insuranceValidity) {
-      toast.error('Insurance validity date is required.')
-      return null
-    }
+  // Validate required identifiers in both create and edit. Edit previously skipped
+  // these checks, so whitespace-only values passed HTML `required` and PATCH'd
+  // empty strings — wiping bus/engine/chassis numbers.
+  if (!busNumber) {
+    toast.error('Bus number is required.')
+    return null
+  }
+  if (!engineNumber) {
+    toast.error('Engine number is required.')
+    return null
+  }
+  if (!chassisNumber) {
+    toast.error('Chassis number is required.')
+    return null
+  }
+  if (!odometerRaw) {
+    toast.error('Odometer reading is required.')
+    return null
+  }
+  const odometer = Number(odometerRaw)
+  if (!Number.isInteger(odometer) || odometer < 0) {
+    toast.error('Odometer must be a whole number greater than or equal to 0.')
+    return null
+  }
+  if (mode === 'create' && !insuranceValidity) {
+    toast.error('Insurance validity date is required.')
+    return null
   }
 
   const payload: CreateMasterBusInput = {
     busNumber,
     engineNumber,
     chassisNumber,
-    odometer: Number(odometerRaw),
+    odometer,
     insuranceValidity: insuranceValidity ?? '',
   }
 

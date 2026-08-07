@@ -2,6 +2,7 @@ import { create } from 'zustand'
 
 import type { AuthSession, AuthUser, UserPermissions } from '@/features/auth/types/auth'
 import { buildPermissionKeySet } from '@/features/permissions/utils/permission-normalize'
+import { queryClient } from '@/lib/query/query-client'
 
 const STORAGE_KEY = 'samanvi.auth.session'
 
@@ -109,6 +110,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       permissions: null,
       permissionSet: new Set(),
     })
+    // Drop cached queries so the next login cannot briefly see the prior user's data
+    // (query keys are not user-scoped, e.g. ['permissions', 'me']).
+    queryClient.clear()
   },
 }))
 
