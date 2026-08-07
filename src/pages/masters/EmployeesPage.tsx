@@ -373,6 +373,8 @@ export function EmployeesPage() {
           dataColumnDefs={driverDataColumnDefs}
           mobileBadge={driverMobileBadge}
           mobileFields={driverMobileFields}
+          getMobileTitle={(item) => item.aadharName}
+          omitFirstMobileField
           isLoading={isLoadingDrivers}
           isError={isDriversError}
           error={driversError as Error | null}
@@ -396,6 +398,8 @@ export function EmployeesPage() {
           dataColumnDefs={helperDataColumnDefs}
           mobileBadge={helperMobileBadge}
           mobileFields={helperMobileFields}
+          getMobileTitle={(item) => item.aadharName}
+          omitFirstMobileField
           isLoading={isLoadingHelpers}
           isError={isHelpersError}
           error={helpersError as Error | null}
@@ -419,6 +423,8 @@ export function EmployeesPage() {
           dataColumnDefs={officeStaffDataColumnDefs}
           mobileBadge={officeStaffMobileBadge}
           mobileFields={officeStaffMobileFields}
+          getMobileTitle={(item) => item.aadharName}
+          omitFirstMobileField
           isLoading={isLoadingOfficeStaff}
           isError={isOfficeStaffError}
           error={officeStaffError as Error | null}
