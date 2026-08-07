@@ -1,6 +1,6 @@
 import type { ColDef, ICellRendererParams } from 'ag-grid-community'
 
-import type { EmployeeMobileField } from '@/features/employees/components/employees-grid'
+import type { EmployeeMobileField } from '@/features/employees/components/employee-mobile-card'
 import {
   applicationUserTypeLabels,
   type ApplicationUser,
@@ -77,10 +77,10 @@ export const applicationUserDataColumnDefs: ColDef<ApplicationUser>[] = [
 ]
 
 export const applicationUserMobileFields: EmployeeMobileField<ApplicationUser>[] = [
-  { label: 'Name', getValue: (item) => item.displayName },
+  { label: 'Name', getValue: (item) => item.displayName, fullWidth: true },
   { label: 'Username', getValue: (item) => item.username || '—' },
   { label: 'Mobile', getValue: (item) => item.mobileNumber },
-  { label: 'Email', getValue: (item) => item.email ?? '—' },
+  { label: 'Email', getValue: (item) => item.email ?? '—', fullWidth: true },
   {
     label: 'User Type',
     getValue: (item) => applicationUserTypeLabels[item.userType] ?? item.userType,
@@ -93,4 +93,8 @@ export const applicationUserMobileFields: EmployeeMobileField<ApplicationUser>[]
 
 export function applicationUserMobileBadge(item: ApplicationUser) {
   return <StatusBadge isActive={item.isActive} />
+}
+
+export function applicationUserMobileMeta(item: ApplicationUser) {
+  return item.username ? `@${item.username}` : item.mobileNumber
 }

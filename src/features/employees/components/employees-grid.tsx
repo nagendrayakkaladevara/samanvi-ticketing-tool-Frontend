@@ -1,4 +1,4 @@
-import { useMemo, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
+import { useMemo, type CSSProperties, type ComponentType, type MouseEvent, type ReactNode } from 'react'
 import { AgGridReact } from 'ag-grid-react'
 import {
   AllCommunityModule,
@@ -6,12 +6,19 @@ import {
   type ColDef,
   type ICellRendererParams,
 } from 'ag-grid-community'
-import { AlertTriangle, Eye, Pencil, Trash2 } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { AlertTriangle, Eye, IdCard, Pencil, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  EmployeeMobileCard,
+  EmployeeMobileCardSkeleton,
+  type EmployeeMobileField,
+} from '@/features/employees/components/employee-mobile-card'
 import { useDarkMode } from '@/hooks/use-dark-mode'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
 
 import 'ag-grid-community/styles/ag-grid.css'
@@ -20,9 +27,34 @@ import '@/features/tickets/styles/tickets-grid.css'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
-export type EmployeeMobileField<T> = {
-  label: string
-  getValue: (item: T) => ReactNode
+export type { EmployeeMobileField }
+
+const easeOutExpo = [0.22, 1, 0.36, 1] as const
+
+const mobileListVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.07, delayChildren: 0.04 },
+  },
+  exit: {
+    transition: { staggerChildren: 0.03, staggerDirection: -1 },
+  },
+}
+
+const mobileItemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.4, ease: easeOutExpo },
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    scale: 0.98,
+    transition: { duration: 0.2, ease: 'easeIn' as const },
+  },
 }
 
 export type EmployeesGridProps<T extends { id: string }> = {
@@ -30,6 +62,9 @@ export type EmployeesGridProps<T extends { id: string }> = {
   dataColumnDefs: ColDef<T>[]
   mobileBadge: (item: T) => ReactNode
   mobileFields: EmployeeMobileField<T>[]
+  mobileMeta?: (item: T) => ReactNode
+  mobileSectionTitle?: string
+  mobileSectionIcon?: ComponentType<{ className?: string }>
   isLoading: boolean
   isError: boolean
   error: Error | null
@@ -97,53 +132,14 @@ function EmptyState({
   )
 }
 
-function MobileActionButtons<T>({
-  item,
-  canEdit = false,
-  canDelete = false,
-  onView,
-  onEdit,
-  onDelete,
-}: {
-  item: T
-  canEdit?: boolean
-  canDelete?: boolean
-  onView: (item: T) => void
-  onEdit: (item: T) => void
-  onDelete: (item: T) => void
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      <Button variant="outline" size="sm" onClick={() => onView(item)}>
-        <Eye className="h-3.5 w-3.5" />
-        View
-      </Button>
-      {canEdit ? (
-        <Button variant="outline" size="sm" onClick={() => onEdit(item)}>
-          <Pencil className="h-3.5 w-3.5" />
-          Edit
-        </Button>
-      ) : null}
-      {canDelete ? (
-        <Button
-          variant="destructive"
-          size="sm"
-          className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-          onClick={() => onDelete(item)}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-          Delete
-        </Button>
-      ) : null}
-    </div>
-  )
-}
-
 export function EmployeesGrid<T extends { id: string }>({
   items,
   dataColumnDefs,
   mobileBadge,
   mobileFields,
+  mobileMeta,
+  mobileSectionTitle = 'Details',
+  mobileSectionIcon = IdCard,
   isLoading,
   isError,
   error,
@@ -160,6 +156,9 @@ export function EmployeesGrid<T extends { id: string }>({
   skeletonColumnCount = 7,
 }: EmployeesGridProps<T>) {
   const isDarkMode = useDarkMode()
+  const isMobile = useIsMobile()
+  const shouldReduceMotion = useReducedMotion()
+  const animateMobile = isMobile && !shouldReduceMotion
 
   const columnDefs = useMemo<Array<ColDef<T>>>(
     () => [
@@ -242,99 +241,115 @@ export function EmployeesGrid<T extends { id: string }>({
     '--ag-font-family': 'inherit',
   } as CSSProperties
 
-  if (isLoading) {
-    return (
-      <>
-        <div className="space-y-3 md:hidden">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-28 w-full rounded-xl" />
-          ))}
-        </div>
+  return (
+    <>
+      <div className="md:hidden">
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <motion.div
+              key="employee-mobile-loading"
+              className="employee-mobile-list"
+              variants={animateMobile ? mobileListVariants : undefined}
+              initial={animateMobile ? 'hidden' : false}
+              animate={animateMobile ? 'visible' : undefined}
+              exit={animateMobile ? 'exit' : undefined}
+            >
+              {Array.from({ length: 4 }).map((_, index) => (
+                <motion.div key={index} variants={animateMobile ? mobileItemVariants : undefined}>
+                  <EmployeeMobileCardSkeleton />
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : null}
+
+          {!isLoading && !isError && items.length > 0 ? (
+            <motion.div
+              key="employee-mobile-data"
+              className="employee-mobile-list"
+              variants={animateMobile ? mobileListVariants : undefined}
+              initial={animateMobile ? 'hidden' : false}
+              animate={animateMobile ? 'visible' : undefined}
+              exit={animateMobile ? 'exit' : undefined}
+            >
+              {items.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  variants={animateMobile ? mobileItemVariants : undefined}
+                  layout={animateMobile}
+                >
+                  <EmployeeMobileCard
+                    item={item}
+                    index={index}
+                    badge={mobileBadge(item)}
+                    meta={mobileMeta?.(item)}
+                    fields={mobileFields}
+                    sectionTitle={mobileSectionTitle}
+                    sectionIcon={mobileSectionIcon}
+                    animationDelay={animateMobile ? index * 0.05 : 0}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
+                    onView={onView}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
+
+      {isLoading ? (
         <div className="hidden md:block">
           <TableSkeleton columnCount={skeletonColumnCount} />
         </div>
-      </>
-    )
-  }
+      ) : null}
 
-  if (isError) {
-    return (
-      <Card className="ticket-page__error">
-        <AlertTriangle className="ticket-page__error-icon" />
-        <div>
-          <p className="ticket-page__error-title">Unable to load records</p>
-          <p className="ticket-page__error-message">{error?.message ?? 'An unexpected error occurred.'}</p>
-        </div>
-      </Card>
-    )
-  }
+      {isError ? (
+        <Card className="ticket-page__error">
+          <AlertTriangle className="ticket-page__error-icon" />
+          <div>
+            <p className="ticket-page__error-title">Unable to load records</p>
+            <p className="ticket-page__error-message">{error?.message ?? 'An unexpected error occurred.'}</p>
+          </div>
+        </Card>
+      ) : null}
 
-  if (items.length === 0) {
-    return (
-      <EmptyState
-        icon={emptyIcon}
-        title={emptyTitle}
-        description={emptyDescription}
-        onAdd={onAdd}
-        addLabel={emptyAddLabel}
-      />
-    )
-  }
+      {!isLoading && !isError && items.length === 0 ? (
+        <EmptyState
+          icon={emptyIcon}
+          title={emptyTitle}
+          description={emptyDescription}
+          onAdd={onAdd}
+          addLabel={emptyAddLabel}
+        />
+      ) : null}
 
-  return (
-    <>
-      <div className="space-y-3 md:hidden">
-        {items.map((item, index) => (
-          <Card key={item.id} className="p-4">
-            <div className="space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-xs text-muted-foreground">S.No {index + 1}</p>
-                {mobileBadge(item)}
-              </div>
-              <div className="grid gap-2">
-                {mobileFields.map((field) => (
-                  <div key={field.label} className="flex items-start justify-between gap-3 text-sm">
-                    <span className="text-muted-foreground">{field.label}</span>
-                    <span className="max-w-[60%] text-right font-medium">{field.getValue(item)}</span>
-                  </div>
-                ))}
-              </div>
-              <MobileActionButtons
-                item={item}
-                canEdit={canEdit}
-                canDelete={canDelete}
-                onView={onView}
-                onEdit={onEdit}
-                onDelete={onDelete}
-              />
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <Card className="ticket-grid-wrapper hidden md:block">
-        <div
-          className={cn(isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'ticket-grid')}
-          style={gridStyle}
-        >
-          <AgGridReact<T>
-            rowData={items}
-            columnDefs={columnDefs}
-            defaultColDef={{
-              sortable: true,
-              filter: true,
-              resizable: true,
-              floatingFilter: true,
-            }}
-            animateRows
-            suppressCellFocus
-            domLayout="autoHeight"
-            rowHeight={52}
-            headerHeight={44}
-            floatingFiltersHeight={44}
-          />
-        </div>
-      </Card>
+      {!isLoading && !isError && items.length > 0 ? (
+        <Card className="ticket-grid-wrapper hidden md:block">
+          <div
+            className={cn(isDarkMode ? 'ag-theme-quartz-dark' : 'ag-theme-quartz', 'ticket-grid')}
+            style={gridStyle}
+          >
+            <AgGridReact<T>
+              rowData={items}
+              columnDefs={columnDefs}
+              defaultColDef={{
+                sortable: true,
+                filter: true,
+                resizable: true,
+                floatingFilter: true,
+              }}
+              animateRows
+              suppressCellFocus
+              domLayout="autoHeight"
+              rowHeight={52}
+              headerHeight={44}
+              floatingFiltersHeight={44}
+            />
+          </div>
+        </Card>
+      ) : null}
     </>
   )
 }
