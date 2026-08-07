@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { useMutation } from '@tanstack/react-query'
 import { Loader2, Plus, RefreshCw } from 'lucide-react'
 import { toast } from '@/lib/toast'
@@ -21,9 +22,21 @@ import { serviceNumbersService } from '@/features/service-numbers/api/service-nu
 import { useServiceNumbersQuery } from '@/features/service-numbers/hooks/use-service-numbers-query'
 import type { ServiceNumber } from '@/features/service-numbers/types/service-number'
 import { useServiceForQuery } from '@/features/service-for/hooks/use-service-for-query'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { useMasterDialogParams } from '@/hooks/use-master-dialog-params'
 import { usePermissions } from '@/hooks/use-permissions'
 import { queryClient } from '@/lib/query/query-client'
+
+const easeOutExpo = [0.22, 1, 0.36, 1] as const
+
+const mobileHeaderVariants = {
+  hidden: { opacity: 0, y: -14 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: easeOutExpo },
+  },
+}
 
 export function ServiceNoPage() {
   const { can } = usePermissions()
@@ -33,6 +46,9 @@ export function ServiceNoPage() {
   const { data: items = [], isLoading, isFetching, isError, error } = useServiceNumbersQuery()
   const { data: serviceForOptions = [] } = useServiceForQuery()
   const { action, id, openDialog, closeDialog } = useMasterDialogParams()
+  const isMobile = useIsMobile()
+  const shouldReduceMotion = useReducedMotion()
+  const animateMobile = isMobile && !shouldReduceMotion
 
   const editingItem = useMemo(
     () => (action === 'edit' && id ? items.find((item) => item.id === id) ?? null : null),
@@ -75,16 +91,47 @@ export function ServiceNoPage() {
     deleteMutation.mutate(deleteTarget.id)
   }
 
+  const headerMotionProps = animateMobile
+    ? {
+        variants: mobileHeaderVariants,
+        initial: 'hidden' as const,
+        animate: 'visible' as const,
+      }
+    : {}
+
   return (
     <section className="space-y-6">
-      <header className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-emerald-500/10 via-background to-rose-500/10 p-6 shadow-sm">
-        <div
+      <motion.header
+        className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-emerald-500/10 via-background to-rose-500/10 p-6 shadow-sm"
+        {...headerMotionProps}
+      >
+        <motion.div
           aria-hidden
           className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-emerald-400/25 blur-3xl dark:bg-emerald-500/15"
+          animate={
+            animateMobile
+              ? { scale: [1, 1.12, 1], opacity: [0.7, 1, 0.7] }
+              : undefined
+          }
+          transition={
+            animateMobile
+              ? { duration: 6, repeat: Infinity, ease: 'easeInOut' }
+              : undefined
+          }
         />
-        <div
+        <motion.div
           aria-hidden
           className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-rose-400/20 blur-3xl dark:bg-rose-500/10"
+          animate={
+            animateMobile
+              ? { scale: [1, 1.08, 1], opacity: [0.55, 0.9, 0.55] }
+              : undefined
+          }
+          transition={
+            animateMobile
+              ? { duration: 7.5, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }
+              : undefined
+          }
         />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5">
@@ -104,14 +151,20 @@ export function ServiceNoPage() {
               </span>
             ) : null}
             {canCreate ? (
-              <Button className="w-full sm:w-auto" onClick={openCreateForm}>
-                <Plus className="h-4 w-4" />
-                Add Service Number
-              </Button>
+              <motion.div
+                className="w-full sm:w-auto"
+                whileTap={animateMobile ? { scale: 0.97 } : undefined}
+                transition={{ type: 'spring', stiffness: 480, damping: 30 }}
+              >
+                <Button className="w-full sm:w-auto" onClick={openCreateForm}>
+                  <Plus className="h-4 w-4" />
+                  Add Service Number
+                </Button>
+              </motion.div>
             ) : null}
           </div>
         </div>
-      </header>
+      </motion.header>
 
       <ServiceNumbersGrid
         items={items}
