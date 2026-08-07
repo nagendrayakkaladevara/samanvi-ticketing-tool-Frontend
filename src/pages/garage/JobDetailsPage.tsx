@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, Loader2, Trash2 } from 'lucide-react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
@@ -45,24 +46,141 @@ import {
 import { downloadRepairJobPdf } from '@/features/garage/utils/download-repair-job-pdf'
 import { hasPendingRepeatSchedule } from '@/features/garage/utils/job-repeat-model'
 import type { RepairJobPart } from '@/features/garage/types/job'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { usePermissions, useSubmoduleActions } from '@/hooks/use-permissions'
 import { queryClient } from '@/lib/query/query-client'
 import { cn } from '@/lib/utils'
+
+const easeOutExpo = [0.22, 1, 0.36, 1] as const
+
+const pageVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.1, delayChildren: 0.04 },
+  },
+  exit: {
+    opacity: 0,
+    transition: { duration: 0.18 },
+  },
+}
+
+const blockVariants = {
+  hidden: { opacity: 0, y: 16, scale: 0.985 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.4, ease: easeOutExpo },
+  },
+}
+
+const contentStaggerVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.045, delayChildren: 0.08 },
+  },
+}
+
+const fieldVariants = {
+  hidden: { opacity: 0, y: 10, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.3, ease: easeOutExpo },
+  },
+}
+
+const skeletonListVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.05, delayChildren: 0.04 },
+  },
+  exit: {
+    opacity: 0,
+    transition: { duration: 0.15 },
+  },
+}
+
+const skeletonItemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.3, ease: easeOutExpo },
+  },
+}
 
 function DetailItem({
   label,
   value,
   className,
+  animate,
 }: {
   label: string
   value: string
   className?: string
+  animate?: boolean
 }) {
-  return (
+  const content = (
     <div className={cn('space-y-1 rounded-lg border bg-muted/20 px-3 py-2.5', className)}>
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="text-sm font-medium text-foreground">{value}</p>
     </div>
+  )
+
+  if (!animate) return content
+
+  return <motion.div variants={fieldVariants}>{content}</motion.div>
+}
+
+function AnimatedSection({
+  animate,
+  children,
+  className,
+}: {
+  animate: boolean
+  children: ReactNode
+  className?: string
+}) {
+  if (!animate) {
+    return <div className={className}>{children}</div>
+  }
+
+  return (
+    <motion.div className={className} variants={fieldVariants}>
+      {children}
+    </motion.div>
+  )
+}
+
+function JobDetailsSkeleton({ animate }: { animate: boolean }) {
+  return (
+    <motion.section
+      key="job-details-loading"
+      className="mx-auto w-full min-w-0 max-w-4xl space-y-5"
+      variants={animate ? skeletonListVariants : undefined}
+      initial={animate ? 'hidden' : false}
+      animate={animate ? 'visible' : undefined}
+      exit={animate ? 'exit' : undefined}
+    >
+      <motion.div variants={animate ? skeletonItemVariants : undefined}>
+        <Skeleton className="h-9 w-40" />
+      </motion.div>
+      <motion.div variants={animate ? skeletonItemVariants : undefined}>
+        <Skeleton className="h-28 w-full rounded-xl sm:h-32" />
+      </motion.div>
+      <motion.div
+        className="grid grid-cols-2 gap-3"
+        variants={animate ? skeletonListVariants : undefined}
+      >
+        {Array.from({ length: 8 }).map((_, index) => (
+          <motion.div key={index} variants={animate ? skeletonItemVariants : undefined}>
+            <Skeleton className="h-20 rounded-lg" />
+          </motion.div>
+        ))}
+      </motion.div>
+    </motion.section>
   )
 }
 
@@ -73,6 +191,9 @@ export function JobDetailsPage() {
   const { has, can } = usePermissions()
   const canViewJob = has('garage', 'repair_job', 'view')
   const canAddParts = can('garage', 'repair_job', 'edit')
+  const isMobile = useIsMobile()
+  const shouldReduceMotion = useReducedMotion()
+  const animateMobile = isMobile && !shouldReduceMotion
   const [addPartOpen, setAddPartOpen] = useState(false)
   const [repeatJobOpen, setRepeatJobOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -140,8 +261,8 @@ export function JobDetailsPage() {
     try {
       await downloadRepairJobPdf(job)
       toast.success('Repair job downloaded as PDF.')
-    } catch (error) {
-      console.error('Repair job PDF download failed:', error)
+    } catch (downloadError) {
+      console.error('Repair job PDF download failed:', downloadError)
       toast.error('Failed to download PDF file.')
     }
   }
@@ -150,21 +271,7 @@ export function JobDetailsPage() {
     return <Navigate to={getRepairTrackingPath()} replace />
   }
 
-  if (isLoading) {
-    return (
-      <section className="mx-auto w-full min-w-0 max-w-4xl space-y-5">
-        <Skeleton className="h-9 w-40" />
-        <Skeleton className="h-10 w-64" />
-        <div className="grid grid-cols-2 gap-3">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <Skeleton key={index} className="h-20 rounded-lg" />
-          ))}
-        </div>
-      </section>
-    )
-  }
-
-  if (isError || !job) {
+  if (isError || (!isLoading && !job)) {
     return (
       <section className="mx-auto w-full min-w-0 max-w-4xl space-y-5">
         <Button variant="ghost" className="-ml-2 h-9 w-fit px-2" onClick={() => navigate(getRepairTrackingPath())}>
@@ -178,234 +285,299 @@ export function JobDetailsPage() {
     )
   }
 
-  const jobParts = job.parts ?? []
-  const jobComments = [...getJobComments(job.activityLogs ?? [])].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-  )
-  const isRepeatEditMode = hasPendingRepeatSchedule(job)
-  const assignedLabel = job.assignedToOfficeStaff
+  const jobParts = job?.parts ?? []
+  const jobComments = job
+    ? [...getJobComments(job.activityLogs ?? [])].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      )
+    : []
+  const isRepeatEditMode = job ? hasPendingRepeatSchedule(job) : false
+  const assignedLabel = job?.assignedToOfficeStaff
     ? `${job.assignedToOfficeStaff.nickName}${job.assignedToOfficeStaff.designation ? ` (${job.assignedToOfficeStaff.designation})` : ''}`
     : 'Unassigned'
-  const driverLabel = job.reportedDriver
+  const driverLabel = job?.reportedDriver
     ? `${job.reportedDriver.driverIdNumber} — ${job.reportedDriver.aadharName || job.reportedDriver.dlName}`
     : 'None'
-  const jobViewUrl = getJobShareUrl(job.id)
+  const jobViewUrl = job ? getJobShareUrl(job.id) : ''
+
+  const pageMotionProps = animateMobile
+    ? {
+        variants: pageVariants,
+        initial: 'hidden' as const,
+        animate: 'visible' as const,
+        exit: 'exit' as const,
+      }
+    : {}
+
+  const blockMotionProps = animateMobile ? { variants: blockVariants } : {}
+  const contentMotionProps = animateMobile
+    ? {
+        variants: contentStaggerVariants,
+        initial: 'hidden' as const,
+        animate: 'visible' as const,
+      }
+    : {}
 
   return (
-    <section className="mx-auto w-full min-w-0 max-w-4xl space-y-5">
-      <JobDetailsHeader
-        job={job}
-        canViewJob={canViewJob}
-        canEditJob={jobActions.canEdit}
-        canAddParts={canAddParts}
-        isRepeatEditMode={isRepeatEditMode}
-        onBack={() => navigate(getRepairTrackingPath())}
-        onEdit={() => navigate(getJobEditPath(job.id))}
-        onAddPart={() => setAddPartOpen(true)}
-        onScheduleRepeat={() => {
-          if (!canAddParts) {
-            toast.error('You do not have permission to schedule repeat jobs.')
-            return
-          }
-          setRepeatJobOpen(true)
-        }}
-        onDownload={handleDownloadPdf}
-        onHistory={() => setHistoryOpen(true)}
-        onToggleComment={() => setShowCommentForm((open) => !open)}
-        onUpdateStatus={() => setStatusDialogOpen(true)}
-      />
+    <AnimatePresence mode="wait">
+      {isLoading || !job ? (
+        <JobDetailsSkeleton animate={animateMobile} />
+      ) : (
+        <motion.section
+          key="job-details-content"
+          className="mx-auto w-full min-w-0 max-w-4xl space-y-5"
+          {...pageMotionProps}
+        >
+          <motion.div {...blockMotionProps}>
+            <JobDetailsHeader
+              job={job}
+              canViewJob={canViewJob}
+              canEditJob={jobActions.canEdit}
+              canAddParts={canAddParts}
+              isRepeatEditMode={isRepeatEditMode}
+              onBack={() => navigate(getRepairTrackingPath())}
+              onEdit={() => navigate(getJobEditPath(job.id))}
+              onAddPart={() => setAddPartOpen(true)}
+              onScheduleRepeat={() => {
+                if (!canAddParts) {
+                  toast.error('You do not have permission to schedule repeat jobs.')
+                  return
+                }
+                setRepeatJobOpen(true)
+              }}
+              onDownload={handleDownloadPdf}
+              onHistory={() => setHistoryOpen(true)}
+              onToggleComment={() => setShowCommentForm((open) => !open)}
+              onUpdateStatus={() => setStatusDialogOpen(true)}
+            />
+          </motion.div>
 
-      <Card className="space-y-4 p-4 sm:p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Job Details</h2>
-        <MasterDetailGrid columns="threeColLg">
-          <DetailItem label="Bus Number" value={job.bus.busNumber} />
-          <DetailItem label="Repair Category" value={job.repairCategory.name} />
-          <DetailItem label="Status" value={formatJobStatus(job.status)} className="capitalize" />
-          <DetailItem label="Odometer (km)" value={job.odometerReading.toLocaleString()} />
-          <DetailItem label="Assigned To" value={assignedLabel} />
-          <DetailItem label="Reported Driver" value={driverLabel} />
-          <DetailItem label="Created By" value={job.createdBy.displayName || job.createdBy.username || 'Unknown'} />
-          <DetailItem label="Created At" value={formatJobDate(job.createdAt)} />
-          <DetailItem label="Updated At" value={formatJobDate(job.updatedAt)} />
-          {job.closedAt ? (
-            <DetailItem label="Closed At" value={formatJobDate(job.closedAt)} />
-          ) : null}
-          <DetailItem label="Repeat Job" value={job.isRepeatJob ? 'Yes' : 'No'} />
-        </MasterDetailGrid>
+          <motion.div {...blockMotionProps}>
+            <Card className="overflow-hidden p-0">
+              <motion.div className="space-y-4 p-4 sm:p-5" {...contentMotionProps}>
+                <AnimatedSection animate={animateMobile}>
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Job Details</h2>
+                </AnimatedSection>
 
-        <div className="space-y-2 rounded-lg border bg-background px-3 py-2.5">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Repair Job QR</p>
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
-            <div className="shrink-0 rounded-md border bg-white p-2">
-              <QRCodeSVG value={jobViewUrl} size={76} />
-            </div>
-            <p className="w-full break-all text-center text-xs text-muted-foreground sm:text-left">{jobViewUrl}</p>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="space-y-1 rounded-lg border bg-background px-3 py-2.5">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Description</p>
-            <p className="text-sm leading-6 text-foreground">{job.description}</p>
-          </div>
-
-          {jobComments.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Comments</p>
-              <ul className="divide-y rounded-lg border">
-                {jobComments.map((comment) => (
-                  <li key={comment.id} className="space-y-1 px-3 py-2.5">
-                    <p className="text-sm leading-6 text-foreground">{comment.note}</p>
-                    <p className="text-xs text-muted-foreground">{formatCommentMeta(comment)}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {showCommentForm ? (
-            <div className="space-y-2 rounded-lg border bg-muted/20 px-3 py-3">
-              <label htmlFor="jobCommentNote" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Add comment
-              </label>
-              <Textarea
-                id="jobCommentNote"
-                className="min-h-24 bg-background"
-                value={commentNote}
-                onChange={(event) => setCommentNote(event.target.value)}
-                disabled={commentMutation.isPending}
-                placeholder="Enter your comment..."
-                maxLength={2000}
-              />
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleSubmitComment}
-                  disabled={commentMutation.isPending || !commentNote.trim()}
+                <motion.div
+                  {...(animateMobile
+                    ? {
+                        variants: contentStaggerVariants,
+                      }
+                    : {})}
                 >
-                  {commentMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Submit
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={commentMutation.isPending}
-                  onClick={() => {
-                    setShowCommentForm(false)
-                    setCommentNote('')
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </div>
+                  <MasterDetailGrid columns="threeColLg">
+                    <DetailItem label="Bus Number" value={job.bus.busNumber} animate={animateMobile} />
+                    <DetailItem label="Repair Category" value={job.repairCategory.name} animate={animateMobile} />
+                    <DetailItem
+                      label="Status"
+                      value={formatJobStatus(job.status)}
+                      className="capitalize"
+                      animate={animateMobile}
+                    />
+                    <DetailItem
+                      label="Odometer (km)"
+                      value={job.odometerReading.toLocaleString()}
+                      animate={animateMobile}
+                    />
+                    <DetailItem label="Assigned To" value={assignedLabel} animate={animateMobile} />
+                    <DetailItem label="Reported Driver" value={driverLabel} animate={animateMobile} />
+                    <DetailItem
+                      label="Created By"
+                      value={job.createdBy.displayName || job.createdBy.username || 'Unknown'}
+                      animate={animateMobile}
+                    />
+                    <DetailItem label="Created At" value={formatJobDate(job.createdAt)} animate={animateMobile} />
+                    <DetailItem label="Updated At" value={formatJobDate(job.updatedAt)} animate={animateMobile} />
+                    {job.closedAt ? (
+                      <DetailItem label="Closed At" value={formatJobDate(job.closedAt)} animate={animateMobile} />
+                    ) : null}
+                    <DetailItem label="Repeat Job" value={job.isRepeatJob ? 'Yes' : 'No'} animate={animateMobile} />
+                  </MasterDetailGrid>
+                </motion.div>
 
-        {jobParts.length > 0 ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Spare Parts Used
-              </h3>
-              <p className="text-sm font-semibold text-primary">
-                Total: {formatJobPartsTotal(jobParts)}
-              </p>
-            </div>
-            <ul className="divide-y rounded-lg border">
-              {jobParts.map((part) => (
-                <li key={part.id} className="space-y-1 px-3 py-2.5 text-sm">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <p className="min-w-0 flex-1 font-medium text-foreground">{part.repairPart.partName}</p>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <p className="font-semibold text-primary">{formatJobPartLineTotal(part)}</p>
-                      {canAddParts ? (
+                <AnimatedSection
+                  animate={animateMobile}
+                  className="space-y-2 rounded-lg border bg-background px-3 py-2.5"
+                >
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Repair Job QR</p>
+                  <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
+                    <div className="shrink-0 rounded-md border bg-white p-2">
+                      <QRCodeSVG value={jobViewUrl} size={76} />
+                    </div>
+                    <p className="w-full break-all text-center text-xs text-muted-foreground sm:text-left">
+                      {jobViewUrl}
+                    </p>
+                  </div>
+                </AnimatedSection>
+
+                <AnimatedSection animate={animateMobile} className="space-y-3">
+                  <div className="space-y-1 rounded-lg border bg-background px-3 py-2.5">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Description</p>
+                    <p className="text-sm leading-6 text-foreground">{job.description}</p>
+                  </div>
+
+                  {jobComments.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Comments</p>
+                      <ul className="divide-y rounded-lg border">
+                        {jobComments.map((comment) => (
+                          <li key={comment.id} className="space-y-1 px-3 py-2.5">
+                            <p className="text-sm leading-6 text-foreground">{comment.note}</p>
+                            <p className="text-xs text-muted-foreground">{formatCommentMeta(comment)}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  {showCommentForm ? (
+                    <div className="space-y-2 rounded-lg border bg-muted/20 px-3 py-3">
+                      <label
+                        htmlFor="jobCommentNote"
+                        className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                      >
+                        Add comment
+                      </label>
+                      <Textarea
+                        id="jobCommentNote"
+                        className="min-h-24 bg-background"
+                        value={commentNote}
+                        onChange={(event) => setCommentNote(event.target.value)}
+                        disabled={commentMutation.isPending}
+                        placeholder="Enter your comment..."
+                        maxLength={2000}
+                      />
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          aria-label={`Remove ${part.repairPart.partName}`}
-                          onClick={() => setRemovePartTarget(part)}
+                          size="sm"
+                          onClick={handleSubmitComment}
+                          disabled={commentMutation.isPending || !commentNote.trim()}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {commentMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                          Submit
                         </Button>
-                      ) : null}
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={commentMutation.isPending}
+                          onClick={() => {
+                            setShowCommentForm(false)
+                            setCommentNote('')
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Qty {part.quantity} × {formatRepairPartPrice(part.unitPrice)} · Added by{' '}
-                    {part.addedBy.displayName || part.addedBy.username || 'Unknown'} ·{' '}
-                    {formatJobPartAddedAt(part.createdAt)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </Card>
+                  ) : null}
+                </AnimatedSection>
 
-      {jobId ? (
-        <>
-          <AddJobPartDialog open={addPartOpen} jobId={jobId} onOpenChange={setAddPartOpen} />
-          {!job.isRepeatJob ? (
-            <ScheduleRepeatJobDialog
-              open={repeatJobOpen}
-              onOpenChange={setRepeatJobOpen}
-              jobId={job.id}
-              jobIdNumber={job.jobIdNumber}
-              repeatScheduledFor={job.repeatScheduledFor ?? null}
-              repeatProcessedAt={job.repeatProcessedAt ?? null}
-            />
+                {jobParts.length > 0 ? (
+                  <AnimatedSection animate={animateMobile} className="space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                        Spare Parts Used
+                      </h3>
+                      <p className="text-sm font-semibold text-primary">Total: {formatJobPartsTotal(jobParts)}</p>
+                    </div>
+                    <ul className="divide-y rounded-lg border">
+                      {jobParts.map((part) => (
+                        <li key={part.id} className="space-y-1 px-3 py-2.5 text-sm">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <p className="min-w-0 flex-1 font-medium text-foreground">{part.repairPart.partName}</p>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <p className="font-semibold text-primary">{formatJobPartLineTotal(part)}</p>
+                              {canAddParts ? (
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                  aria-label={`Remove ${part.repairPart.partName}`}
+                                  onClick={() => setRemovePartTarget(part)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Qty {part.quantity} × {formatRepairPartPrice(part.unitPrice)} · Added by{' '}
+                            {part.addedBy.displayName || part.addedBy.username || 'Unknown'} ·{' '}
+                            {formatJobPartAddedAt(part.createdAt)}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </AnimatedSection>
+                ) : null}
+              </motion.div>
+            </Card>
+          </motion.div>
+
+          {jobId ? (
+            <>
+              <AddJobPartDialog open={addPartOpen} jobId={jobId} onOpenChange={setAddPartOpen} />
+              {!job.isRepeatJob ? (
+                <ScheduleRepeatJobDialog
+                  open={repeatJobOpen}
+                  onOpenChange={setRepeatJobOpen}
+                  jobId={job.id}
+                  jobIdNumber={job.jobIdNumber}
+                  repeatScheduledFor={job.repeatScheduledFor ?? null}
+                  repeatProcessedAt={job.repeatProcessedAt ?? null}
+                />
+              ) : null}
+              <JobHistorySheet
+                open={historyOpen}
+                onOpenChange={setHistoryOpen}
+                jobId={job.id}
+                jobIdNumber={job.jobIdNumber}
+                currentStatus={job.status}
+              />
+              <UpdateJobStatusDialog job={job} open={statusDialogOpen} onOpenChange={setStatusDialogOpen} />
+            </>
           ) : null}
-          <JobHistorySheet
-            open={historyOpen}
-            onOpenChange={setHistoryOpen}
-            jobId={job.id}
-            jobIdNumber={job.jobIdNumber}
-            currentStatus={job.status}
-          />
-          <UpdateJobStatusDialog
-            job={job}
-            open={statusDialogOpen}
-            onOpenChange={setStatusDialogOpen}
-          />
-        </>
-      ) : null}
 
-      <AlertDialog
-        open={Boolean(removePartTarget)}
-        onOpenChange={(open) => !open && setRemovePartTarget(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove spare part?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {removePartTarget
-                ? `Remove "${removePartTarget.repairPart.partName}" (qty ${removePartTarget.quantity}) from this repair job? This cannot be undone.`
-                : 'This action cannot be undone.'}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={removePartMutation.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="border-red-600 bg-red-600 text-white hover:bg-red-700"
-              onClick={confirmRemovePart}
-              disabled={removePartMutation.isPending}
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <AlertDialog
+            open={Boolean(removePartTarget)}
+            onOpenChange={(open) => !open && setRemovePartTarget(null)}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove spare part?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {removePartTarget
+                    ? `Remove "${removePartTarget.repairPart.partName}" (qty ${removePartTarget.quantity}) from this repair job? This cannot be undone.`
+                    : 'This action cannot be undone.'}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={removePartMutation.isPending}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+                  onClick={confirmRemovePart}
+                  disabled={removePartMutation.isPending}
+                >
+                  Remove
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
-      <p className="text-center text-xs text-muted-foreground">
-        <Link to={getRepairTrackingPath()} className="font-medium text-primary hover:underline">
-          Return to repair tracking
-        </Link>
-      </p>
-    </section>
+          <motion.p
+            className="text-center text-xs text-muted-foreground"
+            {...(animateMobile ? { variants: fieldVariants } : {})}
+          >
+            <Link to={getRepairTrackingPath()} className="font-medium text-primary hover:underline">
+              Return to repair tracking
+            </Link>
+          </motion.p>
+        </motion.section>
+      )}
+    </AnimatePresence>
   )
 }
