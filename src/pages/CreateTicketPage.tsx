@@ -38,6 +38,9 @@ export function CreateTicketPage() {
 
   const createTicketMutation = useMutation({
     mutationFn: async (variables: { assignedToId: string }) => {
+      if (!form.payload) {
+        throw new Error('Please enter a valid SLA due date and time.')
+      }
       const createdTicket = await ticketsService.create(form.payload)
       if (variables.assignedToId) {
         await ticketsService.assign({
