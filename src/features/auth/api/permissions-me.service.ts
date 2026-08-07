@@ -4,7 +4,16 @@ import { normalizePermissionsCatalog } from '@/features/permissions/utils/permis
 
 const endpoint = '/permissions/me'
 
-export async function fetchMyPermissions(): Promise<UserPermissions> {
-  const { data } = await apiClient.get<unknown>(endpoint)
+export async function fetchMyPermissions(accessToken?: string): Promise<UserPermissions> {
+  const { data } = await apiClient.get<unknown>(
+    endpoint,
+    accessToken
+      ? {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      : undefined,
+  )
   return normalizePermissionsCatalog(data)
 }

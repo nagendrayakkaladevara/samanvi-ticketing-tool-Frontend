@@ -220,12 +220,17 @@ async function fetchCurrentUser(accessToken: string): Promise<{ user: AuthUser; 
   }
 }
 
-async function resolvePermissions(permissions: UserPermissions | null | undefined): Promise<UserPermissions> {
+async function resolvePermissions(
+  permissions: UserPermissions | null | undefined,
+  accessToken: string,
+): Promise<UserPermissions> {
   if (permissions?.items?.length) {
     return permissions
   }
 
-  return fetchMyPermissions()
+  // Must use the freshly issued token — the auth store is not updated until
+  // login() returns and LoginPage calls setSession().
+  return fetchMyPermissions(accessToken)
 }
 
 function assertLoginSucceeded(raw: unknown): void {
@@ -260,7 +265,7 @@ async function parseSessionPayload(raw: unknown): Promise<AuthSession> {
     parsedPermissions = parsedPermissions ?? me.permissions
   }
 
-  const permissions = await resolvePermissions(parsedPermissions)
+  const permissions = await resolvePermissions(parsedPermissions, accessToken)
 
   return { accessToken, refreshToken, user: parsedUser, permissions }
 }
