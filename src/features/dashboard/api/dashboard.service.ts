@@ -327,11 +327,50 @@ function normalizeSummary(raw: unknown): DashboardSummary {
   }
 }
 
+export type DashboardMasterCounts = {
+  serviceFor: number
+  busNo: number
+  serviceNo: number
+  employees: {
+    driver: number
+    helper: number
+    staff: number
+    total: number
+  }
+}
+
+function normalizeMasterCounts(raw: unknown): DashboardMasterCounts {
+  const payload = extractPayload(raw)
+  const employees = getRecord(payload.employees)
+
+  const driver = pickNumber(employees, ['driver']) ?? 0
+  const helper = pickNumber(employees, ['helper']) ?? 0
+  const staff = pickNumber(employees, ['staff']) ?? 0
+  const total = pickNumber(employees, ['total']) ?? driver + helper + staff
+
+  return {
+    serviceFor: pickNumber(payload, ['serviceFor']) ?? 0,
+    busNo: pickNumber(payload, ['busNo']) ?? 0,
+    serviceNo: pickNumber(payload, ['serviceNo']) ?? 0,
+    employees: {
+      driver,
+      helper,
+      staff,
+      total,
+    },
+  }
+}
+
 export const dashboardService = {
   async getAdminSummary(days = 14): Promise<DashboardSummary> {
     const { data } = await apiClient.get<unknown>('/dashboard/admin-summary', {
       params: { days },
     })
     return normalizeSummary(data)
+  },
+
+  async getMasterCounts(): Promise<DashboardMasterCounts> {
+    const { data } = await apiClient.get<unknown>('/dashboard/master-counts')
+    return normalizeMasterCounts(data)
   },
 }
