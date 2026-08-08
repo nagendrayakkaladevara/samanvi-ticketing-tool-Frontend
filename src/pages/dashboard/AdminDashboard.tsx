@@ -10,6 +10,7 @@ import {
   FolderOpen,
   Loader2,
   Route,
+  UserRound,
   UserX,
   Users,
   Wrench,
@@ -57,28 +58,24 @@ function MasterStatLink({ item }: { item: MasterStat }) {
     <Link
       to={item.to}
       className={cn(
-        'group flex flex-col gap-3 rounded-lg border border-border bg-background p-4 transition-colors',
+        'group flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-background p-3 transition-colors sm:gap-3 sm:p-4',
         'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{item.label}</p>
-          <p className="text-3xl font-semibold tracking-tight tabular-nums text-foreground">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 space-y-1">
+          <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:text-xs">
+            {item.label}
+          </p>
+          <p className="text-2xl font-semibold tracking-tight tabular-nums text-foreground sm:text-3xl">
             {formatNumber(item.value)}
           </p>
         </div>
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground sm:size-9">
           <Icon className="size-4" aria-hidden />
         </span>
       </div>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">{item.helper}</p>
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-          Open
-          <ArrowRight className="size-3.5" aria-hidden />
-        </span>
-      </div>
+      <p className="line-clamp-2 text-[11px] leading-snug text-muted-foreground sm:text-xs">{item.helper}</p>
     </Link>
   )
 }
@@ -92,35 +89,36 @@ function TicketMetricCard({
 }) {
   const Icon = item.icon
   const filter = item.filterTitle ? dashboardSummaryCardToFilter(item.filterTitle) : null
+  const className = cn(
+    'group flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-background p-3 transition-colors sm:gap-3 sm:p-4',
+    filter &&
+      'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+  )
   const content = (
     <>
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{item.label}</p>
-          <p className="text-3xl font-semibold tracking-tight tabular-nums text-foreground">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 space-y-1">
+          <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:text-xs">
+            {item.label}
+          </p>
+          <p className="text-2xl font-semibold tracking-tight tabular-nums text-foreground sm:text-3xl">
             {formatNumber(item.value)}
           </p>
         </div>
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground sm:size-9">
           <Icon className="size-4" aria-hidden />
         </span>
       </div>
-      <p className="text-xs text-muted-foreground">{item.helper}</p>
+      <p className="line-clamp-2 text-[11px] leading-snug text-muted-foreground sm:text-xs">{item.helper}</p>
     </>
   )
 
   if (!filter) {
-    return <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-4">{content}</div>
+    return <div className={className}>{content}</div>
   }
 
   return (
-    <Link
-      to={getTicketsByStatusPath(filter, windowDays)}
-      className={cn(
-        'group flex flex-col gap-3 rounded-lg border border-border bg-background p-4 transition-colors',
-        'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-      )}
-    >
+    <Link to={getTicketsByStatusPath(filter, windowDays)} className={className}>
       {content}
     </Link>
   )
@@ -138,53 +136,65 @@ function EmployeeBreakdown({
   total: number
 }) {
   const rows = [
-    { label: 'Drivers', value: driver },
-    { label: 'Helpers', value: helper },
-    { label: 'Office staff', value: staff },
+    { label: 'Drivers', value: driver, icon: UserRound },
+    { label: 'Helpers', value: helper, icon: Users },
+    { label: 'Office staff', value: staff, icon: ClipboardList },
   ]
-  const peak = Math.max(...rows.map((row) => row.value), 1)
 
   return (
-    <div className="rounded-lg border border-border bg-background p-4 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
-          <h2 className="text-base font-semibold text-foreground">Active employees</h2>
+          <h2 className="text-xl font-semibold text-foreground">Active employees</h2>
           <p className="text-sm text-muted-foreground">
-            Counts include people without a leaving date only.
+            People currently on roster (no leaving date).
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
-          <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">
-            {formatNumber(total)}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-6 space-y-4">
-        {rows.map((row) => (
-          <div key={row.label} className="space-y-2">
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="font-medium text-foreground">{row.label}</span>
-              <span className="tabular-nums text-muted-foreground">{formatNumber(row.value)}</span>
-            </div>
-            <div className="h-2 rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-foreground/70 transition-[width] duration-300"
-                style={{ width: `${(row.value / peak) * 100}%` }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-6">
         <Button asChild variant="outline" size="sm" className="gap-2">
           <Link to="/masters/employees">
             Manage employees
             <ArrowRight className="size-4" aria-hidden />
           </Link>
         </Button>
+      </div>
+
+      <div className="overflow-hidden rounded-lg border border-border">
+        <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="flex size-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground">
+              <Users className="size-4" aria-hidden />
+            </span>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total active</p>
+              <p className="text-sm text-muted-foreground">Across all employee types</p>
+            </div>
+          </div>
+          <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">
+            {formatNumber(total)}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 divide-x divide-border">
+          {rows.map((row) => {
+            const Icon = row.icon
+            const share = total > 0 ? Math.round((row.value / total) * 100) : 0
+
+            return (
+              <div key={row.label} className="min-w-0 px-3 py-4 sm:px-4 sm:py-5">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Icon className="size-3.5 shrink-0" aria-hidden />
+                  <p className="truncate text-[11px] font-medium uppercase tracking-wide sm:text-xs">
+                    {row.label}
+                  </p>
+                </div>
+                <p className="mt-2 text-xl font-semibold tabular-nums tracking-tight text-foreground sm:text-2xl">
+                  {formatNumber(row.value)}
+                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">{share}% of total</p>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
@@ -338,7 +348,7 @@ export function AdminDashboard() {
 
   return (
     <section className="mx-auto flex w-full max-w-7xl flex-col gap-8 pb-4">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+      <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dashboard</p>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">Operations overview</h1>
@@ -347,28 +357,14 @@ export function AdminDashboard() {
             you need.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {(masterCountsQuery.isFetching || ticketSummaryQuery.isFetching) &&
-          !showMasterSkeleton &&
-          !showTicketSkeleton ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Loader2 className="size-3.5 animate-spin" aria-hidden />
-              Updating
-            </span>
-          ) : null}
-          <Button asChild variant="outline" size="sm" className="gap-2">
-            <Link to="/garage/repair-tracking">
-              <Wrench className="size-4" aria-hidden />
-              Repair tracking
-            </Link>
-          </Button>
-          <Button asChild size="sm" className="gap-2">
-            <Link to="/tickets">
-              View tickets
-              <ArrowRight className="size-4" aria-hidden />
-            </Link>
-          </Button>
-        </div>
+        {(masterCountsQuery.isFetching || ticketSummaryQuery.isFetching) &&
+        !showMasterSkeleton &&
+        !showTicketSkeleton ? (
+          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 className="size-3.5 animate-spin" aria-hidden />
+            Updating
+          </span>
+        ) : null}
       </header>
 
       <div className="space-y-4">
@@ -387,13 +383,13 @@ export function AdminDashboard() {
             onRetry={() => void masterCountsQuery.refetch()}
           />
         ) : showMasterSkeleton ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 xl:gap-4">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-32 w-full rounded-lg" />
+              <Skeleton key={index} className="h-28 w-full rounded-lg sm:h-32" />
             ))}
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 xl:gap-4">
             {masterStats.map((item) => (
               <MasterStatLink key={item.id} item={item} />
             ))}
@@ -419,13 +415,13 @@ export function AdminDashboard() {
             onRetry={() => void ticketSummaryQuery.refetch()}
           />
         ) : showTicketSkeleton ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6 xl:gap-4">
             {Array.from({ length: 6 }).map((_, index) => (
               <Skeleton key={index} className="h-28 w-full rounded-lg" />
             ))}
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6 xl:gap-4">
             {ticketMetrics.map((item) => (
               <TicketMetricCard key={item.id} item={item} windowDays={windowDays} />
             ))}
