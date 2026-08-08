@@ -30,6 +30,16 @@ export type EmployeesGridProps<T extends { id: string }> = {
   dataColumnDefs: ColDef<T>[]
   mobileBadge: (item: T) => ReactNode
   mobileFields: EmployeeMobileField<T>[]
+  /** Optional title for the shared mobile card header (defaults to first field value). */
+  getMobileTitle?: (item: T) => ReactNode
+  /** Optional subtitle shown under the mobile card title. */
+  getMobileSubtitle?: (item: T) => ReactNode
+  /** When true, the first mobile field is omitted from the meta grid (use when it is the title). */
+  omitFirstMobileField?: boolean
+  /** Fully custom mobile card renderer; when set, default mobile cards are skipped. */
+  renderMobileCard?: (item: T, index: number) => ReactNode
+  /** Custom mobile loading skeleton; when set, replaces the default skeleton list. */
+  renderMobileSkeleton?: () => ReactNode
   isLoading: boolean
   isError: boolean
   error: Error | null
@@ -113,14 +123,19 @@ function MobileActionButtons<T>({
   onDelete: (item: T) => void
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      <Button variant="outline" size="sm" onClick={() => onView(item)}>
-        <Eye className="h-3.5 w-3.5" />
+    <div className="ticket-mobile-card__actions">
+      <Button size="sm" className="ticket-mobile-card__action-primary flex-1" onClick={() => onView(item)}>
+        <Eye className="h-4 w-4" />
         View
       </Button>
       {canEdit ? (
-        <Button variant="outline" size="sm" onClick={() => onEdit(item)}>
-          <Pencil className="h-3.5 w-3.5" />
+        <Button
+          variant="outline"
+          size="sm"
+          className="ticket-mobile-card__action-secondary flex-1"
+          onClick={() => onEdit(item)}
+        >
+          <Pencil className="h-4 w-4" />
           Edit
         </Button>
       ) : null}
@@ -128,11 +143,11 @@ function MobileActionButtons<T>({
         <Button
           variant="destructive"
           size="sm"
-          className="border-red-600 bg-red-600 text-white hover:bg-red-700"
+          className="ticket-mobile-card__action-delete shrink-0 border-red-600 bg-red-600 text-white hover:bg-red-700"
           onClick={() => onDelete(item)}
+          aria-label="Delete"
         >
-          <Trash2 className="h-3.5 w-3.5" />
-          Delete
+          <Trash2 className="h-4 w-4" />
         </Button>
       ) : null}
     </div>
@@ -144,6 +159,11 @@ export function EmployeesGrid<T extends { id: string }>({
   dataColumnDefs,
   mobileBadge,
   mobileFields,
+  getMobileTitle,
+  getMobileSubtitle,
+  omitFirstMobileField = false,
+  renderMobileCard,
+  renderMobileSkeleton,
   isLoading,
   isError,
   error,
@@ -160,6 +180,7 @@ export function EmployeesGrid<T extends { id: string }>({
   skeletonColumnCount = 7,
 }: EmployeesGridProps<T>) {
   const isDarkMode = useDarkMode()
+  const visibleMobileFields = omitFirstMobileField ? mobileFields.slice(1) : mobileFields
 
   const columnDefs = useMemo<Array<ColDef<T>>>(
     () => [
@@ -245,10 +266,32 @@ export function EmployeesGrid<T extends { id: string }>({
   if (isLoading) {
     return (
       <>
-        <div className="space-y-3 md:hidden">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-28 w-full rounded-xl" />
-          ))}
+        <div className="ticket-mobile-list md:hidden">
+          {renderMobileSkeleton
+            ? Array.from({ length: 4 }).map((_, index) => (
+                <div key={index}>{renderMobileSkeleton()}</div>
+              ))
+            : Array.from({ length: 4 }).map((_, index) => (
+                <Card key={index} className="ticket-mobile-card ticket-mobile-card--skeleton" aria-hidden>
+                  <div className="ticket-mobile-card__header">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <Skeleton className="h-5 w-36" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                  </div>
+                  <dl className="ticket-mobile-card__meta">
+                    <Skeleton className="h-10 rounded-md" />
+                    <Skeleton className="h-10 rounded-md" />
+                    <Skeleton className="ticket-mobile-card__meta-item--full h-10 rounded-md" />
+                  </dl>
+                  <div className="ticket-mobile-card__actions">
+                    <Skeleton className="h-9 flex-1" />
+                    <Skeleton className="h-9 flex-1" />
+                    <Skeleton className="h-9 w-10" />
+                  </div>
+                </Card>
+              ))}
         </div>
         <div className="hidden md:block">
           <TableSkeleton columnCount={skeletonColumnCount} />
@@ -283,22 +326,44 @@ export function EmployeesGrid<T extends { id: string }>({
 
   return (
     <>
-      <div className="space-y-3 md:hidden">
-        {items.map((item, index) => (
-          <Card key={item.id} className="p-4">
-            <div className="space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-xs text-muted-foreground">S.No {index + 1}</p>
-                {mobileBadge(item)}
-              </div>
-              <div className="grid gap-2">
-                {mobileFields.map((field) => (
-                  <div key={field.label} className="flex items-start justify-between gap-3 text-sm">
-                    <span className="text-muted-foreground">{field.label}</span>
-                    <span className="max-w-[60%] text-right font-medium">{field.getValue(item)}</span>
+      <div className="ticket-mobile-list md:hidden">
+        {items.map((item, index) => {
+          if (renderMobileCard) {
+            return <div key={item.id}>{renderMobileCard(item, index)}</div>
+          }
+
+          const title =
+            getMobileTitle?.(item) ??
+            (mobileFields[0] ? mobileFields[0].getValue(item) : `Record ${index + 1}`)
+          const subtitle = getMobileSubtitle?.(item)
+
+          return (
+            <Card key={item.id} className="ticket-mobile-card" role="article">
+              <button type="button" className="ticket-mobile-card__body" onClick={() => onView(item)}>
+                <div className="ticket-mobile-card__header">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <h3 className="ticket-mobile-card__title">{title}</h3>
+                    {subtitle ? <p className="text-xs text-muted-foreground">{subtitle}</p> : null}
                   </div>
-                ))}
-              </div>
+                  {mobileBadge(item)}
+                </div>
+                <dl className="ticket-mobile-card__meta">
+                  {visibleMobileFields.map((field, fieldIndex) => (
+                    <div
+                      key={field.label}
+                      className={cn(
+                        'ticket-mobile-card__meta-item',
+                        fieldIndex === visibleMobileFields.length - 1 &&
+                          visibleMobileFields.length % 2 === 1 &&
+                          'ticket-mobile-card__meta-item--full',
+                      )}
+                    >
+                      <dt>{field.label}</dt>
+                      <dd>{field.getValue(item)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </button>
               <MobileActionButtons
                 item={item}
                 canEdit={canEdit}
@@ -307,9 +372,9 @@ export function EmployeesGrid<T extends { id: string }>({
                 onEdit={onEdit}
                 onDelete={onDelete}
               />
-            </div>
-          </Card>
-        ))}
+            </Card>
+          )
+        })}
       </div>
 
       <Card className="ticket-grid-wrapper hidden md:block">

@@ -20,6 +20,10 @@ import {
   applicationUserMobileBadge,
   applicationUserMobileFields,
 } from '@/features/application-users/components/application-users-grid-columns'
+import {
+  ApplicationUserMobileCard,
+  ApplicationUserMobileCardSkeleton,
+} from '@/features/application-users/components/application-user-mobile-card'
 import { useApplicationUsersQuery } from '@/features/application-users/hooks/use-application-users-query'
 import type { ApplicationUser } from '@/features/application-users/types/application-user'
 import { applicationAccessRoutes } from '@/features/application-users/utils/application-access-routes'
@@ -108,6 +112,18 @@ export function ApplicationAccessPage() {
         dataColumnDefs={applicationUserDataColumnDefs}
         mobileBadge={applicationUserMobileBadge}
         mobileFields={applicationUserMobileFields}
+        renderMobileCard={(user, index) => (
+          <ApplicationUserMobileCard
+            user={user}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            animationDelay={index * 0.05}
+            onView={() => navigate(applicationAccessRoutes.view(user.id))}
+            onEdit={() => navigate(applicationAccessRoutes.edit(user.id))}
+            onDelete={() => setDeleteTarget(user)}
+          />
+        )}
+        renderMobileSkeleton={() => <ApplicationUserMobileCardSkeleton />}
         isLoading={isLoading}
         isError={isError}
         error={error as Error | null}

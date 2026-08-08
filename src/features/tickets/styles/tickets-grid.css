@@ -556,7 +556,7 @@
 }
 
 .user-mobile-card--inactive {
-  border-style: dashed;
+  border-style: dashed !important;
 }
 
 @media (min-width: 768px) {
