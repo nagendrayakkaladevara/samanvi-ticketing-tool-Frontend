@@ -1,4 +1,6 @@
 import { AtSign, Eye, KeyRound, Mail, Pencil, Phone, Shield, Trash2 } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
+import type { ReactNode } from 'react'
 
 import '@/features/tickets/styles/tickets-grid.css'
 
@@ -8,6 +10,7 @@ import {
   applicationUserTypeLabels,
   type ApplicationUser,
 } from '@/features/application-users/types/application-user'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
 
 function StatusBadge({ isActive }: { isActive: boolean }) {
@@ -43,6 +46,91 @@ function UserTypeBadge({ userType }: { userType: ApplicationUser['userType'] }) 
   )
 }
 
+const easeOutExpo = [0.22, 1, 0.36, 1] as const
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 18, scale: 0.97 },
+  visible: (delay = 0) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.4,
+      ease: easeOutExpo,
+      delay,
+      staggerChildren: 0.07,
+      delayChildren: 0.08 + delay,
+    },
+  }),
+}
+
+const headerVariants = {
+  hidden: { opacity: 0, y: -8 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.32, ease: easeOutExpo },
+  },
+}
+
+const metaVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.045,
+      delayChildren: 0.02,
+    },
+  },
+}
+
+const fieldVariants = {
+  hidden: { opacity: 0, y: 10, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.28, ease: easeOutExpo },
+  },
+}
+
+const actionsVariants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.3, ease: easeOutExpo },
+  },
+}
+
+function MetaField({
+  label,
+  children,
+  muted = false,
+  animate,
+}: {
+  label: string
+  children: ReactNode
+  muted?: boolean
+  animate: boolean
+}) {
+  const content = (
+    <>
+      <dt>{label}</dt>
+      <dd className={cn('min-w-0', muted && 'ticket-mobile-card__meta-value--muted')}>{children}</dd>
+    </>
+  )
+
+  if (!animate) {
+    return <div className="ticket-mobile-card__meta-item">{content}</div>
+  }
+
+  return (
+    <motion.div className="ticket-mobile-card__meta-item" variants={fieldVariants}>
+      {content}
+    </motion.div>
+  )
+}
+
 export type ApplicationUserMobileCardProps = {
   user: ApplicationUser
   canEdit?: boolean
@@ -50,6 +138,8 @@ export type ApplicationUserMobileCardProps = {
   onView: () => void
   onEdit: () => void
   onDelete: () => void
+  /** Extra delay so list stagger + field populate feel sequenced after loading */
+  animationDelay?: number
 }
 
 export function ApplicationUserMobileCard({
@@ -59,9 +149,87 @@ export function ApplicationUserMobileCard({
   onView,
   onEdit,
   onDelete,
+  animationDelay = 0,
 }: ApplicationUserMobileCardProps) {
+  const isMobile = useIsMobile()
+  const shouldReduceMotion = useReducedMotion()
+  const animate = isMobile && !shouldReduceMotion
+
   const email = user.email?.trim()
   const overrideCount = user.permissionIds.length
+
+  const headerInner = (
+    <>
+      <div className="min-w-0 flex-1 space-y-1">
+        <h3 className="ticket-mobile-card__title">{user.displayName}</h3>
+        <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <AtSign className="h-3 w-3 shrink-0" aria-hidden />
+          {user.username || '—'}
+        </p>
+      </div>
+      <StatusBadge isActive={user.isActive} />
+    </>
+  )
+
+  const metaFields = (
+    <>
+      <MetaField label="User Type" animate={animate}>
+        <Shield className="ticket-mobile-card__meta-icon" aria-hidden />
+        <UserTypeBadge userType={user.userType} />
+      </MetaField>
+      <MetaField label="Mobile" animate={animate}>
+        <Phone className="ticket-mobile-card__meta-icon" aria-hidden />
+        {user.mobileNumber || '—'}
+      </MetaField>
+      <MetaField label="Overrides" muted={overrideCount === 0} animate={animate}>
+        <KeyRound className="ticket-mobile-card__meta-icon" aria-hidden />
+        {overrideCount > 0 ? overrideCount : 'None'}
+      </MetaField>
+      <MetaField label="Email" muted={!email} animate={animate}>
+        <Mail className="ticket-mobile-card__meta-icon" aria-hidden />
+        <span className="min-w-0 break-all">{email || 'Not set'}</span>
+      </MetaField>
+    </>
+  )
+
+  const actions = (
+    <div className="ticket-mobile-card__actions flex-col gap-2 min-[420px]:flex-row">
+      <Button
+        size="sm"
+        className="ticket-mobile-card__action-primary w-full min-[420px]:flex-1"
+        onClick={onView}
+      >
+        <Eye className="h-4 w-4" aria-hidden />
+        View
+      </Button>
+      {canEdit || canDelete ? (
+        <div className="flex w-full gap-2 min-[420px]:contents">
+          {canEdit ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="ticket-mobile-card__action-secondary min-w-0 flex-1"
+              onClick={onEdit}
+            >
+              <Pencil className="h-4 w-4" aria-hidden />
+              Edit
+            </Button>
+          ) : null}
+          {canDelete ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              className="ticket-mobile-card__action-delete shrink-0 border-red-600 bg-red-600 text-white hover:bg-red-700"
+              onClick={onDelete}
+              aria-label={`Delete application user ${user.displayName}`}
+            >
+              <Trash2 className="h-4 w-4" aria-hidden />
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  )
 
   return (
     <Card
@@ -72,86 +240,27 @@ export function ApplicationUserMobileCard({
       role="article"
       aria-label={`Application user ${user.displayName}`}
     >
-      <button type="button" className="ticket-mobile-card__body" onClick={onView}>
-        <div className="ticket-mobile-card__header">
-          <div className="min-w-0 flex-1 space-y-1">
-            <h3 className="ticket-mobile-card__title">{user.displayName}</h3>
-            <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <AtSign className="h-3 w-3 shrink-0" aria-hidden />
-              {user.username || '—'}
-            </p>
-          </div>
-          <StatusBadge isActive={user.isActive} />
-        </div>
-
-        <dl className="ticket-mobile-card__meta">
-          <div className="ticket-mobile-card__meta-item">
-            <dt>User Type</dt>
-            <dd>
-              <Shield className="ticket-mobile-card__meta-icon" aria-hidden />
-              <UserTypeBadge userType={user.userType} />
-            </dd>
-          </div>
-          <div className="ticket-mobile-card__meta-item">
-            <dt>Mobile</dt>
-            <dd>
-              <Phone className="ticket-mobile-card__meta-icon" aria-hidden />
-              {user.mobileNumber || '—'}
-            </dd>
-          </div>
-          <div className="ticket-mobile-card__meta-item">
-            <dt>Overrides</dt>
-            <dd className={cn(overrideCount === 0 && 'ticket-mobile-card__meta-value--muted')}>
-              <KeyRound className="ticket-mobile-card__meta-icon" aria-hidden />
-              {overrideCount > 0 ? overrideCount : 'None'}
-            </dd>
-          </div>
-          <div className="ticket-mobile-card__meta-item ticket-mobile-card__meta-item--full">
-            <dt>Email</dt>
-            <dd className={cn(!email && 'ticket-mobile-card__meta-value--muted')}>
-              <Mail className="ticket-mobile-card__meta-icon" aria-hidden />
-              {email || 'Not set'}
-            </dd>
-          </div>
-        </dl>
-      </button>
-
-      <div className="ticket-mobile-card__actions flex-col gap-2 min-[420px]:flex-row">
-        <Button
-          size="sm"
-          className="ticket-mobile-card__action-primary w-full min-[420px]:flex-1"
-          onClick={onView}
-        >
-          <Eye className="h-4 w-4" aria-hidden />
-          View
-        </Button>
-        {canEdit || canDelete ? (
-          <div className="flex w-full gap-2 min-[420px]:contents">
-            {canEdit ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="ticket-mobile-card__action-secondary min-w-0 flex-1"
-                onClick={onEdit}
-              >
-                <Pencil className="h-4 w-4" aria-hidden />
-                Edit
-              </Button>
-            ) : null}
-            {canDelete ? (
-              <Button
-                size="sm"
-                variant="destructive"
-                className="ticket-mobile-card__action-delete shrink-0 border-red-600 bg-red-600 text-white hover:bg-red-700"
-                onClick={onDelete}
-                aria-label={`Delete application user ${user.displayName}`}
-              >
-                <Trash2 className="h-4 w-4" aria-hidden />
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      {animate ? (
+        <motion.div initial="hidden" animate="visible" custom={animationDelay} variants={cardVariants}>
+          <button type="button" className="ticket-mobile-card__body" onClick={onView}>
+            <motion.div className="ticket-mobile-card__header" variants={headerVariants}>
+              {headerInner}
+            </motion.div>
+            <motion.dl className="ticket-mobile-card__meta" variants={metaVariants}>
+              {metaFields}
+            </motion.dl>
+          </button>
+          <motion.div variants={actionsVariants}>{actions}</motion.div>
+        </motion.div>
+      ) : (
+        <>
+          <button type="button" className="ticket-mobile-card__body" onClick={onView}>
+            <div className="ticket-mobile-card__header">{headerInner}</div>
+            <dl className="ticket-mobile-card__meta">{metaFields}</dl>
+          </button>
+          {actions}
+        </>
+      )}
     </Card>
   )
 }
@@ -170,7 +279,7 @@ export function ApplicationUserMobileCardSkeleton() {
         <div className="h-10 rounded-md bg-muted/70" />
         <div className="h-10 rounded-md bg-muted/70" />
         <div className="h-10 rounded-md bg-muted/70" />
-        <div className="ticket-mobile-card__meta-item--full h-10 rounded-md bg-muted/70" />
+        <div className="h-10 rounded-md bg-muted/70" />
       </dl>
       <div className="ticket-mobile-card__actions">
         <div className="h-9 flex-1 rounded-md bg-muted" />

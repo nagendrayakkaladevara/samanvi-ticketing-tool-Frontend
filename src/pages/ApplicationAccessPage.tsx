@@ -112,11 +112,12 @@ export function ApplicationAccessPage() {
         dataColumnDefs={applicationUserDataColumnDefs}
         mobileBadge={applicationUserMobileBadge}
         mobileFields={applicationUserMobileFields}
-        renderMobileCard={(user) => (
+        renderMobileCard={(user, index) => (
           <ApplicationUserMobileCard
             user={user}
             canEdit={canEdit}
             canDelete={canDelete}
+            animationDelay={index * 0.05}
             onView={() => navigate(applicationAccessRoutes.view(user.id))}
             onEdit={() => navigate(applicationAccessRoutes.edit(user.id))}
             onDelete={() => setDeleteTarget(user)}
