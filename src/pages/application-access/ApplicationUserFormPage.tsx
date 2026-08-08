@@ -29,6 +29,7 @@ import {
   mergePermissionIdsForSave,
   partitionPermissionIds,
 } from '@/features/application-users/utils/permission-tree'
+import { AUTH_PASSWORD_MIN_LENGTH } from '@/features/auth/types/auth'
 import { usePermissions } from '@/hooks/use-permissions'
 import { invalidFieldClass } from '@/lib/form/form-field-styles'
 import { queryClient } from '@/lib/query/query-client'
@@ -99,11 +100,15 @@ function getApplicationUserFieldError(
         ? 'Mobile number must be exactly 10 digits.'
         : undefined
     case 'password':
-      if (mode === 'create' && values.password.trim().length < 6) {
-        return 'Password must be at least 6 characters.'
+      if (mode === 'create' && values.password.trim().length < AUTH_PASSWORD_MIN_LENGTH) {
+        return `Password must be at least ${AUTH_PASSWORD_MIN_LENGTH} characters.`
       }
-      if (mode === 'edit' && values.password.trim() && values.password.trim().length < 6) {
-        return 'Password must be at least 6 characters.'
+      if (
+        mode === 'edit' &&
+        values.password.trim() &&
+        values.password.trim().length < AUTH_PASSWORD_MIN_LENGTH
+      ) {
+        return `Password must be at least ${AUTH_PASSWORD_MIN_LENGTH} characters.`
       }
       return undefined
     case 'email':

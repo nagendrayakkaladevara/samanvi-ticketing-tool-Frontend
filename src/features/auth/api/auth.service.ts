@@ -4,7 +4,14 @@ import { fetchMyPermissions } from '@/features/auth/api/permissions-me.service'
 import { apiClient } from '@/lib/api/client'
 import { ApiError } from '@/lib/api/api-error'
 import type { ApplicationUserType } from '@/features/application-users/types/application-user'
-import type { AuthSession, AuthUser, LoginInput, UserPermissions } from '@/features/auth/types/auth'
+import {
+  AUTH_PASSWORD_MAX_LENGTH,
+  AUTH_PASSWORD_MIN_LENGTH,
+  type AuthSession,
+  type AuthUser,
+  type LoginInput,
+  type UserPermissions,
+} from '@/features/auth/types/auth'
 import { normalizePermissionsCatalog } from '@/features/permissions/utils/permission-normalize'
 
 const loginSchema = z.object({
@@ -15,8 +22,8 @@ const loginSchema = z.object({
     .max(64, 'Username is too long'),
   password: z
     .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(128, 'Password is too long'),
+    .min(AUTH_PASSWORD_MIN_LENGTH, `Password must be at least ${AUTH_PASSWORD_MIN_LENGTH} characters`)
+    .max(AUTH_PASSWORD_MAX_LENGTH, 'Password is too long'),
 })
 
 const applicationUserTypes = new Set<string>([

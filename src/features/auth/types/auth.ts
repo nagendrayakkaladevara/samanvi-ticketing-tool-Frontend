@@ -26,3 +26,7 @@ export type LoginInput = {
   username: string
   password: string
 }
+
+/** Matches Application Access create/edit and the application-users API (min 6). */
+export const AUTH_PASSWORD_MIN_LENGTH = 6
+export const AUTH_PASSWORD_MAX_LENGTH = 128

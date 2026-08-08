@@ -4,6 +4,10 @@ import { toast } from '@/lib/toast'
 import { z } from 'zod'
 
 import { login } from '@/features/auth/api/auth.service'
+import {
+  AUTH_PASSWORD_MAX_LENGTH,
+  AUTH_PASSWORD_MIN_LENGTH,
+} from '@/features/auth/types/auth'
 import { ApiError } from '@/lib/api/api-error'
 import { useAuthStore } from '@/store/auth-store'
 import { LoginForm } from '@/components/login-form'
@@ -16,8 +20,8 @@ const formSchema = z.object({
     .max(64, 'Username is too long'),
   password: z
     .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(128, 'Password is too long'),
+    .min(AUTH_PASSWORD_MIN_LENGTH, `Password must be at least ${AUTH_PASSWORD_MIN_LENGTH} characters`)
+    .max(AUTH_PASSWORD_MAX_LENGTH, 'Password is too long'),
 })
 
 type FormErrors = Partial<Record<'username' | 'password' | 'form', string>>
