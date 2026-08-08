@@ -76,6 +76,12 @@ function pickNumber(record: Record<string, unknown> | null, keys: string[]): num
     if (typeof candidate === 'number' && Number.isFinite(candidate)) {
       return Math.max(0, candidate)
     }
+    if (typeof candidate === 'string' && candidate.trim() !== '') {
+      const parsed = Number(candidate)
+      if (Number.isFinite(parsed)) {
+        return Math.max(0, parsed)
+      }
+    }
   }
 
   return undefined

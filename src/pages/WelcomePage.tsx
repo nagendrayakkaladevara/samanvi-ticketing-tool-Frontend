@@ -1,4 +1,9 @@
+import { Link } from 'react-router-dom'
+import { ArrowRight, LayoutDashboard } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { usePermissions } from '@/hooks/use-permissions'
 
 import './welcome-page.css'
 
@@ -18,7 +23,9 @@ function getGreeting(): string {
 
 export function WelcomePage() {
   const currentUser = useCurrentUser()
+  const { canAccess } = usePermissions()
   const displayName = currentUser?.name?.trim() || 'there'
+  const canOpenDashboard = canAccess({ module: 'tickets', submodule: '', action: 'view' })
 
   return (
     <section className="welcome-page" aria-labelledby="welcome-heading">
@@ -38,15 +45,25 @@ export function WelcomePage() {
         </h1>
 
         <p className="welcome-page__subtitle">
-          Welcome to your workspace. Use the sidebar to open tickets, garage jobs, and other tools
-          available to your account.
+          Welcome to your workspace. Open the dashboard for live metrics, or use the sidebar for
+          tickets, garage jobs, and other tools available to your account.
         </p>
 
         <div className="welcome-page__meta">
           {currentUser?.role ? (
             <span className="welcome-page__role">{currentUser.role}</span>
           ) : null}
-          <span className="welcome-page__hint">Home page placeholder — more content coming soon.</span>
+          {canOpenDashboard ? (
+            <Button asChild size="sm" className="gap-2">
+              <Link to="/dashboard">
+                <LayoutDashboard className="size-4" aria-hidden />
+                Open dashboard
+                <ArrowRight className="size-4" aria-hidden />
+              </Link>
+            </Button>
+          ) : (
+            <span className="welcome-page__hint">Use the sidebar to open your available tools.</span>
+          )}
         </div>
       </div>
     </section>
