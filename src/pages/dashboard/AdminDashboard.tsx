@@ -1,5 +1,6 @@
 import { useMemo, type ComponentType } from 'react'
 import { Link } from 'react-router-dom'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   AlertTriangle,
   ArrowRight,
@@ -28,6 +29,73 @@ import {
   getTicketsByStatusPath,
 } from '@/features/tickets/utils/ticket-list-filter'
 import { cn } from '@/lib/utils'
+
+const EASE_OUT = [0.22, 1, 0.36, 1] as const
+
+function getStaggerContainer(reduceMotion: boolean | null) {
+  if (reduceMotion) {
+    return {
+      hidden: { opacity: 0 },
+      visible: {
+        opacity: 1,
+        transition: { duration: 0.15 },
+      },
+    }
+  }
+
+  return {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.06,
+        delayChildren: 0.04,
+      },
+    },
+  }
+}
+
+function getStaggerItem(reduceMotion: boolean | null) {
+  if (reduceMotion) {
+    return {
+      hidden: { opacity: 0 },
+      visible: {
+        opacity: 1,
+        transition: { duration: 0.15 },
+      },
+    }
+  }
+
+  return {
+    hidden: { opacity: 0, y: 12 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.35, ease: EASE_OUT },
+    },
+  }
+}
+
+function getSectionReveal(reduceMotion: boolean | null) {
+  if (reduceMotion) {
+    return {
+      hidden: { opacity: 0 },
+      visible: {
+        opacity: 1,
+        transition: { duration: 0.15 },
+      },
+    }
+  }
+
+  return {
+    hidden: { opacity: 0, y: 14 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.4, ease: EASE_OUT },
+    },
+  }
+}
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-IN').format(value)
@@ -129,20 +197,30 @@ function EmployeeBreakdown({
   helper,
   staff,
   total,
+  reduceMotion,
 }: {
   driver: number
   helper: number
   staff: number
   total: number
+  reduceMotion: boolean | null
 }) {
   const rows = [
     { label: 'Drivers', value: driver, icon: UserRound },
     { label: 'Helpers', value: helper, icon: Users },
     { label: 'Office staff', value: staff, icon: ClipboardList },
   ]
+  const sectionVariants = getSectionReveal(reduceMotion)
+  const itemVariants = getStaggerItem(reduceMotion)
+  const containerVariants = getStaggerContainer(reduceMotion)
 
   return (
-    <div className="space-y-4">
+    <motion.div
+      className="space-y-4"
+      variants={sectionVariants}
+      initial="hidden"
+      animate="visible"
+    >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold text-foreground">Active employees</h2>
@@ -158,8 +236,16 @@ function EmployeeBreakdown({
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border">
-        <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-3">
+      <motion.div
+        className="overflow-hidden rounded-lg border border-border"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div
+          variants={itemVariants}
+          className="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-3"
+        >
           <div className="flex items-center gap-2">
             <span className="flex size-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground">
               <Users className="size-4" aria-hidden />
@@ -172,7 +258,7 @@ function EmployeeBreakdown({
           <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">
             {formatNumber(total)}
           </p>
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-3 divide-x divide-border">
           {rows.map((row) => {
@@ -180,7 +266,11 @@ function EmployeeBreakdown({
             const share = total > 0 ? Math.round((row.value / total) * 100) : 0
 
             return (
-              <div key={row.label} className="min-w-0 px-3 py-4 sm:px-4 sm:py-5">
+              <motion.div
+                key={row.label}
+                variants={itemVariants}
+                className="min-w-0 px-3 py-4 sm:px-4 sm:py-5"
+              >
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Icon className="size-3.5 shrink-0" aria-hidden />
                   <p className="truncate text-[11px] font-medium uppercase tracking-wide sm:text-xs">
@@ -191,12 +281,12 @@ function EmployeeBreakdown({
                   {formatNumber(row.value)}
                 </p>
                 <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">{share}% of total</p>
-              </div>
+              </motion.div>
             )
           })}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -263,9 +353,12 @@ function buildMasterStats(data: DashboardMasterCounts | undefined): MasterStat[]
 }
 
 export function AdminDashboard() {
+  const shouldReduceMotion = useReducedMotion()
   const { windowDays } = useDashboardWindowDays()
   const masterCountsQuery = useDashboardMasterCountsQuery(true)
   const ticketSummaryQuery = useDashboardSummaryQuery(windowDays)
+  const containerVariants = getStaggerContainer(shouldReduceMotion)
+  const itemVariants = getStaggerItem(shouldReduceMotion)
 
   const masterStats = useMemo(
     () => buildMasterStats(masterCountsQuery.data),
@@ -389,11 +482,19 @@ export function AdminDashboard() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 xl:gap-4">
+          <motion.div
+            key="master-inventory"
+            className="grid grid-cols-2 gap-3 xl:grid-cols-4 xl:gap-4"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
             {masterStats.map((item) => (
-              <MasterStatLink key={item.id} item={item} />
+              <motion.div key={item.id} variants={itemVariants}>
+                <MasterStatLink item={item} />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
       </div>
 
@@ -421,11 +522,19 @@ export function AdminDashboard() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6 xl:gap-4">
+          <motion.div
+            key="ticket-health"
+            className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6 xl:gap-4"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
             {ticketMetrics.map((item) => (
-              <TicketMetricCard key={item.id} item={item} windowDays={windowDays} />
+              <motion.div key={item.id} variants={itemVariants}>
+                <TicketMetricCard item={item} windowDays={windowDays} />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
       </div>
 
@@ -437,6 +546,7 @@ export function AdminDashboard() {
             helper={employees.helper}
             staff={employees.staff}
             total={employees.total}
+            reduceMotion={shouldReduceMotion}
           />
         </>
       ) : null}
