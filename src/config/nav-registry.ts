@@ -79,7 +79,6 @@ export const NAV_REGISTRY: NavRegistryEntry[] = [
     icon: LayoutDashboard,
     group: 'main',
     sortOrder: 10,
-    hidden: true,
     permission: { module: 'tickets', submodule: '', action: 'view' },
   },
   {

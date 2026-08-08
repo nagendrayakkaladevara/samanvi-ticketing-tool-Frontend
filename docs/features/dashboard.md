@@ -2,20 +2,21 @@
 
 ## Feature overview
 
-The **Dashboard** gives managers and ticket teams a **snapshot** of ticket health: how many are open, overdue, unassigned, and how the team is performing.
+The **Dashboard** gives managers and ticket teams a **snapshot** of operational health. Admins see a masters-focused overview; other ticket users see the ticket operations dashboard.
 
 ### Why users use it
 
 - Morning operational review.
 - Spotting overdue or unassigned work quickly.
-- Drilling into filtered lists by status or time period.
+- Admins: checking master inventory (buses, services, employees) at a glance.
+- Drilling into filtered lists by status or time period (operations view).
 
 ### When to use it
 
 - Start of shift or week.
 - Before escalation meetings.
 
-**Permission needed:** View on **Tickets**.
+**Permission needed:** View on **Tickets** (backend also requires `view_dashboard`).
 
 ---
 
@@ -26,7 +27,22 @@ The **Dashboard** gives managers and ticket teams a **snapshot** of ticket healt
 
 ---
 
-## Screen explanation
+## Admin view
+
+Admins see an **Operations overview** designed for institutional oversight:
+
+| Section | Content |
+|---------|---------|
+| **Master inventory** | Service For, Bus No, Service No, and active Employees totals |
+| **Active employees** | Drivers, helpers, and office staff (active only — no leaving date) |
+| **Ticket health** | Compact open / unassigned / in progress / overdue snapshot |
+| **Quick actions** | Jump to tickets, repair tracking, and master screens |
+
+Master cards link into the related Masters screens.
+
+---
+
+## Operations view (non-admin)
 
 ### Reporting period
 
@@ -73,16 +89,16 @@ Cards may show a **trend** percentage compared to a prior window. **Click a card
 ## Step-by-step: morning review
 
 1. Open **Dashboard**.
-2. Set **reporting period** to **Today** or **7 days**.
-3. Check **Overdue** and **Unassigned** cards first.
-4. Click a card to open the filtered list (if you are admin).
+2. Admins: scan master inventory and ticket health.
+3. Other users: set **reporting period** to **Today** or a recent window, then check **Overdue** and **Unassigned**.
+4. Click a card or quick link to open the related list or master screen.
 5. Assign or update tickets from the list or details pages.
 
 ---
 
 ## Tips
 
-- Set your default period in **Settings → Reporting period default** to save time.
+- Set your default period in **Settings → Reporting period default** to save time on the operations dashboard.
 - Pair dashboard review with the **Board** (admins) for drag-and-drop status updates.
 
 ---
@@ -91,4 +107,5 @@ Cards may show a **trend** percentage compared to a prior window. **Click a card
 
 - [Tickets](tickets.md)
 - [Board](board.md)
+- [Masters](masters.md)
 - [Tickets by status (admin)](../roles-and-permissions.md)
