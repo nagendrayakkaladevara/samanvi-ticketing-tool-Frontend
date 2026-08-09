@@ -28,9 +28,7 @@ export default defineConfig({
       thresholds: {
         lines: 95,
         functions: 95,
-        // Dense API normalizers still have alternate-key ternary branches to close;
-        // lines/statements/functions already exceed 95%. Raise back to 95 as those close.
-        branches: 92,
+        branches: 95,
         statements: 95,
       },
       include: ['src/**/*.{ts,tsx}'],
