@@ -405,5 +405,54 @@ describe('userHistoryService', () => {
       const result = await userHistoryService.listTickets('u1', { page: 1, limit: 10 })
       expect(result.meta.totalPages).toBe(1)
     })
+
+    it('listActivity skips items without ticket id and uses meta from data', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          data: {
+            userId: 'u1',
+            items: [
+              { id: 'a-bad', actionType: 'commented', createdAt: '2024-01-01' },
+              {
+                id: 'a-good',
+                action: 'assigned',
+                createdAt: '2024-01-02',
+                ticket: { ticketId: 't1', title: 'T', status: 'assigned' },
+              },
+            ],
+            meta: { page: 2, limit: 5, total: 10, totalPages: 2 },
+          },
+        },
+      })
+
+      const result = await userHistoryService.listActivity('u1', 2, 5)
+      expect(result.items).toHaveLength(1)
+      expect(result.meta.page).toBe(2)
+      expect(result.userId).toBe('u1')
+    })
+
+    it('normalizes ticket without assigned user and with userId alias', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          data: {
+            userId: 'u1',
+            items: [
+              {
+                id: 't-alias',
+                title: 'Alias id',
+                status: 'resolved',
+                severity: 'low',
+                priority: 'p3',
+                assignedTo: null,
+              },
+            ],
+          },
+        },
+      })
+
+      const [ticket] = (await userHistoryService.listTickets('u1')).items
+      expect(ticket?.id).toBe('t-alias')
+      expect(ticket?.assignedTo).toBeNull()
+    })
   })
 })
