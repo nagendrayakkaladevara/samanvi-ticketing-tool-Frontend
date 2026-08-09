@@ -903,5 +903,112 @@ describe('garageService', () => {
       expect(timeline.items).toHaveLength(2)
       expect(timeline.items[0]?.note).toBeNull()
     })
+
+    it('covers partial person objects and invalid job relations', async () => {
+      const job = {
+        ...minimalJobPayload,
+        reportedDriver: { id: 'd-partial' },
+        assignedToOfficeStaff: { id: 's-partial', nickName: 'Nick' },
+        createdBy: { displayName: 'Creator Only' },
+        previousJob: { id: '  ', jobIdNumber: 'RJ-000' },
+        parts: [
+          {
+            id: 'pl-bad-part',
+            quantity: 1,
+            unitPrice: '9.00',
+            repairPart: { id: 'rp1' },
+            addedBy: { displayName: 'Tech' },
+          },
+        ],
+        activityLogs: [
+          {
+            id: 'log-partial-actor',
+            actionType: 'commented',
+            createdAt: '2024-01-01T00:00:00Z',
+            actor: { displayName: 'Actor' },
+          },
+        ],
+      }
+
+      vi.mocked(apiClient.get).mockResolvedValue({ data: { data: job } })
+      const result = await garageService.getJob('job-1')
+
+      expect(result.reportedDriver).toEqual({
+        id: 'd-partial',
+        driverIdNumber: '',
+        aadharName: '',
+        dlName: '',
+      })
+      expect(result.assignedToOfficeStaff).toMatchObject({
+        id: 's-partial',
+        staffIdNumber: '',
+        designation: '',
+      })
+      expect(result.createdBy).toEqual({ id: '', username: '', displayName: 'Creator Only' })
+      expect(result.previousJob).toBeNull()
+      expect(result.parts).toHaveLength(0)
+      expect(result.activityLogs[0]?.actor).toEqual({ id: '', username: '', displayName: 'Actor' })
+    })
+
+    it('filters jobs with invalid bus or category payloads', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          { ...minimalJobPayload, bus: null },
+          { ...minimalJobPayload, id: 'job-bad-cat', repairCategory: 'invalid' },
+          {
+            ...minimalJobPayload,
+            id: 'job-bad-bus',
+            bus: { id: 'b1' },
+            repairCategory: { id: 'c1', name: 'Cat', level: 1 },
+          },
+        ],
+      })
+
+      const jobs = await garageService.listJobs()
+      expect(jobs).toHaveLength(0)
+    })
+
+    it('rejects invalid unit price types in activity metadata', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          data: {
+            ...minimalJobPayload,
+            activityLogs: [
+              {
+                id: 'log-bad-price',
+                actionType: 'part_added',
+                createdAt: '2024-01-01T00:00:00Z',
+                metadata: {
+                  repairJobPartId: 'pl1',
+                  repairPartId: 'rp1',
+                  partName: 'Bolt',
+                  quantity: 1,
+                  unitPrice: true,
+                },
+              },
+            ],
+          },
+        },
+      })
+
+      const job = await garageService.getJob('job-1')
+      expect(job.activityLogs[0]?.metadata).toBeNull()
+    })
+
+    it('updateRepairPart omits undefined fields from patch payload', async () => {
+      vi.mocked(apiClient.patch).mockResolvedValue({
+        data: { data: { id: 'p1', partName: 'Bolt', price: '2.00' } },
+      })
+
+      await garageService.updateRepairPart({ partId: 'p1', price: '2.00' })
+      expect(apiClient.patch).toHaveBeenCalledWith('/garage/masters/repair-parts/p1', { price: '2.00' })
+    })
+
+    it('listRepairCategories handles non-object payload record', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: 'invalid' })
+      const result = await garageService.listRepairCategories()
+      expect(result.items).toEqual([])
+      expect(result.tree).toEqual([])
+    })
   })
 })

@@ -175,13 +175,6 @@ describe('busesService', () => {
       expect(await busesService.create({ busNumber: 'X' })).toEqual({ busNumber: 'only' })
     })
 
-    it('listBusNumbers maps array items directly when extractArrayPayload is non-empty', async () => {
-      vi.mocked(apiClient.get).mockResolvedValue({
-        data: [{ busNumber: 'ARR-1' }, { number: 'ARR-2' }],
-      })
-      expect(await busesService.listBusNumbers()).toEqual(['ARR-1', 'ARR-2'])
-    })
-
     it('listTicketHistory normalizes all status severity priority branches', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         data: [
@@ -285,6 +278,39 @@ describe('busesService', () => {
         data: { busNumbers: [{ bus_no: '  ' }, { number: 'VALID' }] },
       })
       expect(await busesService.listBusNumbers()).toEqual(['VALID'])
+    })
+
+    it('extracts bus numbers from direct arrays and invalid values', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [{ busNumber: 'ARR-1' }, { number: 'ARR-2' }, 42],
+      })
+      expect(await busesService.listBusNumbers()).toEqual(['ARR-1', 'ARR-2'])
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: null })
+      expect(await busesService.listBusNumbers()).toEqual([])
+    })
+
+    it('create falls back through non-object entity payload', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({ data: null })
+      expect(await busesService.create({ busNumber: 'X' })).toBeNull()
+    })
+
+    it('listTicketHistory handles numeric ticket ids and comment field', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          {
+            ticketId: 42,
+            title: 'Numeric id',
+            status: 'assigned',
+            severity: 'medium',
+            priority: 'p1',
+            comment: 'Via comment',
+          },
+        ],
+      })
+      const [ticket] = await busesService.listTicketHistory('bus-1')
+      expect(ticket?.id).toBe('42')
+      expect(ticket?.status).toBe('ASSIGNED')
     })
   })
 })

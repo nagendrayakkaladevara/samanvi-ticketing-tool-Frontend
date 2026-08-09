@@ -302,4 +302,21 @@ describe('auth.service login', () => {
     const session = await login({ username: 'validuser', password: 'password12' })
     expect(session.permissions?.items[0]?.id).toBe('top-item')
   })
+
+  it('ignores invalid user type while unwrapping nested user record', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      data: {
+        data: {
+          token: 'token-2',
+          user: { id: '1', username: 'u', userType: 'bogus-type' },
+        },
+      },
+    })
+    vi.mocked(fetchMyPermissions).mockResolvedValue({ items: [], tree: [] })
+
+    const session = await login({ username: 'validuser', password: 'password12' })
+    expect(session.accessToken).toBe('token-2')
+    expect(session.user.userType).toBeUndefined()
+    expect(session.user.role).toBe('WORKER')
+  })
 })

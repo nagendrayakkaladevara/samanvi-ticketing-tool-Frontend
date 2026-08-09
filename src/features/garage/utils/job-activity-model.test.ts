@@ -87,6 +87,13 @@ describe('formatStatusTransition', () => {
   })
 })
 
+describe('formatCommentMeta', () => {
+  it('formats createdAt timestamps', () => {
+    const meta = formatCommentMeta(makeActivityLog({ createdAt: '2024-06-01T10:00:00.000Z' }))
+    expect(meta).toMatch(/2024/)
+  })
+})
+
 describe('getPartActivityMetadata', () => {
   it('returns metadata for part_added with valid fields', () => {
     const log = makeActivityLog({

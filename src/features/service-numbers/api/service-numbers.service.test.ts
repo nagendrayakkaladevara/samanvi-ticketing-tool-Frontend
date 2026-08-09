@@ -147,5 +147,15 @@ describe('serviceNumbersService', () => {
       vi.mocked(apiClient.get).mockResolvedValue({ data: null })
       expect(await serviceNumbersService.list()).toEqual([])
     })
+
+    it('extracts from top-level serviceNumbers and handles non-object payloads', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { serviceNumbers: [minimalServiceNumber] },
+      })
+      expect((await serviceNumbersService.list())[0]?.serviceNo).toBe('101')
+
+      vi.mocked(apiClient.post).mockResolvedValue({ data: null })
+      expect(await serviceNumbersService.create(minimalServiceNumber as never)).toBeNull()
+    })
   })
 })

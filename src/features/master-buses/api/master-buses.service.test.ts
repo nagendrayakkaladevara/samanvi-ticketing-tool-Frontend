@@ -201,5 +201,25 @@ describe('masterBusesService', () => {
       const bus = await masterBusesService.create(minimalBus as never)
       expect(bus.busNumber).toBe('BUS-01')
     })
+
+    it('list extracts top-level buses array and rejects invalid bus numbers', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { buses: [minimalBus] },
+      })
+      expect((await masterBusesService.list())[0]?.busNumber).toBe('BUS-01')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { busNumbers: [null, 5, { busNumber: '  ' }] },
+      })
+      expect(await masterBusesService.listBusNumbers()).toEqual([])
+    })
+
+    it('create and update handle non-object entity payloads', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({ data: null })
+      expect(await masterBusesService.create(minimalBus as never)).toBeNull()
+
+      vi.mocked(apiClient.patch).mockResolvedValue({ data: undefined })
+      expect(await masterBusesService.update({ busId: 'b1', odometer: 1 })).toBeUndefined()
+    })
   })
 })

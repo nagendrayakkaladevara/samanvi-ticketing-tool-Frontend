@@ -676,5 +676,36 @@ describe('ticketsService', () => {
       const categories = await ticketsService.listIssueCategories()
       expect(categories[0]).toMatchObject({ id: 'c9', name: 'Cat Title' })
     })
+
+    it('covers ticket array extraction paths and timeline comment aliases', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { tickets: [{ id: 't-top', title: 'Top ticket', status: 'created' }] },
+      })
+      expect((await ticketsService.list())[0]?.id).toBe('t-top')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { categories: [{ categoryId: 7, label: 'Label Cat', isActive: false }] },
+      })
+      expect((await ticketsService.listIssueCategories())[0]).toMatchObject({
+        id: '7',
+        name: 'Label Cat',
+        isActive: false,
+      })
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [
+          {
+            comment: 'Timeline comment',
+            event: 'updated',
+            user: { name: 'Performer' },
+            timestamp: '2024-03-01',
+          },
+        ],
+      })
+      const [entry] = await ticketsService.getTimeline('t1')
+      expect(entry?.note).toBe('Timeline comment')
+      expect(entry?.action).toBe('updated')
+      expect(entry?.actorName).toBe('Performer')
+    })
   })
 })

@@ -76,6 +76,14 @@ describe('buildDriverPayload', () => {
     ).toThrow('Mobile number must be exactly 10 digits.')
   })
 
+  it('edit mode includes trimmed dlBack when provided', () => {
+    const payload = buildDriverPayload(
+      { ...validDriverFormValues, dlBack: 'dl-back.jpg' },
+      'edit',
+    )
+    expect(payload.dlBack).toBe('dl-back.jpg')
+  })
+
   it('edit mode omits optional fields when blank', () => {
     const payload = buildDriverPayload(
       {
@@ -116,5 +124,19 @@ describe('buildDriverPayload', () => {
   it('create mode omits upiScanner when blank', () => {
     const payload = buildDriverPayload({ ...validDriverFormValues, upiScanner: '   ' }, 'create')
     expect(payload.upiScanner).toBeNull()
+  })
+
+  it('driverToFormValues preserves optional populated fields', () => {
+    const driver = makeDriver({
+      alternateMobile: '9876543211',
+      upiId: 'driver@upi',
+      remarks: 'Note',
+      upiScanner: 'scan.jpg',
+    })
+    const values = driverToFormValues(driver)
+    expect(values.alternateMobile).toBe('9876543211')
+    expect(values.upiId).toBe('driver@upi')
+    expect(values.remarks).toBe('Note')
+    expect(values.upiScanner).toBe('scan.jpg')
   })
 })

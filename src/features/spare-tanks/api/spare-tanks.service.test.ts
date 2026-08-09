@@ -97,4 +97,12 @@ describe('spareTanksService', () => {
       ownerName: 'Owner 2',
     })
   })
+
+  it('returns empty list for unrecognized payload shapes and null entities', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: { unknown: true } })
+    expect(await spareTanksService.list()).toEqual([])
+
+    vi.mocked(apiClient.post).mockResolvedValue({ data: null })
+    expect(await spareTanksService.create({ busNumber: 'B', ownerName: 'O' })).toBeNull()
+  })
 })

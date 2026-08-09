@@ -268,4 +268,28 @@ describe('applicationUsersService', () => {
     })
     expect((await applicationUsersService.list())[0]?.displayName).toBe('fallback-name')
   })
+
+  it('normalizes trimmed empty strings and invalid permission entries', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: [{ id: 'u14', username: 'u14', permissionIds: [null, 'p1', { id: 2 }] }],
+    })
+    expect((await applicationUsersService.list())[0]?.permissionIds).toEqual(['p1', '2'])
+
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: [{ userId: 'u15', username: 'u15', userType: { label: '  ' }, role: { name: 'admin' } }],
+    })
+    expect((await applicationUsersService.list())[0]?.userType).toBe('admin')
+  })
+
+  it('extracts users from nested data.users and rejects invalid username checks', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: { data: { users: [{ id: 'u16', username: 'u16' }] } },
+    })
+    expect((await applicationUsersService.list())[0]?.id).toBe('u16')
+
+    vi.mocked(apiClient.get).mockResolvedValue({ data: null })
+    await expect(applicationUsersService.checkUsernameExists('x')).rejects.toThrow(
+      'Unable to verify username availability.',
+    )
+  })
 })

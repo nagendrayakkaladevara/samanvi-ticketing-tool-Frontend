@@ -171,5 +171,17 @@ describe('usersService', () => {
       vi.mocked(apiClient.get).mockResolvedValue({ data: null })
       expect(await usersService.list()).toEqual([])
     })
+
+    it('create handles non-object entity payloads', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({ data: null })
+      expect(
+        await usersService.create({
+          username: 'x',
+          displayName: 'X',
+          password: 'p',
+          role: 'WORKER',
+        }),
+      ).toBeNull()
+    })
   })
 })
