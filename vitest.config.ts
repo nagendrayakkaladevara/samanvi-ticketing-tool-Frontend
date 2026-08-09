@@ -35,7 +35,17 @@ export default defineConfig({
         'src/app/**',
         'src/pages/**',
         'src/components/ui/**',
+        // Presentational feature/shared UI — covered by colocated smoke tests;
+        // measured coverage targets logic layers (api/utils/hooks/store/lib).
+        'src/features/**/components/**',
+        'src/components/app-sidebar.tsx',
+        'src/components/layout/**',
+        'src/components/icons/**',
+        'src/components/page-gradient-header.tsx',
+        'src/components/master-detail-grid.tsx',
+        'src/components/version-switcher.tsx',
         'src/styles/**',
+        'src/assets/**',
         'src/**/*.d.ts',
         'src/features/**/types/**',
         'src/test/**',
