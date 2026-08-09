@@ -114,6 +114,7 @@ describe('getPartActivityMetadata', () => {
 
   it('returns null for wrong action type or incomplete metadata', () => {
     expect(getPartActivityMetadata(makeActivityLog({ actionType: 'created' }))).toBeNull()
+    expect(getPartActivityMetadata(makeActivityLog({ actionType: 'part_added', metadata: undefined }))).toBeNull()
     expect(
       getPartActivityMetadata(
         makeActivityLog({ actionType: 'part_added', metadata: { partName: 'x' } as never }),
@@ -184,6 +185,14 @@ describe('repeat metadata helpers', () => {
         makeActivityLog({
           actionType: 'created',
           metadata: { isRepeatJob: true, previousJobId: 'j0' } as never,
+        }),
+      ),
+    ).toBeNull()
+    expect(
+      getRepeatSourceMetadata(
+        makeActivityLog({
+          actionType: 'created',
+          metadata: { isRepeatJob: false, previousJobId: 'j0', previousJobIdNumber: 'RJ-000' } as never,
         }),
       ),
     ).toBeNull()

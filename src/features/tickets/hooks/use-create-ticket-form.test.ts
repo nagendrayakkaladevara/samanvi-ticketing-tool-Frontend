@@ -46,6 +46,12 @@ describe('getCreateTicketFieldError', () => {
       }),
     ).toBeUndefined()
   })
+
+  it('returns undefined when optional validated fields are non-empty', () => {
+    expect(getCreateTicketFieldError('description', { ...baseValues, description: 'Ok' })).toBeUndefined()
+    expect(getCreateTicketFieldError('categoryId', { ...baseValues, categoryId: 'c1' })).toBeUndefined()
+    expect(getCreateTicketFieldError('busNumber', { ...baseValues, busNumber: 'BUS-1' })).toBeUndefined()
+  })
 })
 
 describe('useCreateTicketForm', () => {
@@ -80,6 +86,16 @@ describe('useCreateTicketForm', () => {
     })
 
     expect(result.current.errors.title).toBe('Title is required.')
+  })
+
+  it('blurField returns undefined for non-validated fields', () => {
+    const { result } = renderHook(() => useCreateTicketForm())
+
+    act(() => {
+      result.current.blurField('severity')
+    })
+
+    expect(result.current.errors.severity).toBeUndefined()
   })
 
   it('applySuggestedSla updates sla based on priority', () => {

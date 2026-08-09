@@ -24,6 +24,31 @@ describe('driverToFormValues', () => {
     expect(values.alternateMobile).toBe('')
     expect(values.remarks).toBe('')
   })
+
+  it('maps nullable driver fields when present', () => {
+    const driver = makeDriver({
+      alternateMobile: '9876543219',
+      emergencyNumber: '9876543218',
+      upiId: 'driver@upi',
+      remarks: 'Note',
+      dateOfLeaving: '2024-01-01',
+      aadharCardFront: 'front.jpg',
+      aadharCardBack: 'back.jpg',
+      dlFront: 'dl-front.jpg',
+      dlBack: 'dl-back.jpg',
+      upiScanner: 'scan.jpg',
+    })
+    const values = driverToFormValues(driver)
+
+    expect(values.alternateMobile).toBe('9876543219')
+    expect(values.emergencyNumber).toBe('9876543218')
+    expect(values.upiId).toBe('driver@upi')
+    expect(values.remarks).toBe('Note')
+    expect(values.dateOfLeaving).toBe('2024-01-01')
+    expect(values.aadharCardFront).toBe('front.jpg')
+    expect(values.dlBack).toBe('dl-back.jpg')
+    expect(values.upiScanner).toBe('scan.jpg')
+  })
 })
 
 describe('buildDriverPayload', () => {
