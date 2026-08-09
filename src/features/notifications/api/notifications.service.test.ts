@@ -182,5 +182,29 @@ describe('notificationsService', () => {
       vi.mocked(apiClient.get).mockResolvedValue({ data: { count: 4 } })
       expect(await notificationsService.getUnreadCount()).toBe(4)
     })
+
+    it('extracts notifications from nested data array and meta fallbacks', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          data: [{ id: 'n6', title: 'Nested', createdAt: '2024-01-01T00:00:00.000Z' }],
+          meta: {},
+        },
+      })
+      const result = await notificationsService.list({ page: 3, limit: 15 })
+      expect(result.items[0]?.id).toBe('n6')
+      expect(result.meta).toEqual({ page: 3, limit: 15, total: 0, totalPages: 0 })
+    })
+
+    it('getUnreadCount unwraps nested data envelope', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: { data: { count: 7 } } })
+      expect(await notificationsService.getUnreadCount()).toBe(7)
+    })
+
+    it('markRead falls back to now when createdAt missing', async () => {
+      vi.mocked(apiClient.patch).mockResolvedValue({ data: { id: 'n7', title: 'Read', type: 'ticket_created' } })
+      const item = await notificationsService.markRead('n7')
+      expect(item.id).toBe('n7')
+      expect(item.createdAt).toBeTruthy()
+    })
   })
 })

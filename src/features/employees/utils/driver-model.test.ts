@@ -144,6 +144,37 @@ describe('buildDriverPayload', () => {
     expect(values.dlBack).toBe('dl-back.jpg')
   })
 
+  it('driverToFormValues defaults null document fields to empty strings', () => {
+    const driver = makeDriver({
+      aadharCardFront: null,
+      aadharCardBack: null,
+      dlFront: null,
+      dlBack: null,
+    })
+    const values = driverToFormValues(driver)
+    expect(values.aadharCardFront).toBe('')
+    expect(values.aadharCardBack).toBe('')
+    expect(values.dlFront).toBe('')
+    expect(values.dlBack).toBe('')
+  })
+
+  it('edit mode includes only aadharCardFront when other documents blank', () => {
+    const payload = buildDriverPayload(
+      {
+        ...validDriverFormValues,
+        aadharCardFront: 'only-front.jpg',
+        aadharCardBack: '',
+        dlFront: '',
+        dlBack: '',
+      },
+      'edit',
+    )
+    expect(payload.aadharCardFront).toBe('only-front.jpg')
+    expect(payload.aadharCardBack).toBeUndefined()
+    expect(payload.dlFront).toBeUndefined()
+    expect(payload.dlBack).toBeUndefined()
+  })
+
   it('edit mode trims aadhar and dl back document fields', () => {
     const payload = buildDriverPayload(
       {

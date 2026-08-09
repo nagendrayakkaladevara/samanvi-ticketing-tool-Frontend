@@ -55,6 +55,9 @@ describe('formatActivityActor', () => {
     expect(
       formatActivityActor(makeActivityLog({ actor: { id: 'u1', username: '', displayName: 'Only Name' } })),
     ).toBe('Only Name')
+    expect(
+      formatActivityActor(makeActivityLog({ actor: { id: 'u1', username: 'tech', displayName: '' } })),
+    ).toBe('Unknown (@tech)')
   })
 })
 
@@ -116,6 +119,14 @@ describe('getPartActivityMetadata', () => {
         makeActivityLog({ actionType: 'part_added', metadata: { partName: 'x' } as never }),
       ),
     ).toBeNull()
+    expect(
+      getPartActivityMetadata(
+        makeActivityLog({
+          actionType: 'part_removed',
+          metadata: { repairJobPartId: 'p1', repairPartId: 'rp1', partName: 'Bolt', quantity: 1, unitPrice: '5' },
+        }),
+      ),
+    ).toMatchObject({ partName: 'Bolt' })
   })
 })
 
@@ -127,6 +138,11 @@ describe('repeat metadata helpers', () => {
       ),
     ).toEqual({ scheduledFor: '2024-07-01' })
     expect(getRepeatScheduledMetadata(makeActivityLog({ actionType: 'repeat_scheduled' }))).toBeNull()
+    expect(
+      getRepeatScheduledMetadata(
+        makeActivityLog({ actionType: 'repeat_scheduled', metadata: { scheduledFor: '' } as never }),
+      ),
+    ).toBeNull()
   })
 
   it('getRepeatCreatedMetadata requires related job fields', () => {
@@ -138,6 +154,11 @@ describe('repeat metadata helpers', () => {
         }),
       ),
     ).toEqual({ relatedJobId: 'j2', relatedJobIdNumber: 'RJ-002' })
+    expect(
+      getRepeatCreatedMetadata(
+        makeActivityLog({ actionType: 'repeat_created', metadata: { relatedJobId: 'j2' } as never }),
+      ),
+    ).toBeNull()
   })
 
   it('getRepeatSourceMetadata requires repeat source fields on created', () => {
@@ -158,6 +179,14 @@ describe('repeat metadata helpers', () => {
       previousJobIdNumber: 'RJ-000',
     })
     expect(getRepeatSourceMetadata(makeActivityLog({ actionType: 'created' }))).toBeNull()
+    expect(
+      getRepeatSourceMetadata(
+        makeActivityLog({
+          actionType: 'created',
+          metadata: { isRepeatJob: true, previousJobId: 'j0' } as never,
+        }),
+      ),
+    ).toBeNull()
   })
 })
 
