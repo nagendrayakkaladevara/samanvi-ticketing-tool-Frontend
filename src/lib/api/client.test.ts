@@ -134,7 +134,7 @@ describe('apiClient', () => {
       expect(captured?.headers).toBeUndefined()
     })
 
-    it('detects authorization on plain headers without get method', async () => {
+    it('detects authorization on plain object without get method', async () => {
       mockGetAccessToken.mockReturnValue('new-token')
       let captured: AdapterConfig | undefined
       installAdapter(async (config) => {
@@ -147,6 +147,22 @@ describe('apiClient', () => {
 
       expect((captured?.headers as Record<string, string>).authorization).toBe('Bearer plain')
       expect(captured?.headers.Authorization).toBeUndefined()
+    })
+
+    it('detects authorization via AxiosHeaders get fallback to lowercase', async () => {
+      mockGetAccessToken.mockReturnValue('new-token')
+      let captured: AdapterConfig | undefined
+      installAdapter(async (config) => {
+        captured = config
+        return { data: {}, status: 200, statusText: 'OK', headers: {}, config }
+      })
+
+      const headers = new AxiosHeaders()
+      headers.set('authorization', 'Bearer lower-get')
+
+      await apiClient.get('/test', { headers })
+
+      expect(captured?.headers.get('authorization')).toBe('Bearer lower-get')
     })
 
     it('treats headers with non-function get as plain object', async () => {

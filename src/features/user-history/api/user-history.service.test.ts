@@ -458,5 +458,66 @@ describe('userHistoryService', () => {
       expect(ticket?.id).toBe('t-alias')
       expect(ticket?.assignedTo).toBeNull()
     })
+
+    it('covers remaining user summary, activity, and pagination branches', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: { user: { userId: 'u-only', role: { code: 'admin' } } } },
+      })
+      const metrics = await userHistoryService.getMetrics('u-only')
+      expect(metrics.user).toMatchObject({ id: 'u-only', username: 'u-only', displayName: 'u-only' })
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: {
+          data: {
+            userId: 'u1',
+            items: [
+              {
+                activityId: 'a1',
+                action: 'assigned',
+                createdAt: '2024-01-01',
+                ticket: { ticketId: 't1', number: '42', title: '', status: 'assigned', bus: { number: 'B-1' } },
+              },
+            ],
+          },
+        },
+      })
+      const activity = await userHistoryService.listActivity('u1')
+      expect(activity.items[0]).toMatchObject({
+        id: 'a1',
+        actionType: 'assigned',
+        ticket: { ticketNumber: '42', title: 'Ticket', bus: { busNumber: 'B-1' } },
+      })
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: { userId: 'u1', relation: 'created', items: [{ ticketId: 't2', title: 'T2' }] } },
+      })
+      const tickets = await userHistoryService.listTickets('u1', { relation: 'created' })
+      expect(tickets.items[0]?.id).toBe('t2')
+      expect(tickets.relation).toBe('created')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: {
+          data: {
+            ticketsByStatus: { assigned: { bogus: 1, in_progress: 2 } },
+            recent: { activity: [{ id: 'a-bad' }] },
+          },
+        },
+      })
+      const history = await userHistoryService.getHistory('u1')
+      expect(history.ticketsByStatus.assigned).toEqual({ created: 1, in_progress: 2 })
+      expect(history.recent.activity).toEqual([])
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { userId: 'u1', items: [{ id: 't-flat', title: 'Flat' }] },
+      })
+      const flatTickets = await userHistoryService.listTickets('u1')
+      expect(flatTickets.items[0]?.title).toBe('Flat')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { userId: 'u1', items: [] },
+      })
+      const emptyActivity = await userHistoryService.listActivity('u1')
+      expect(emptyActivity.items).toEqual([])
+    })
   })
 })

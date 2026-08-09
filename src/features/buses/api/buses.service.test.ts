@@ -312,5 +312,32 @@ describe('busesService', () => {
       expect(ticket?.id).toBe('42')
       expect(ticket?.status).toBe('ASSIGNED')
     })
+
+    it('extracts bus numbers from nested data shapes and alternate keys', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: ['NESTED-ARR'] },
+      })
+      expect(await busesService.listBusNumbers()).toEqual(['NESTED-ARR'])
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: { busNumbers: [{ bus_no: 'NO-1' }, { busNo: 'NO-2' }] } },
+      })
+      expect(await busesService.listBusNumbers()).toEqual(['NO-1', 'NO-2'])
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { busNumbers: [{ number: 'TOP-NUM' }] },
+      })
+      expect(await busesService.listBusNumbers()).toEqual(['TOP-NUM'])
+    })
+
+    it('create unwraps nested bus entity from data envelope', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: { data: { id: 'b1', busNumber: 'ENVELOPE' } },
+      })
+      expect(await busesService.create({ busNumber: 'ENVELOPE' })).toMatchObject({
+        id: 'b1',
+        busNumber: 'ENVELOPE',
+      })
+    })
   })
 })

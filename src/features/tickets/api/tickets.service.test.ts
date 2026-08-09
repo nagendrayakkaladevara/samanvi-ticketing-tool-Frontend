@@ -797,5 +797,63 @@ describe('ticketsService', () => {
       })
       expect((await ticketsService.create({ title: 'Created ticket' } as never)).id).toBe('t-new')
     })
+
+    it('covers flat payloads and remaining alternate field branches', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [
+          {
+            ticketId: 'only-ticket-id',
+            title: 'Ticket id only',
+            ticketNumber: 88,
+            busNumber: 'BUS-1',
+            description: 1,
+            assignedTo: { id: 'w2' },
+            updatedAt: '2024-03-03',
+          },
+        ],
+      })
+      const [listed] = await ticketsService.list()
+      expect(listed).toMatchObject({
+        id: 'only-ticket-id',
+        ticketNumber: '88',
+        busNumber: 'BUS-1',
+        description: '',
+        assignedToUserId: 'w2',
+        updatedAt: '2024-03-03',
+      })
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { id: 't-flat', title: 'Flat get' } })
+      expect((await ticketsService.getById('t-flat')).title).toBe('Flat get')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { id: 't-search', title: 'Flat search' } })
+      expect((await ticketsService.searchByTicketNumber('TN')).title).toBe('Flat search')
+
+      vi.mocked(apiClient.patch).mockResolvedValue({ data: { id: 't1', title: 'Flat patch', status: 'open' } })
+      expect((await ticketsService.updateStatus({ ticketId: 't1', status: 'OPEN' })).title).toBe('Flat patch')
+
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ data: { id: 't1', title: 'Flat assign' } })
+      expect((await ticketsService.assign({ ticketId: 't1', assignedToId: 'w1' })).title).toBe('Flat assign')
+
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ data: { id: 't-new', title: 'Flat create', status: 'created' } })
+      expect((await ticketsService.create({ title: 'Flat create' } as never)).title).toBe('Flat create')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: { items: [{ _id: 'w5', username: 'five', roleCode: 'worker' }] } },
+      })
+      expect((await ticketsService.listAssignableUsers())[0]).toMatchObject({ id: 'w5', role: 'WORKER' })
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [{ issueCategoryId: 'c2', categoryName: 'Engine' }],
+      })
+      expect((await ticketsService.listIssueCategories())[0]).toMatchObject({ id: 'c2', name: 'Engine' })
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: null })
+      expect(await ticketsService.getTimeline('t1')).toEqual([])
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: { activityLogs: [{ id: 'nested-log', type: 'note', createdAt: '2024-01-01' }] } },
+      })
+      expect((await ticketsService.getTimeline('t1'))[0]?.id).toBe('nested-log')
+    })
   })
 })

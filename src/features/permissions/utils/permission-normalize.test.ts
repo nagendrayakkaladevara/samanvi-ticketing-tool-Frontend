@@ -238,3 +238,34 @@ describe('buildPermissionKeySet', () => {
     expect(set.size).toBe(1)
   })
 })
+
+describe('normalizePermissionTree edge branches', () => {
+  it('normalizes tree submodules from actions array and empty submodule label', () => {
+    const items = [makePermission({ id: 'a1', module: 'masters', action: 'view' })]
+    const tree = normalizePermissionTree(
+      {
+        tree: [
+          {
+            module: 'masters',
+            label: 'Masters',
+            submodules: [
+              {
+                submodule: '',
+                label: '',
+                actions: items,
+              },
+            ],
+          },
+        ],
+      },
+      items,
+    )
+
+    expect(tree[0]?.submodules[0]?.label).toBe('General')
+    expect(tree[0]?.submodules[0]?.permissions).toHaveLength(1)
+  })
+
+  it('returns empty tree when module missing on raw group', () => {
+    expect(normalizePermissionTree({ tree: [{ label: 'No module', submodules: [] }] }, [])).toEqual([])
+  })
+})

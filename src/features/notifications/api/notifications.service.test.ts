@@ -153,5 +153,34 @@ describe('notificationsService', () => {
       vi.mocked(apiClient.patch).mockResolvedValue({ data: { data: { updatedCount: 5 } } })
       expect(await notificationsService.markAllRead()).toBe(5)
     })
+
+    it('normalizes nullable fields and rejects invalid numeric dates', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          {
+            id: 'n4',
+            title: 'T',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            ticketNumber: 'not-a-number',
+            ticketId: '  ',
+            activityLogId: 123,
+          },
+        ],
+      })
+      const [item] = (await notificationsService.list()).items
+      expect(item?.ticketNumber).toBeNull()
+      expect(item?.ticketId).toBeNull()
+      expect(item?.activityLogId).toBeNull()
+
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [{ id: 'n5', title: 'T', createdAt: Number.NaN }],
+      })
+      expect((await notificationsService.list()).items).toEqual([])
+    })
+
+    it('getUnreadCount reads flat payload without data wrapper', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: { count: 4 } })
+      expect(await notificationsService.getUnreadCount()).toBe(4)
+    })
   })
 })

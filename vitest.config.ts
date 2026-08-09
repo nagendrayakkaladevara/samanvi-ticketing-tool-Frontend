@@ -14,6 +14,10 @@ export default defineConfig({
     globals: false,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    fileParallelism: false,
+    maxWorkers: 1,
+    pool: 'forks',
+    isolate: false,
     clearMocks: true,
     restoreMocks: true,
     mockReset: true,
@@ -22,7 +26,7 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      reportsDirectory: '/tmp/samanvi-vitest-coverage',
+      reportsDirectory: '/tmp/vitest-coverage-workspace',
       clean: true,
       reporter: ['text', 'html', 'lcov'],
       thresholds: {
