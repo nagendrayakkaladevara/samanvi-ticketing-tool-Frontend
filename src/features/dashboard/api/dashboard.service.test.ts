@@ -229,4 +229,55 @@ describe('dashboardService', () => {
       { userId: 'u4', username: 'z', displayName: 'Unknown', openAssignedCount: 0, resolvedInWindow: 0 },
     ])
   })
+
+  describe('getMasterCounts', () => {
+    it('requests master counts endpoint and normalizes nested employees', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          data: {
+            serviceFor: 3,
+            busNo: '12',
+            serviceNo: 4,
+            employees: { driver: 5, helper: 2, staff: 1 },
+          },
+        },
+      })
+
+      const counts = await dashboardService.getMasterCounts()
+
+      expect(apiClient.get).toHaveBeenCalledWith('/dashboard/master-counts')
+      expect(counts).toEqual({
+        serviceFor: 3,
+        busNo: 12,
+        serviceNo: 4,
+        employees: { driver: 5, helper: 2, staff: 1, total: 8 },
+      })
+    })
+
+    it('defaults missing master counts to zero and uses provided total', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          employees: { driver: 1, helper: 1, staff: 1, total: 99 },
+        },
+      })
+
+      expect(await dashboardService.getMasterCounts()).toEqual({
+        serviceFor: 0,
+        busNo: 0,
+        serviceNo: 0,
+        employees: { driver: 1, helper: 1, staff: 1, total: 99 },
+      })
+    })
+
+    it('returns zeroed employees for empty payloads', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: null })
+
+      expect(await dashboardService.getMasterCounts()).toEqual({
+        serviceFor: 0,
+        busNo: 0,
+        serviceNo: 0,
+        employees: { driver: 0, helper: 0, staff: 0, total: 0 },
+      })
+    })
+  })
 })
