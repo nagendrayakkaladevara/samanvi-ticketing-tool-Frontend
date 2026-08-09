@@ -15,6 +15,7 @@ import { notificationQueryKeys } from '@/features/notifications/hooks/notificati
 import { BusNumberAutocomplete } from '@/features/tickets/components/bus-number-autocomplete'
 import { ticketsService } from '@/features/tickets/api/tickets.service'
 import { useCreateTicketForm } from '@/features/tickets/hooks/use-create-ticket-form'
+import { getTicketDetailsPath } from '@/features/tickets/utils/ticket-routes'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { queryClient } from '@/lib/query/query-client'
 import { invalidFieldClass } from '@/lib/form/form-field-styles'
@@ -38,20 +39,36 @@ export function CreateTicketPage() {
 
   const createTicketMutation = useMutation({
     mutationFn: async (variables: { assignedToId: string }) => {
+      // Create first; assignment is a separate request. If assign fails after create
+      // succeeds, treat that as partial success so the user is not prompted to
+      // resubmit and create a duplicate ticket.
       const createdTicket = await ticketsService.create(form.payload)
-      if (variables.assignedToId) {
+      if (!variables.assignedToId) {
+        return { createdTicket, assigned: false as const, assignmentFailed: false as const }
+      }
+
+      try {
         await ticketsService.assign({
           ticketId: createdTicket.id,
           assignedToId: variables.assignedToId,
         })
+        return { createdTicket, assigned: true as const, assignmentFailed: false as const }
+      } catch {
+        return { createdTicket, assigned: false as const, assignmentFailed: true as const }
       }
-      return createdTicket
     },
-    onSuccess: (_, variables) => {
-      toast.success(variables.assignedToId ? 'Ticket created and assigned successfully.' : 'Ticket created successfully.')
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
       queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all })
       form.resetForm()
+
+      if (result.assignmentFailed) {
+        toast.warning('Ticket created, but assignment failed. You can assign it from the ticket details page.')
+        navigate(getTicketDetailsPath(result.createdTicket.id))
+        return
+      }
+
+      toast.success(result.assigned ? 'Ticket created and assigned successfully.' : 'Ticket created successfully.')
       navigate('/tickets')
     },
     onError: (error) => {
