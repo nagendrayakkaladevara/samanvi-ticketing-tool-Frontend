@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeDriver } from '@/test/fixtures/employees'
 import { downloadDriverPdf } from './download-driver-pdf'
 
-const { mockSave, MockJsPDF } = vi.hoisted(() => {
+const { mockSave, mockSplitTextToSize, MockJsPDF } = vi.hoisted(() => {
   const mockSave = vi.fn()
+  const mockSplitTextToSize = vi.fn().mockReturnValue(['line'])
   class MockJsPDF {
     setFontSize = vi.fn()
     setFont = vi.fn()
@@ -12,13 +13,13 @@ const { mockSave, MockJsPDF } = vi.hoisted(() => {
     setDrawColor = vi.fn()
     text = vi.fn()
     line = vi.fn()
-    splitTextToSize = vi.fn().mockReturnValue(['line'])
+    splitTextToSize = mockSplitTextToSize
     addPage = vi.fn()
     setPage = vi.fn()
     getNumberOfPages = vi.fn().mockReturnValue(1)
     save = mockSave
   }
-  return { mockSave, MockJsPDF }
+  return { mockSave, mockSplitTextToSize, MockJsPDF }
 })
 
 vi.mock('jspdf', () => ({
@@ -28,6 +29,7 @@ vi.mock('jspdf', () => ({
 describe('downloadDriverPdf', () => {
   beforeEach(() => {
     mockSave.mockClear()
+    mockSplitTextToSize.mockReturnValue(['line'])
   })
 
   it('generates and saves driver PDF', () => {
@@ -44,6 +46,19 @@ describe('downloadDriverPdf', () => {
 
   it('skips record info section when timestamps missing', () => {
     downloadDriverPdf(makeDriver({ createdAt: undefined, updatedAt: undefined }))
+    expect(mockSave).toHaveBeenCalled()
+  })
+
+  it('uses fallback filename when driver id sanitizes to empty', () => {
+    downloadDriverPdf(makeDriver({ driverIdNumber: '   ' }))
+    expect(mockSave).toHaveBeenCalledWith('Driver-driver.pdf')
+  })
+
+  it('adds pages when content exceeds page height', () => {
+    mockSplitTextToSize.mockReturnValue(Array.from({ length: 40 }, () => 'line'))
+
+    downloadDriverPdf(makeDriver({ remarks: 'Very long remarks section' }))
+
     expect(mockSave).toHaveBeenCalled()
   })
 })

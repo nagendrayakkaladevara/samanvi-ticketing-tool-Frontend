@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   persistTicketsAutoRefreshPreference,
@@ -21,12 +21,28 @@ describe('readTicketsAutoRefreshPreference', () => {
     localStorage.setItem(TICKETS_AUTO_REFRESH_KEY, 'true')
     expect(readTicketsAutoRefreshPreference()).toBe(true)
   })
+
+  it('returns false when localStorage read throws', () => {
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked')
+    })
+    expect(readTicketsAutoRefreshPreference()).toBe(false)
+    getItem.mockRestore()
+  })
 })
 
 describe('persistTicketsAutoRefreshPreference', () => {
   it('writes boolean to localStorage', () => {
     persistTicketsAutoRefreshPreference(true)
     expect(localStorage.getItem(TICKETS_AUTO_REFRESH_KEY)).toBe('true')
+  })
+
+  it('ignores storage write errors', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota')
+    })
+    expect(() => persistTicketsAutoRefreshPreference(false)).not.toThrow()
+    setItem.mockRestore()
   })
 })
 

@@ -15,7 +15,11 @@ vi.mock('@/lib/api/client', () => ({
 
 describe('userHistoryService', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.mocked(apiClient.get).mockReset()
+    vi.mocked(apiClient.post).mockReset()
+    vi.mocked(apiClient.patch).mockReset()
+    vi.mocked(apiClient.put).mockReset()
+    vi.mocked(apiClient.delete).mockReset()
   })
 
   describe('getHistory', () => {

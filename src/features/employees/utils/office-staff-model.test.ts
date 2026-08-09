@@ -71,6 +71,41 @@ describe('buildOfficeStaffPayload', () => {
     )
     expect(payload.aadharCardBack).toBe('new-back.jpg')
   })
+
+  it('edit mode omits blank optional fields and documents', () => {
+    const payload = buildOfficeStaffPayload(
+      {
+        ...validStaffValues,
+        alternativeMobile: '',
+        emergencyContact: '',
+        upiId: '',
+        remarks: '',
+        dateOfLeaving: '',
+        aadharCardFront: '',
+        aadharCardBack: '',
+        upiScanner: '',
+      },
+      'edit',
+    )
+    expect(payload.alternativeMobile).toBeNull()
+    expect(payload.aadharCardFront).toBeUndefined()
+    expect(payload.upiScanner).toBeNull()
+  })
+
+  it('edit mode includes all document fields when provided', () => {
+    const payload = buildOfficeStaffPayload(
+      {
+        ...validStaffValues,
+        aadharCardFront: 'front-new.jpg',
+        aadharCardBack: 'back-new.jpg',
+        upiScanner: 'scan-new.jpg',
+      },
+      'edit',
+    )
+    expect(payload.aadharCardFront).toBe('front-new.jpg')
+    expect(payload.aadharCardBack).toBe('back-new.jpg')
+    expect(payload.upiScanner).toBe('scan-new.jpg')
+  })
 })
 
 describe('defaultOfficeStaffFormValues', () => {

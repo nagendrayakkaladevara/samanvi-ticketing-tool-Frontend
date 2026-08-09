@@ -14,6 +14,12 @@ describe('toSpareTankGridRow', () => {
     expect(row.ownerName).toBe('Owner Name')
     expect(row.updatedAtLabel).toMatch(/2024/)
   })
+
+  it('defaults missing updatedAt to empty string', () => {
+    const row = toSpareTankGridRow(makeSpareTank({ updatedAt: undefined }))
+    expect(row.updatedAt).toBe('')
+    expect(row.updatedAtLabel).toBe('—')
+  })
 })
 
 describe('compareSpareTanksByBusNumber', () => {

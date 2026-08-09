@@ -63,4 +63,13 @@ describe('useNetworkStatus', () => {
     })
     expect(result.current.showReconnected).toBe(false)
   })
+
+  it('defaults to online when navigator is unavailable', () => {
+    vi.stubGlobal('navigator', undefined)
+
+    const { result } = renderHook(() => useNetworkStatus())
+    expect(result.current.isOnline).toBe(true)
+
+    vi.unstubAllGlobals()
+  })
 })

@@ -92,4 +92,27 @@ describe('useSubmoduleActions', () => {
     expect(result.current.canDelete).toBe(false)
     expect(result.current.canManage).toBe(true)
   })
+
+  it('canManage is true when only delete permission is granted', () => {
+    const session = makeAuthSession({
+      permissions: {
+        items: [
+          {
+            id: '1',
+            module: 'masters',
+            submodule: 'driver',
+            action: 'delete',
+            key: 'masters:driver:delete',
+          },
+        ],
+        tree: [],
+      },
+    })
+    useAuthStore.getState().setSession(session)
+
+    const { result } = renderHook(() => useSubmoduleActions('masters', 'driver'))
+
+    expect(result.current.canDelete).toBe(true)
+    expect(result.current.canManage).toBe(true)
+  })
 })

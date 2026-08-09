@@ -44,4 +44,17 @@ describe('downloadNormalBusesExcel', () => {
     expect(mockBookAppendSheet).toHaveBeenCalled()
     expect(mockWriteFile).toHaveBeenCalledWith(expect.anything(), expect.stringMatching(/^normal-buses-/))
   })
+
+  it('uses em dash for blank remarks and trims whitespace remarks', async () => {
+    await downloadNormalBusesExcel([
+      makeMasterBus({ remarks: '' }),
+      makeMasterBus({ busNumber: 'BUS-02', remarks: '  trimmed  ' }),
+      makeMasterBus({ busNumber: 'BUS-03', remarks: '   ' }),
+    ])
+
+    const rows = mockJsonToSheet.mock.calls[0]?.[0] as Array<Record<string, string>>
+    expect(rows[0]?.Remarks).toBe('—')
+    expect(rows[1]?.Remarks).toBe('trimmed')
+    expect(rows[2]?.Remarks).toBe('—')
+  })
 })

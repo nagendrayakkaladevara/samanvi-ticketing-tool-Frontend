@@ -93,4 +93,28 @@ describe('buildDriverPayload', () => {
     expect(payload.emergencyNumber).toBeNull()
     expect(payload.upiScanner).toBeNull()
   })
+
+  it('edit mode includes all optional document fields when provided', () => {
+    const payload = buildDriverPayload(
+      {
+        ...validDriverFormValues,
+        aadharCardFront: 'new-front.jpg',
+        aadharCardBack: 'new-back.jpg',
+        dlFront: 'new-dl-front.jpg',
+        dlBack: 'new-dl-back.jpg',
+        upiScanner: 'new-scan.jpg',
+      },
+      'edit',
+    )
+    expect(payload.aadharCardFront).toBe('new-front.jpg')
+    expect(payload.aadharCardBack).toBe('new-back.jpg')
+    expect(payload.dlFront).toBe('new-dl-front.jpg')
+    expect(payload.dlBack).toBe('new-dl-back.jpg')
+    expect(payload.upiScanner).toBe('new-scan.jpg')
+  })
+
+  it('create mode omits upiScanner when blank', () => {
+    const payload = buildDriverPayload({ ...validDriverFormValues, upiScanner: '   ' }, 'create')
+    expect(payload.upiScanner).toBeNull()
+  })
 })

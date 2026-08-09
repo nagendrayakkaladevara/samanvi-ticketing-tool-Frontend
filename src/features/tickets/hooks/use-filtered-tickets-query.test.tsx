@@ -134,4 +134,18 @@ describe('useFilteredTicketsQuery', () => {
     expect(ticketsService.list).toHaveBeenCalledWith({ status: 'assigned' })
     expect(result.current.data?.[0]?.id).toBe('newer')
   })
+
+  it('treats invalid createdAt as zero when sorting', async () => {
+    vi.mocked(ticketsService.list).mockResolvedValue([
+      makeTicket({ id: 'invalid-date', createdAt: 'not-a-date' }),
+      makeTicket({ id: 'valid-date', createdAt: '2024-02-01' }),
+    ])
+
+    const { result } = renderHook(() => useFilteredTicketsQuery('open'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.[0]?.id).toBe('valid-date')
+  })
 })

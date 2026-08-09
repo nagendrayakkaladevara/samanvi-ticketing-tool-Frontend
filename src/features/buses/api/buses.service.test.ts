@@ -156,6 +156,18 @@ describe('busesService', () => {
         data: { busNumbers: [{ bus_no: 'C-3' }, { number: 'D-4' }] },
       })
       expect(await busesService.listBusNumbers()).toEqual(['C-3', 'D-4'])
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: null })
+      expect(await busesService.listBusNumbers()).toEqual([])
+    })
+
+    it('create extracts bus from top-level bus wrapper', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: { bus: { id: 'new', busNumber: 'X-1', last_maintenance_date: '01-01-2024' } },
+      })
+      const bus = await busesService.create({ busNumber: 'X-1' })
+      expect(bus.busNumber).toBe('X-1')
+      expect(bus.lastMaintenanceDate).toBe('01-01-2024')
     })
 
     it('create falls back when normalize fails', async () => {

@@ -137,6 +137,15 @@ describe('ticketsService', () => {
       })
     })
 
+    it('unwraps nested data envelope in response', async () => {
+      vi.mocked(apiClient.patch).mockResolvedValue({
+        data: { data: { ...baseTicket, id: 'nested-status', status: 'assigned' } },
+      })
+
+      const ticket = await ticketsService.updateStatus({ ticketId: 't1', status: 'ASSIGNED' })
+      expect(ticket.id).toBe('nested-status')
+    })
+
     it('omits blank note', async () => {
       vi.mocked(apiClient.patch).mockResolvedValue({ data: baseTicket })
 
@@ -184,6 +193,15 @@ describe('ticketsService', () => {
         assignedToId: 'w1',
         note: 'assign',
       })
+    })
+
+    it('unwraps nested assign response', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: { data: { ...baseTicket, id: 'assigned-nested' } },
+      })
+
+      const ticket = await ticketsService.assign({ ticketId: 't1', assignedToId: 'w1' })
+      expect(ticket.id).toBe('assigned-nested')
     })
   })
 
@@ -249,6 +267,24 @@ describe('ticketsService', () => {
       await ticketsService.create(input)
 
       expect(apiClient.post).toHaveBeenCalledWith('/tickets', input)
+    })
+
+    it('unwraps nested create response', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: { data: { ...baseTicket, id: 'created-nested' } },
+      })
+
+      const ticket = await ticketsService.create({
+        title: 'New',
+        description: 'Desc',
+        severity: 'medium',
+        priority: 'p2',
+        categoryId: 'c1',
+        busNumber: 'BUS-1',
+        slaDueAt: '2024-01-01T00:00:00.000Z',
+      })
+
+      expect(ticket.id).toBe('created-nested')
     })
   })
 

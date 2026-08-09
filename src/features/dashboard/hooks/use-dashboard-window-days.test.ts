@@ -42,6 +42,15 @@ describe('dashboard window days preference', () => {
     expect(() => persistDashboardWindowDaysPreference(6)).not.toThrow()
     setItem.mockRestore()
   })
+
+  it('falls back when localStorage read throws', () => {
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked')
+    })
+
+    expect(readDashboardWindowDaysPreference()).toBe(2)
+    getItem.mockRestore()
+  })
 })
 
 describe('useDashboardWindowDays', () => {

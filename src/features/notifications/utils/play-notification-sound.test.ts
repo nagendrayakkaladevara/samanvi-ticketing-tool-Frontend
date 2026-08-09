@@ -75,4 +75,13 @@ describe('play-notification-sound', () => {
 
     expect(createOscillatorMock).not.toHaveBeenCalled()
   })
+
+  it('does not resume when context is already running on unlock', async () => {
+    installAudioContext('running')
+    const mod = await import('./play-notification-sound')
+
+    mod.unlockNotificationAudio()
+
+    expect(resumeMock).not.toHaveBeenCalled()
+  })
 })

@@ -17,6 +17,11 @@ describe('masterBusToFormValues', () => {
     expect(values.purchaseDate).toBe('2020-01-01')
     expect(values.remarks).toBe('Test bus')
   })
+
+  it('defaults missing remarks to empty string', () => {
+    const values = masterBusToFormValues(makeMasterBus({ remarks: undefined }))
+    expect(values.remarks).toBe('')
+  })
 })
 
 describe('toMasterBusGridRow', () => {

@@ -66,6 +66,34 @@ describe('buildHelperPayload', () => {
     expect(payload.aadharCardFront).toBe('updated.jpg')
     expect(payload.upiScanner).toBe('new-scan.jpg')
   })
+
+  it('edit mode omits blank optional fields and documents', () => {
+    const payload = buildHelperPayload(
+      {
+        ...validHelperValues,
+        alternateNumber: '',
+        emergencyMobile: '',
+        upiId: '',
+        remarks: '',
+        dateOfLeaving: '',
+        aadharCardFront: '',
+        aadharCardBack: '',
+        upiScanner: '',
+      },
+      'edit',
+    )
+    expect(payload.alternateNumber).toBeNull()
+    expect(payload.aadharCardFront).toBeUndefined()
+    expect(payload.upiScanner).toBeNull()
+  })
+
+  it('edit mode includes aadharCardBack when provided', () => {
+    const payload = buildHelperPayload(
+      { ...validHelperValues, aadharCardBack: 'back-updated.jpg' },
+      'edit',
+    )
+    expect(payload.aadharCardBack).toBe('back-updated.jpg')
+  })
 })
 
 describe('defaultHelperFormValues', () => {

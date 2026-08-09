@@ -175,6 +175,30 @@ describe('apiClient', () => {
 
       expect(captured?.headers.Authorization).toBe('Bearer secret-token')
     })
+
+    it('returns early when headers are null and no token', async () => {
+      mockGetAccessToken.mockReturnValue(null)
+      const handler = apiClient.interceptors.request.handlers[0]?.fulfilled
+      expect(handler).toBeDefined()
+
+      const config = { headers: null } as AdapterConfig
+      const result = await handler!(config)
+
+      expect(result.headers).toBeNull()
+    })
+
+    it('detects Authorization on plain object without get method', async () => {
+      mockGetAccessToken.mockReturnValue('new-token')
+      let captured: AdapterConfig | undefined
+      installAdapter(async (config) => {
+        captured = config
+        return { data: {}, status: 200, statusText: 'OK', headers: {}, config }
+      })
+
+      await apiClient.get('/test', { headers: { Authorization: 'Bearer plain-cap' } as never })
+
+      expect((captured?.headers as Record<string, string>).Authorization).toBe('Bearer plain-cap')
+    })
   })
 
   describe('response interceptor', () => {
