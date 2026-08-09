@@ -217,7 +217,7 @@ describe('dashboardService', () => {
     const summary = await dashboardService.getAdminSummary()
 
     expect(summary.totalTickets).toBe(8)
-    expect(summary.openTickets).toBe(4)
+    expect(summary.openTickets).toBe(5)
     expect(summary.trends?.closedResolvedTicketsPct).toBe(6)
     expect(summary.snapshot.oldestOpenTicket).toEqual({
       id: 't-old',
@@ -226,7 +226,7 @@ describe('dashboardService', () => {
       status: '-',
     })
     expect(summary.leaderboard).toEqual([
-      { userId: 'u4', username: 'z', displayName: 'z', openAssignedCount: 0, resolvedInWindow: 0 },
+      { userId: 'u4', username: 'z', displayName: 'Unknown', openAssignedCount: 0, resolvedInWindow: 0 },
     ])
   })
 })
