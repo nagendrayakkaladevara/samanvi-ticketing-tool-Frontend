@@ -233,8 +233,10 @@ describe('auth.service login', () => {
     vi.mocked(apiClient.post).mockResolvedValue({
       data: {
         accessToken: 'token',
-        user: { id: '1', username: 'u' },
-        data: { permissions: [makePermission({ id: 'arr-perm' })] },
+        data: {
+          permissions: [makePermission({ id: 'arr-perm' })],
+          user: { id: '1', username: 'u' },
+        },
       },
     })
     vi.mocked(fetchMyPermissions).mockResolvedValue({ items: [], tree: [] })
