@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch'
 import { applicationUsersService } from '@/features/application-users/api/application-users.service'
 import { PermissionPicker } from '@/features/application-users/components/permission-picker'
 import { useApplicationUserQuery } from '@/features/application-users/hooks/use-application-user-query'
+import { useLinkableEmployeesQuery } from '@/features/application-users/hooks/use-linkable-employees-query'
 import { usePermissionsQuery } from '@/features/application-users/hooks/use-permissions-query'
 import {
   applicationUserTypeLabels,
@@ -21,6 +22,7 @@ import {
   toCreatableUserType,
   type CreateApplicationUserInput,
   type CreatableApplicationUserType,
+  type EmployeeType,
   type UpdateApplicationUserInput,
   type ApplicationUser,
 } from '@/features/application-users/types/application-user'
@@ -44,6 +46,8 @@ type ApplicationUserFormValues = {
   email: string
   password: string
   userType: CreatableApplicationUserType
+  employeeId: string
+  employeeType: EmployeeType | ''
   isActive: boolean
   permissionIds: string[]
 }
@@ -56,6 +60,8 @@ function getDefaultValues(): ApplicationUserFormValues {
     email: '',
     password: '',
     userType: 'supervisor',
+    employeeId: '',
+    employeeType: '',
     isActive: true,
     permissionIds: [],
   }
@@ -69,6 +75,8 @@ function getValuesFromEditingUser(editingUser: ApplicationUser): ApplicationUser
     email: editingUser.email ?? '',
     password: '',
     userType: toCreatableUserType(editingUser.userType),
+    employeeId: editingUser.linkedEmployee?.id ?? '',
+    employeeType: editingUser.linkedEmployee?.employeeType ?? '',
     isActive: editingUser.isActive,
     permissionIds: editingUser.permissionIds,
   }
@@ -110,6 +118,11 @@ function getApplicationUserFieldError(
       return values.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())
         ? 'Please provide a valid email address.'
         : undefined
+    case 'employeeId':
+      if (mode === 'create' && !values.employeeId) {
+        return 'Please select an employee to link.'
+      }
+      return undefined
     default:
       return undefined
   }
@@ -117,7 +130,14 @@ function getApplicationUserFieldError(
 
 function validateForm(values: ApplicationUserFormValues, mode: FormMode): ApplicationUserFormErrors {
   const errors: ApplicationUserFormErrors = {}
-  const validatedFields: ApplicationUserFormField[] = ['username', 'fullName', 'mobileNumber', 'password', 'email']
+  const validatedFields: ApplicationUserFormField[] = [
+    'username',
+    'fullName',
+    'mobileNumber',
+    'password',
+    'email',
+    ...(mode === 'create' ? (['employeeId'] as const) : []),
+  ]
 
   for (const field of validatedFields) {
     const error = getApplicationUserFieldError(field, values, mode)
@@ -147,6 +167,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [usernameAvailability, setUsernameAvailability] = useState<UsernameAvailabilityStatus>('idle')
   const originalUsernameRef = useRef('')
+  const originalLinkedEmployeeRef = useRef<{ employeeId: string; employeeType: EmployeeType } | null>(null)
   const preservedHiddenPermissionIdsRef = useRef<string[]>([])
   const initializedUserIdRef = useRef<string | null>(null)
   const usernameCheckRequestIdRef = useRef(0)
@@ -167,6 +188,13 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
     error: permissionsError,
   } = usePermissionsQuery()
 
+  const {
+    data: linkableEmployees = [],
+    isLoading: isLinkableEmployeesLoading,
+    isError: isLinkableEmployeesError,
+    error: linkableEmployeesError,
+  } = useLinkableEmployeesQuery(mode === 'edit' ? userId : undefined, canAccessForm)
+
   const isAdminUser = editingUser?.userType === 'admin'
   const permissionTree = permissionsCatalog?.tree ?? []
 
@@ -178,6 +206,7 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
     if (mode === 'create') {
       initializedUserIdRef.current = null
       originalUsernameRef.current = ''
+      originalLinkedEmployeeRef.current = null
       preservedHiddenPermissionIdsRef.current = []
       setValues(getDefaultValues())
       setUsernameAvailability('idle')
@@ -197,6 +226,12 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
 
     initializedUserIdRef.current = editingUser.id
     originalUsernameRef.current = editingUser.username.trim()
+    originalLinkedEmployeeRef.current = editingUser.linkedEmployee
+      ? {
+          employeeId: editingUser.linkedEmployee.id,
+          employeeType: editingUser.linkedEmployee.employeeType,
+        }
+      : null
     setValues({
       ...getValuesFromEditingUser(editingUser),
       permissionIds: visibleIds,
@@ -358,12 +393,20 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
     }
 
     if (mode === 'create') {
+      if (!values.employeeId || !values.employeeType) {
+        setFieldErrors((prev) => ({ ...prev, employeeId: 'Please select an employee to link.' }))
+        toast.error('Please select an employee to link.')
+        return
+      }
+
       createMutation.mutate({
         username: values.username.trim().toLowerCase(),
         fullName: values.fullName.trim(),
         mobileNumber: values.mobileNumber.trim(),
         password: values.password.trim(),
         userType: values.userType,
+        employeeId: values.employeeId,
+        employeeType: values.employeeType,
         isActive: values.isActive,
         permissionIds: canManagePermissions ? values.permissionIds : [],
         ...(values.email.trim() ? { email: values.email.trim() } : {}),
@@ -380,6 +423,14 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
       ? mergePermissionIdsForSave(values.permissionIds, preservedHiddenPermissionIdsRef.current)
       : []
 
+    const originalLinkedEmployee = originalLinkedEmployeeRef.current
+    const employeeLinkChanged =
+      !isAdminUser &&
+      values.employeeId &&
+      values.employeeType &&
+      (originalLinkedEmployee?.employeeId !== values.employeeId ||
+        originalLinkedEmployee?.employeeType !== values.employeeType)
+
     updateMutation.mutate({
       userId,
       username: values.username.trim().toLowerCase(),
@@ -391,12 +442,32 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
       assignPermissions: canManagePermissions,
       ...(!isAdminUser ? { userType: values.userType } : {}),
       ...(values.password.trim() ? { password: values.password.trim() } : {}),
+      ...(employeeLinkChanged
+        ? { employeeId: values.employeeId, employeeType: values.employeeType as EmployeeType }
+        : {}),
     })
+  }
+
+  const handleEmployeeSelect = (employeeRecordId: string) => {
+    const selected = linkableEmployees.find((item) => item.id === employeeRecordId)
+    if (!selected) {
+      return
+    }
+
+    setValues((prev) => ({
+      ...prev,
+      employeeId: selected.id,
+      employeeType: selected.employeeType,
+    }))
+    setFieldErrors((prev) => ({ ...prev, employeeId: undefined }))
   }
 
   const isSaving = createMutation.isPending || updateMutation.isPending
   const isCheckingUsername = usernameAvailability === 'checking'
-  const isLoading = mode === 'edit' ? isUserLoading || isPermissionsLoading : isPermissionsLoading
+  const isLoading =
+    isLinkableEmployeesLoading ||
+    isPermissionsLoading ||
+    (mode === 'edit' ? isUserLoading : false)
 
   if (!canAccessForm) {
     return <Navigate to={applicationAccessRoutes.list} replace />
@@ -462,7 +533,19 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
         </Card>
       ) : null}
 
-      {!isLoading && !isPermissionsError && (mode === 'create' || (!isUserError && editingUser)) ? (
+      {isLinkableEmployeesError ? (
+        <Card className="p-5">
+          <p className="font-medium text-destructive">Failed to load linkable employees</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {(linkableEmployeesError as Error)?.message ?? 'Unexpected error occurred.'}
+          </p>
+        </Card>
+      ) : null}
+
+      {!isLoading &&
+      !isPermissionsError &&
+      !isLinkableEmployeesError &&
+      (mode === 'create' || (!isUserError && editingUser)) ? (
         <form onSubmit={handleSubmit} className="space-y-4 pb-28 sm:pb-4" autoComplete="off" noValidate>
           <Card className="space-y-5 p-4 sm:p-5">
             <div>
@@ -566,6 +649,52 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
                   className={cn(fieldErrors.email && invalidFieldClass)}
                 />
                 <FieldError message={fieldErrors.email} />
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <FormLabel htmlFor="linkedEmployee" required={mode === 'create'}>
+                  Linked Employee
+                </FormLabel>
+                {isAdminUser ? (
+                  <Input
+                    id="linkedEmployee"
+                    value={editingUser?.linkedEmployee?.name ?? '—'}
+                    disabled
+                    readOnly
+                  />
+                ) : (
+                  <Select
+                    key={`${userId ?? 'create'}-${values.employeeId}`}
+                    value={values.employeeId || undefined}
+                    onValueChange={handleEmployeeSelect}
+                    disabled={isSaving || linkableEmployees.length === 0}
+                  >
+                    <SelectTrigger
+                      id="linkedEmployee"
+                      aria-invalid={Boolean(fieldErrors.employeeId)}
+                      className={cn(fieldErrors.employeeId && invalidFieldClass)}
+                    >
+                      <SelectValue
+                        placeholder={
+                          linkableEmployees.length === 0
+                            ? 'No employees available to link'
+                            : 'Select driver, helper, or office staff'
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {linkableEmployees.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Links this login to an existing master employee record. Each employee can only be linked to one user.
+                </p>
+                <FieldError message={fieldErrors.employeeId} />
               </div>
 
               <div className="space-y-2">
