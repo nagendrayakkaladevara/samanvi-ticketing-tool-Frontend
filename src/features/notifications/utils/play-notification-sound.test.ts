@@ -1,97 +1,78 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-function installAudioContextMock(state: AudioContextState = 'running') {
-  class MockAudioContext {
-    state = state
-    currentTime = 0
-    destination = {}
-    resume = vi.fn().mockImplementation(async () => {
-      this.state = 'running'
-    })
-    createGain = vi.fn(() => ({
-      gain: {
-        value: 0,
-        setValueAtTime: vi.fn(),
-        exponentialRampToValueAtTime: vi.fn(),
-      },
-      connect: vi.fn(),
-    }))
-    createOscillator = vi.fn(() => ({
+describe('play-notification-sound', () => {
+  let resumeMock: ReturnType<typeof vi.fn>
+  let createOscillatorMock: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    vi.resetModules()
+    resumeMock = vi.fn().mockResolvedValue(undefined)
+    createOscillatorMock = vi.fn(() => ({
       type: 'sine',
       frequency: { value: 0 },
       connect: vi.fn(),
       start: vi.fn(),
       stop: vi.fn(),
     }))
-  }
-
-  vi.stubGlobal('AudioContext', MockAudioContext)
-  return MockAudioContext
-}
-
-describe('play-notification-sound', () => {
-  beforeEach(() => {
-    vi.resetModules()
   })
 
   afterEach(() => {
     vi.unstubAllGlobals()
   })
 
+  function installAudioContext(state: AudioContextState) {
+    class MockAudioContext {
+      state = state
+      currentTime = 0
+      destination = {}
+      resume = resumeMock
+      createGain = vi.fn(() => ({
+        gain: {
+          value: 0,
+          setValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+      }))
+      createOscillator = createOscillatorMock
+    }
+
+    vi.stubGlobal('AudioContext', MockAudioContext)
+  }
+
   it('resumes suspended audio context on unlock', async () => {
-    installAudioContextMock('suspended')
+    installAudioContext('suspended')
     const mod = await import('./play-notification-sound')
 
     mod.unlockNotificationAudio()
 
-    const context = new AudioContext()
-    expect(context.resume).toHaveBeenCalled()
+    expect(resumeMock).toHaveBeenCalled()
   })
 
   it('plays two tones when context is running', async () => {
-    installAudioContextMock('running')
+    installAudioContext('running')
     const mod = await import('./play-notification-sound')
 
     await mod.playNotificationSound()
 
-    const context = new AudioContext()
-    expect(context.createOscillator).toHaveBeenCalledTimes(2)
+    expect(createOscillatorMock).toHaveBeenCalledTimes(2)
   })
 
   it('returns early when resume fails', async () => {
-    class FailingAudioContext {
-      state: AudioContextState = 'suspended'
-      currentTime = 0
-      destination = {}
-      resume = vi.fn().mockRejectedValue(new Error('blocked'))
-      createGain = vi.fn()
-      createOscillator = vi.fn()
-    }
-
-    vi.stubGlobal('AudioContext', FailingAudioContext)
+    resumeMock = vi.fn().mockRejectedValue(new Error('blocked'))
+    installAudioContext('suspended')
     const mod = await import('./play-notification-sound')
 
     await expect(mod.playNotificationSound()).resolves.toBeUndefined()
-    const context = new AudioContext()
-    expect(context.createOscillator).not.toHaveBeenCalled()
+    expect(createOscillatorMock).not.toHaveBeenCalled()
   })
 
   it('does nothing when context stays non-running', async () => {
-    class SuspendedAudioContext {
-      state: AudioContextState = 'suspended'
-      currentTime = 0
-      destination = {}
-      resume = vi.fn().mockResolvedValue(undefined)
-      createGain = vi.fn()
-      createOscillator = vi.fn()
-    }
-
-    vi.stubGlobal('AudioContext', SuspendedAudioContext)
+    installAudioContext('suspended')
     const mod = await import('./play-notification-sound')
 
     await mod.playNotificationSound()
 
-    const context = new AudioContext()
-    expect(context.createOscillator).not.toHaveBeenCalled()
+    expect(createOscillatorMock).not.toHaveBeenCalled()
   })
 })
