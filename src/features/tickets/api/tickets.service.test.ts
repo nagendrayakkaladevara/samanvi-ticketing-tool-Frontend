@@ -707,5 +707,95 @@ describe('ticketsService', () => {
       expect(entry?.action).toBe('updated')
       expect(entry?.actorName).toBe('Performer')
     })
+
+    it('covers remaining ticket normalization and payload extraction branches', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [
+          {
+            ticketId: 't-alt',
+            title: 'Alt keys',
+            ticket_no: 'TN-ALT',
+            bus_number_plate: 'PLATE-1',
+            category: 12,
+            slaDueAt: 99,
+            updated_at: '2024-02-02',
+            assignedToId: 'w9',
+            createdByDisplayName: 'Creator',
+            assigneeName: 'Assignee',
+          },
+        ],
+      })
+      const [ticket] = await ticketsService.list()
+      expect(ticket).toMatchObject({
+        id: 't-alt',
+        ticketNumber: 'TN-ALT',
+        busNumber: 'PLATE-1',
+        category: 'General',
+        slaDueAt: '',
+        updatedAt: '2024-02-02',
+        assignedToUserId: 'w9',
+        createdByName: 'Creator',
+        assignedToName: 'Assignee',
+      })
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: {
+          data: {
+            activityLogs: [
+              {
+                actionType: 'status_changed',
+                fromStatus: 'created',
+                toStatus: 'assigned',
+                actor: { username: 'tech' },
+              },
+            ],
+          },
+        },
+      })
+      const [timelineEntry] = await ticketsService.getTimeline('t1')
+      expect(timelineEntry?.actionType).toBe('status_changed')
+      expect(timelineEntry?.fromStatus).toBe('created')
+      expect(timelineEntry?.actorUsername).toBe('tech')
+      expect(timelineEntry?.id).toMatch(/^timeline-/)
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { issueCategories: [{ categoryName: 'Brakes', id: 'c1' }] },
+      })
+      expect((await ticketsService.listIssueCategories())[0]?.name).toBe('Brakes')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { activityLogs: [{ id: 'e1', type: 'note' }] } })
+      expect((await ticketsService.getTimeline('t1'))[0]?.id).toBe('e1')
+    })
+
+    it('unwraps nested data payloads for mutations and queries', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: { data: { id: 't1', title: 'Wrapped' } } })
+      expect((await ticketsService.getById('t1')).title).toBe('Wrapped')
+
+      vi.mocked(apiClient.get).mockResolvedValue({ data: { data: { id: 't2', title: 'Search hit' } } })
+      expect((await ticketsService.searchByTicketNumber('TN-2')).title).toBe('Search hit')
+
+      vi.mocked(apiClient.patch).mockResolvedValue({
+        data: { data: { id: 't1', title: 'Updated', status: 'closed' } },
+      })
+      await ticketsService.updateStatus({ ticketId: 't1', status: 'CLOSED', note: '  done  ' })
+      expect(apiClient.patch).toHaveBeenCalledWith('/tickets/t1/status', {
+        status: 'closed',
+        note: 'done',
+      })
+
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: { data: { id: 't1', title: 'Assigned', assignedToUserId: 'w1' } },
+      })
+      await ticketsService.assign({ ticketId: 't1', assignedToId: 'w1', note: 'please' })
+      expect(apiClient.post).toHaveBeenCalledWith('/tickets/t1/assign', {
+        assignedToId: 'w1',
+        note: 'please',
+      })
+
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: { data: { id: 't-new', title: 'Created ticket', status: 'created' } },
+      })
+      expect((await ticketsService.create({ title: 'Created ticket' } as never)).id).toBe('t-new')
+    })
   })
 })

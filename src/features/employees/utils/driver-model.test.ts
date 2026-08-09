@@ -132,11 +132,28 @@ describe('buildDriverPayload', () => {
       upiId: 'driver@upi',
       remarks: 'Note',
       upiScanner: 'scan.jpg',
+      dlFront: 'dl-front.jpg',
+      dlBack: 'dl-back.jpg',
     })
     const values = driverToFormValues(driver)
     expect(values.alternateMobile).toBe('9876543211')
     expect(values.upiId).toBe('driver@upi')
     expect(values.remarks).toBe('Note')
     expect(values.upiScanner).toBe('scan.jpg')
+    expect(values.dlFront).toBe('dl-front.jpg')
+    expect(values.dlBack).toBe('dl-back.jpg')
+  })
+
+  it('edit mode trims aadhar and dl back document fields', () => {
+    const payload = buildDriverPayload(
+      {
+        ...validDriverFormValues,
+        aadharCardBack: '  back.jpg  ',
+        dlBack: '  dl-back.jpg  ',
+      },
+      'edit',
+    )
+    expect(payload.aadharCardBack).toBe('back.jpg')
+    expect(payload.dlBack).toBe('dl-back.jpg')
   })
 })
