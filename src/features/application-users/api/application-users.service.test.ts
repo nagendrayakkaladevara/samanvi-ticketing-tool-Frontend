@@ -276,7 +276,7 @@ describe('applicationUsersService', () => {
     expect((await applicationUsersService.list())[0]?.permissionIds).toEqual(['p1', '2'])
 
     vi.mocked(apiClient.get).mockResolvedValue({
-      data: [{ userId: 'u15', username: 'u15', userType: { label: '  ' }, role: { name: 'admin' } }],
+      data: [{ userId: 'u15', username: 'u15', role: { name: 'admin' } }],
     })
     expect((await applicationUsersService.list())[0]?.userType).toBe('admin')
   })

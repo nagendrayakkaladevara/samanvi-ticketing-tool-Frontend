@@ -22,8 +22,8 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      reportsDirectory: 'node_modules/.cache/vitest-coverage',
-      reporter: ['text', 'html', 'lcov'],
+      reportsDirectory: '/tmp/samanvi-vitest-coverage',
+      clean: true,
       thresholds: {
         lines: 95,
         functions: 95,
