@@ -24,6 +24,7 @@ export default defineConfig({
       provider: 'v8',
       reportsDirectory: '/tmp/samanvi-vitest-coverage',
       clean: true,
+      reporter: ['text', 'html', 'lcov'],
       thresholds: {
         lines: 95,
         functions: 95,
