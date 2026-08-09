@@ -274,5 +274,17 @@ describe('busesService', () => {
         },
       ])
     })
+
+    it('list extracts top-level buses and filters invalid bus numbers', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { buses: [{ id: 'b-top', busNumber: 'TOP-1' }] },
+      })
+      expect((await busesService.list())[0]?.busNumber).toBe('TOP-1')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { busNumbers: [{ bus_no: '  ' }, { number: 'VALID' }] },
+      })
+      expect(await busesService.listBusNumbers()).toEqual(['VALID'])
+    })
   })
 })

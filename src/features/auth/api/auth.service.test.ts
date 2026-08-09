@@ -271,4 +271,35 @@ describe('auth.service login', () => {
       login({ username: 'a'.repeat(65), password: 'password12' }),
     ).rejects.toThrow('Username is too long')
   })
+
+  it('parses refresh token from nested data envelope', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      data: {
+        data: {
+          accessToken: 'token',
+          refreshToken: 'nested-refresh',
+          user: { id: '1', username: 'u', fullName: 'Full Name' },
+        },
+      },
+    })
+    vi.mocked(fetchMyPermissions).mockResolvedValue({ items: [], tree: [] })
+
+    const session = await login({ username: 'validuser', password: 'password12' })
+    expect(session.refreshToken).toBe('nested-refresh')
+    expect(session.user.name).toBe('Full Name')
+  })
+
+  it('parses permissions from top-level items array', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      data: {
+        accessToken: 'token',
+        user: { id: '1', username: 'u' },
+        items: [makePermission({ id: 'top-item' })],
+      },
+    })
+    vi.mocked(fetchMyPermissions).mockResolvedValue({ items: [], tree: [] })
+
+    const session = await login({ username: 'validuser', password: 'password12' })
+    expect(session.permissions?.items[0]?.id).toBe('top-item')
+  })
 })

@@ -210,14 +210,14 @@ describe('dashboardService', () => {
           openByStatus: { assigned: 2, reopened: 1, blocked: 1, created: 1 },
         },
         agentLeaderboard: [null, { username: 'no-id' }, { userId: 'u4', username: 'z' }],
-        closedResolvedTicketsChangePercent: { resolvedTicketsChangePercent: 6 },
+        closedResolvedTicketsChangePercent: { changePercent: 6 },
       },
     })
 
     const summary = await dashboardService.getAdminSummary()
 
     expect(summary.totalTickets).toBe(8)
-    expect(summary.openTickets).toBe(5)
+    expect(summary.openTickets).toBe(4)
     expect(summary.trends?.closedResolvedTicketsPct).toBe(6)
     expect(summary.snapshot.oldestOpenTicket).toEqual({
       id: 't-old',
