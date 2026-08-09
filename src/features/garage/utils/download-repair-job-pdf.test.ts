@@ -1,28 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { makeRepairJob, makeRepairJobPart, makeActivityLog } from '@/test/fixtures/garage'
+import { makeActivityLog, makeRepairJob, makeRepairJobPart } from '@/test/fixtures/garage'
 import { downloadRepairJobPdf } from './download-repair-job-pdf'
 
-const { mockSave, mockJsPDF } = vi.hoisted(() => {
+const { mockSave, MockJsPDF } = vi.hoisted(() => {
   const mockSave = vi.fn()
-  const mockJsPDF = vi.fn().mockImplementation(() => ({
-    setFontSize: vi.fn(),
-    setFont: vi.fn(),
-    setTextColor: vi.fn(),
-    setDrawColor: vi.fn(),
-    text: vi.fn(),
-    line: vi.fn(),
-    splitTextToSize: vi.fn().mockReturnValue(['line']),
-    addPage: vi.fn(),
-    setPage: vi.fn(),
-    getNumberOfPages: vi.fn().mockReturnValue(1),
-    save: mockSave,
-  }))
-  return { mockSave, mockJsPDF }
+  class MockJsPDF {
+    setFontSize = vi.fn()
+    setFont = vi.fn()
+    setTextColor = vi.fn()
+    setDrawColor = vi.fn()
+    text = vi.fn()
+    line = vi.fn()
+    splitTextToSize = vi.fn().mockReturnValue(['line'])
+    addPage = vi.fn()
+    setPage = vi.fn()
+    getNumberOfPages = vi.fn().mockReturnValue(1)
+    save = mockSave
+  }
+  return { mockSave, MockJsPDF }
 })
 
 vi.mock('jspdf', () => ({
-  jsPDF: mockJsPDF,
+  jsPDF: MockJsPDF,
 }))
 
 vi.mock('@/lib/utils/pdf-report-branding', () => ({
@@ -48,14 +48,12 @@ vi.mock('@/lib/utils/pdf-report-layout', () => ({
 describe('downloadRepairJobPdf', () => {
   beforeEach(() => {
     mockSave.mockClear()
-    mockJsPDF.mockClear()
   })
 
   it('generates PDF and saves with job id in filename', async () => {
     const job = makeRepairJob({ jobIdNumber: 'RJ-001' })
     await downloadRepairJobPdf(job)
 
-    expect(mockJsPDF).toHaveBeenCalled()
     expect(mockSave).toHaveBeenCalledWith('RepairJob-RJ-001.pdf')
   })
 
