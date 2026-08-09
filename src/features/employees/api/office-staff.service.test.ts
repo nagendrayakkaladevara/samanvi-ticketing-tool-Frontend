@@ -26,7 +26,11 @@ const minimalStaff = {
 
 describe('officeStaffService', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.mocked(apiClient.get).mockReset()
+    vi.mocked(apiClient.post).mockReset()
+    vi.mocked(apiClient.patch).mockReset()
+    vi.mocked(apiClient.put).mockReset()
+    vi.mocked(apiClient.delete).mockReset()
   })
 
   it('list normalizes office staff', async () => {
@@ -74,14 +78,14 @@ describe('officeStaffService', () => {
   })
 
   it('create and update throw when response cannot be parsed', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({ data: { data: { id: 's1' } } })
+    vi.mocked(apiClient.post).mockResolvedValueOnce({ data: { data: { id: 's1' } } })
     await expect(officeStaffService.create(minimalStaff as never)).rejects.toThrow(
-      'Office staff was created but the response could not be parsed.',
+      'Office staff member was created but the response could not be parsed.',
     )
 
-    vi.mocked(apiClient.patch).mockResolvedValue({ data: { data: null } })
+    vi.mocked(apiClient.patch).mockResolvedValueOnce({ data: { data: null } })
     await expect(officeStaffService.update({ staffId: 's1', nickName: 'X' })).rejects.toThrow(
-      'Office staff was updated but the response could not be parsed.',
+      'Office staff member was updated but the response could not be parsed.',
     )
   })
 })

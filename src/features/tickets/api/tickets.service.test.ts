@@ -498,5 +498,34 @@ describe('ticketsService', () => {
       })
       expect((await ticketsService.listIssueCategories())[0]?.name).toBe('Body')
     })
+
+    it('handles non-object person candidates and name composition', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          {
+            id: 't-num',
+            title: 'Numeric person',
+            createdBy: 42,
+            assignedToUserName: 'Named User',
+          },
+          {
+            id: 't-fl',
+            title: 'First last',
+            createdBy: { firstName: 'OnlyFirst', lastName: '' },
+            assignedTo: { firstName: 'A', lastName: 'B' },
+          },
+        ],
+      })
+      const tickets = await ticketsService.list()
+      expect(tickets[0]?.createdByName).toBeUndefined()
+      expect(tickets[0]?.assignedToName).toBe('Named User')
+      expect(tickets[1]?.createdByName).toBe('OnlyFirst')
+      expect(tickets[1]?.assignedToName).toBe('A B')
+    })
+
+    it('returns empty arrays for non-array ticket payloads', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { foo: 'bar' } })
+      expect(await ticketsService.list()).toEqual([])
+    })
   })
 })

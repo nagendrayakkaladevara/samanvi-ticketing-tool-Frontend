@@ -10,6 +10,8 @@ vi.mock('@/hooks/use-network-status', () => ({
   useNetworkStatus: () => useNetworkStatusMock(),
 }))
 
+const useReducedMotionMock = vi.fn(() => true)
+
 vi.mock('framer-motion', async () => {
   const React = await import('react')
   return {
@@ -18,7 +20,7 @@ vi.mock('framer-motion', async () => {
       div: ({ children, ...props }: React.ComponentProps<'div'>) => <div {...props}>{children}</div>,
       span: ({ children, ...props }: React.ComponentProps<'span'>) => <span {...props}>{children}</span>,
     },
-    useReducedMotion: () => true,
+    useReducedMotion: () => useReducedMotionMock(),
   }
 })
 
@@ -48,5 +50,14 @@ describe('NetworkStatusAlert', () => {
 
     expect(screen.getByText('Back online')).toBeInTheDocument()
     expect(screen.getByText('Your internet connection has been restored.')).toBeInTheDocument()
+  })
+
+  it('uses full motion offline icon when reduced motion is not preferred', () => {
+    useReducedMotionMock.mockReturnValue(false)
+    useNetworkStatusMock.mockReturnValue({ isOnline: false, showReconnected: false })
+
+    render(<NetworkStatusAlert />)
+
+    expect(screen.getByText('You are offline')).toBeInTheDocument()
   })
 })

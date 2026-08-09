@@ -669,5 +669,58 @@ describe('garageService', () => {
       const timeline = await garageService.getJobTimeline('job-1')
       expect(timeline.items).toHaveLength(2)
     })
+
+    it('normalizes activity logs with string notes and invalid metadata branches', async () => {
+      const job = {
+        ...minimalJobPayload,
+        reportedDriverId: 'd-only',
+        assignedToOfficeStaffId: 's-only',
+        activityLogs: [
+          {
+            id: 'log-note',
+            actionType: 'commented',
+            createdAt: '2024-01-01T00:00:00Z',
+            note: 'plain note',
+            actor: 'not-an-object',
+          },
+          {
+            id: 'log-part-removed',
+            actionType: 'part_removed',
+            createdAt: '2024-01-02T00:00:00Z',
+            metadata: {
+              repairJobPartId: 'pl1',
+              repairPartId: 'rp1',
+              partName: 'Bolt',
+              quantity: 1,
+              unitPrice: 9,
+            },
+          },
+          {
+            id: 'log-bad-repeat',
+            actionType: 'repeat_created',
+            createdAt: '2024-01-03T00:00:00Z',
+            metadata: { relatedJobId: 'j1' },
+          },
+        ],
+      }
+
+      vi.mocked(apiClient.get).mockResolvedValue({ data: { data: job } })
+      const result = await garageService.getJob('job-1')
+
+      expect(result.reportedDriver?.id).toBe('d-only')
+      expect(result.assignedToOfficeStaff?.id).toBe('s-only')
+      expect(result.activityLogs[0]?.note).toBe('plain note')
+      expect(result.activityLogs[0]?.actor).toEqual({ id: '', username: '', displayName: '' })
+      expect(result.activityLogs[1]?.metadata).toMatchObject({ unitPrice: '9.00' })
+      expect(result.activityLogs[2]?.metadata).toBeNull()
+    })
+
+    it('returns empty arrays for invalid extract payloads', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: null })
+      expect(await garageService.listJobs()).toEqual([])
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { notItems: true } })
+      expect(await garageService.listRepairParts()).toEqual([])
+    })
   })
 })

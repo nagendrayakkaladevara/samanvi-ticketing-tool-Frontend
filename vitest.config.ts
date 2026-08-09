@@ -20,9 +20,11 @@ export default defineConfig({
     env: {
       VITE_API_BASE_URL: 'http://localhost:3000',
     },
+    fileParallelism: false,
+    maxWorkers: 1,
     coverage: {
       provider: 'v8',
-      reportsDirectory: '.vitest-coverage',
+      reportsDirectory: '/tmp/vitest-coverage-workspace',
       clean: false,
       reporter: ['text', 'html', 'lcov'],
       thresholds: {

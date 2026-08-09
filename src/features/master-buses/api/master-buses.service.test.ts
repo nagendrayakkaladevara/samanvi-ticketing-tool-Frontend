@@ -109,6 +109,15 @@ describe('masterBusesService', () => {
             purchaseDate: '  ',
             pollutionValidity: null,
             remarks: '  note  ',
+            fcValidity: '01-02-2025',
+            basePermitValidity: '01-03-2025',
+            homeTaxValidity: '01-04-2025',
+            aitpValidity: '01-05-2025',
+            aitpAuthorizationValidity: '01-06-2025',
+            serviceOutDate: '01-07-2025',
+            lastMaintenanceDate: '01-08-2025',
+            createdAt: '2024-01-01',
+            updatedAt: '2024-02-01',
           },
         ],
       })
@@ -117,12 +126,21 @@ describe('masterBusesService', () => {
       expect(bus?.odometer).toBe(5000)
       expect(bus?.purchaseDate).toBeNull()
       expect(bus?.remarks).toBe('note')
+      expect(bus?.fcValidity).toBe('01-02-2025')
+      expect(bus?.createdAt).toBe('2024-01-01')
+    })
+
+    it('returns empty list for invalid payloads', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: null })
+      expect(await masterBusesService.list()).toEqual([])
     })
 
     it.each([
       [{ data: ['10', '2'] }, ['2', '10']],
       [{ data: { busNumbers: ['A-1', { busNumber: 'B-2' }] } }, ['A-1', 'B-2']],
       [[{ busNumber: 'C-3' }], ['C-3']],
+      [{ busNumbers: ['  ', 'D-4'] }, ['D-4']],
+      [{ data: [{ busNumber: 'E-5' }] }, ['E-5']],
     ] as const)('listBusNumbers extracts %#', async (payload, expected) => {
       vi.mocked(apiClient.get).mockResolvedValue({ data: payload })
       expect(await masterBusesService.listBusNumbers()).toEqual(expected)
