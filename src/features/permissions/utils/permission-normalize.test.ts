@@ -87,6 +87,17 @@ describe('buildPermissionTreeFromItems', () => {
     expect(tree[1]?.module).toBe('garage')
     expect(tree[0]?.submodules[0]?.permissions.map((p) => p.action)).toEqual(['edit', 'view'])
   })
+
+  it('sorts modules with custom order then localeCompare', () => {
+    const tree = buildPermissionTreeFromItems([
+      makePermission({ id: '1', module: 'tickets', action: 'view' }),
+      makePermission({ id: '2', module: 'garage', action: 'view' }),
+      makePermission({ id: '3', module: 'masters', action: 'view' }),
+      makePermission({ id: '4', module: 'analytics', action: 'view' }),
+    ])
+
+    expect(tree.map((g) => g.module)).toEqual(['masters', 'garage', 'analytics', 'tickets'])
+  })
 })
 
 describe('normalizePermissionTree', () => {
@@ -126,6 +137,30 @@ describe('normalizePermissionTree', () => {
     )
 
     expect(tree[0]?.submodules[0]?.permissions).toHaveLength(1)
+  })
+
+  it('uses custom labels on tree groups and submodules', () => {
+    const tree = normalizePermissionTree(
+      {
+        tree: [
+          {
+            module: 'users',
+            label: 'Custom Users',
+            submodules: [
+              {
+                submodule: 'profile',
+                label: 'Profile Area',
+                permissions: [{ id: '1', module: 'users', submodule: 'profile', action: 'view' }],
+              },
+            ],
+          },
+        ],
+      },
+      [],
+    )
+
+    expect(tree[0]?.label).toBe('Application Access')
+    expect(tree[0]?.submodules[0]?.label).toBe('Profile Area')
   })
 
   it('skips tree groups and submodules without permissions', () => {

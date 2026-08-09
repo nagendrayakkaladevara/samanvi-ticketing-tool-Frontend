@@ -6,6 +6,10 @@ import { useAuthStore } from '@/store/auth-store'
 import { useUiStore } from '@/store/ui-store'
 
 function mockMatchMedia() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     configurable: true,
@@ -24,13 +28,21 @@ function mockMatchMedia() {
 
 beforeEach(() => {
   mockMatchMedia()
-  window.scrollTo = vi.fn()
+  if (typeof window !== 'undefined') {
+    window.scrollTo = vi.fn()
+  }
 })
 
 afterEach(() => {
-  cleanup()
-  localStorage.clear()
-  sessionStorage.clear()
+  if (typeof document !== 'undefined') {
+    cleanup()
+  }
+  if (typeof localStorage !== 'undefined') {
+    localStorage.clear()
+  }
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.clear()
+  }
   useAuthStore.getState().logout()
   useUiStore.setState({ sidebarCollapsed: false })
   vi.clearAllMocks()

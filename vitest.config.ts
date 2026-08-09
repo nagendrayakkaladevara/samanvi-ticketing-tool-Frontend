@@ -22,6 +22,8 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
+      reportsDirectory: '.vitest-coverage',
+      clean: false,
       reporter: ['text', 'html', 'lcov'],
       thresholds: {
         lines: 95,

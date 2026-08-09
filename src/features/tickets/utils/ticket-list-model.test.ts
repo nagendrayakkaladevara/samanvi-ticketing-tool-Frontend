@@ -98,4 +98,18 @@ describe('toTicketGridRow', () => {
     expect(row.assignedTo).toBe('worker-1')
     expect(row.isOverdue).toBe(true)
   })
+
+  it('uses assignedToName when present and handles invalid createdAt in sort', () => {
+    const row = toTicketGridRow(
+      makeTicket({
+        assignedToName: 'Alex',
+        assignedToUserId: 'w1',
+      }),
+    )
+    expect(row.assignedTo).toBe('Alex')
+
+    const invalidDate = makeTicket({ id: 'x', createdAt: 'not-a-date' })
+    const valid = makeTicket({ id: 'y', createdAt: '2024-01-01T00:00:00Z' })
+    expect(compareTicketsNewestFirst(invalidDate, valid)).toBeGreaterThan(0)
+  })
 })

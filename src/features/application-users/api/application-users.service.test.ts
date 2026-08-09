@@ -152,4 +152,84 @@ describe('applicationUsersService', () => {
     const [unknown] = await applicationUsersService.list()
     expect(unknown?.userType).toBe('worker')
   })
+
+  it('extracts users from alternate list payloads', async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      data: { data: [{ id: 'u5', username: 'u5' }] },
+    })
+    expect((await applicationUsersService.list())[0]?.id).toBe('u5')
+
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      data: { items: [{ id: 'u6', username: 'u6' }] },
+    })
+    expect((await applicationUsersService.list())[0]?.id).toBe('u6')
+
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      data: { users: [{ id: 'u7', username: 'u7' }] },
+    })
+    expect((await applicationUsersService.list())[0]?.id).toBe('u7')
+  })
+
+  it('normalizes permission ids from permission objects', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: [{ id: 'u8', username: 'u8', permissions: [{ permissionId: 'p1' }, { id: 2 }] }],
+    })
+    const [user] = await applicationUsersService.list()
+    expect(user?.permissionIds).toEqual(['p1', '2'])
+  })
+
+  it('normalizes user type labels with spaces', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: [{ id: 'u9', username: 'u9', userType: { label: 'Collection Agent' } }],
+    })
+    expect((await applicationUsersService.list())[0]?.userType).toBe('collection_agent')
+  })
+
+  it('checkUsernameExists throws when response is invalid', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: { username: 'x' } })
+    await expect(applicationUsersService.checkUsernameExists('x')).rejects.toThrow(
+      'Unable to verify username availability.',
+    )
+  })
+
+  it('create falls back when normalize fails', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ data: { data: { displayName: 'Only Name' } } })
+    expect(
+      await applicationUsersService.create({
+        username: 'new',
+        password: 'password12',
+        mobileNumber: '9999999999',
+        userType: 'worker',
+        permissionIds: [],
+      }),
+    ).toEqual({ displayName: 'Only Name' })
+  })
+
+  it('normalizes displayName from mobile and numeric id', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: [{ _id: 12, mobile: '8888888888', userType: 'accountant', isActive: false }],
+    })
+    const [user] = await applicationUsersService.list()
+    expect(user).toMatchObject({
+      id: '12',
+      displayName: '8888888888',
+      mobileNumber: '8888888888',
+      userType: 'accountant',
+      isActive: false,
+    })
+  })
+
+  it('normalizes userType from nested role name', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: [{ id: 'u10', username: 'u10', role: { name: 'chairman' } }],
+    })
+    expect((await applicationUsersService.list())[0]?.userType).toBe('chairman')
+  })
+
+  it('prefers permissionIds over permissions array when both present', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: [{ id: 'u11', username: 'u11', permissionIds: ['p1'], permissions: ['p2'] }],
+    })
+    expect((await applicationUsersService.list())[0]?.permissionIds).toEqual(['p1'])
+  })
 })

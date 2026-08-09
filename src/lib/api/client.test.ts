@@ -133,6 +133,48 @@ describe('apiClient', () => {
 
       expect(captured?.headers).toBeUndefined()
     })
+
+    it('detects authorization on plain headers without get method', async () => {
+      mockGetAccessToken.mockReturnValue('new-token')
+      let captured: AdapterConfig | undefined
+      installAdapter(async (config) => {
+        captured = config
+        return { data: {}, status: 200, statusText: 'OK', headers: {}, config }
+      })
+
+      const plainHeaders = { authorization: 'Bearer plain' } as InternalAxiosRequestConfig['headers']
+      await apiClient.get('/test', { headers: plainHeaders })
+
+      expect((captured?.headers as Record<string, string>).authorization).toBe('Bearer plain')
+      expect(captured?.headers.Authorization).toBeUndefined()
+    })
+
+    it('treats headers with non-function get as plain object', async () => {
+      mockGetAccessToken.mockReturnValue('new-token')
+      let captured: AdapterConfig | undefined
+      installAdapter(async (config) => {
+        captured = config
+        return { data: {}, status: 200, statusText: 'OK', headers: {}, config }
+      })
+
+      const headers = { get: 'not-fn', Authorization: 'Bearer legacy' } as never
+      await apiClient.get('/test', { headers })
+
+      expect((captured?.headers as Record<string, string>).Authorization).toBe('Bearer legacy')
+    })
+
+    it('does not attach token when config headers are explicitly undefined', async () => {
+      mockGetAccessToken.mockReturnValue('secret-token')
+      let captured: AdapterConfig | undefined
+      installAdapter(async (config) => {
+        captured = config
+        return { data: {}, status: 200, statusText: 'OK', headers: {}, config }
+      })
+
+      await apiClient.get('/test', { headers: undefined as never })
+
+      expect(captured?.headers.Authorization).toBe('Bearer secret-token')
+    })
   })
 
   describe('response interceptor', () => {

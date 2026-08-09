@@ -171,5 +171,239 @@ describe('userHistoryService', () => {
       expect(result.items[0]?.note).toBeNull()
       expect(result.items[0]?.ticket.ticketNumber).toBe('')
     })
+
+    it('normalizes all activity action types and status transitions', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          data: {
+            userId: 'u1',
+            items: [
+              {
+                id: 'a1',
+                action: 'created',
+                fromStatus: 'created',
+                toStatus: 'assigned',
+                note: 'Started',
+                createdAt: '2024-06-01',
+                ticket: { ticketId: 't1', title: 'Issue', status: 'assigned', bus: { number: 'B-1' } },
+              },
+              {
+                id: 'a2',
+                actionType: 'bogus',
+                createdAt: '2024-06-02',
+                ticket: { id: 't2', title: 'Other', status: 'bogus' },
+              },
+              {
+                id: 'a3',
+                actionType: 'reopened',
+                createdAt: '2024-06-03',
+                ticket: { id: 't3', title: 'Reopened', status: 'reopened' },
+              },
+            ],
+          },
+          meta: { page: 1, limit: 20, total: 3, totalPages: 1 },
+        },
+      })
+
+      const result = await userHistoryService.listActivity('u1', 1, 20)
+
+      expect(result.items[0]).toMatchObject({
+        actionType: 'created',
+        fromStatus: 'created',
+        toStatus: 'assigned',
+        note: 'Started',
+      })
+      expect(result.items[1]?.actionType).toBe('commented')
+      expect(result.items[2]?.actionType).toBe('reopened')
+      expect(result.meta.total).toBe(3)
+    })
+  })
+
+  describe('normalization branches', () => {
+    it.each([
+      ['supervisor', 'Supervisor'],
+      ['admin', 'Admin'],
+      ['bogus', 'Worker'],
+    ] as const)('maps role code %s to label %s', async (code, label) => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: { data: { user: { id: 'u1', username: 'u1', roleCode: code } } },
+      })
+      const metrics = await userHistoryService.getMetrics('u1')
+      expect(metrics.user.role).toEqual({ code: code === 'bogus' ? 'worker' : code, label })
+    })
+
+    it.each([
+      ['critical', 'critical'],
+      ['high', 'high'],
+      ['medium', 'medium'],
+      ['low', 'low'],
+      ['bogus', 'medium'],
+    ] as const)('normalizes severity %s', async (raw, expected) => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          data: {
+            userId: 'u1',
+            items: [{ id: 't1', title: 'T', severity: raw }],
+          },
+        },
+      })
+      const result = await userHistoryService.listTickets('u1')
+      expect(result.items[0]?.severity).toBe(expected)
+    })
+
+    it.each([
+      ['p1', 'p1'],
+      ['p2', 'p2'],
+      ['p3', 'p3'],
+      ['bogus', 'p2'],
+    ] as const)('normalizes priority %s', async (raw, expected) => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          data: {
+            userId: 'u1',
+            items: [{ id: 't1', title: 'T', priority: raw }],
+          },
+        },
+      })
+      const result = await userHistoryService.listTickets('u1')
+      expect(result.items[0]?.priority).toBe(expected)
+    })
+
+    it.each([
+      'created',
+      'assigned',
+      'in_progress',
+      'blocked',
+      'resolved',
+      'closed',
+      'reopened',
+    ] as const)('normalizes ticket status %s', async (status) => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          data: {
+            userId: 'u1',
+            items: [{ id: 't1', title: 'T', status }],
+          },
+        },
+      })
+      const result = await userHistoryService.listTickets('u1')
+      expect(result.items[0]?.status).toBe(status)
+    })
+
+    it('normalizes full ticket item with assigned user and overdue fields', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          data: {
+            userId: 'u1',
+            items: [
+              {
+                ticketId: 't1',
+                number: '100',
+                title: 'Full ticket',
+                status: 'resolved',
+                severity: 'high',
+                priority: 'p1',
+                slaDueAt: '2024-06-01',
+                assignedAt: '2024-06-02',
+                resolvedAt: '2024-06-03',
+                closedAt: '2024-06-04',
+                reopenedCount: 2,
+                createdAt: '2024-05-01',
+                updatedAt: '2024-06-04',
+                isOverdue: true,
+                overdueDurationMs: 5000,
+                bus: { busId: 'b1', busNumber: 'B-9' },
+                category: { categoryId: 'c1', name: 'Fuel' },
+                createdByUser: { userId: 'u2', username: 'sam', displayName: 'Sam' },
+                assignedToUser: { id: 'u3', username: 'worker', name: 'Worker' },
+              },
+            ],
+          },
+        },
+      })
+
+      const [ticket] = (await userHistoryService.listTickets('u1')).items
+
+      expect(ticket).toMatchObject({
+        id: 't1',
+        ticketNumber: '100',
+        title: 'Full ticket',
+        assignedAt: '2024-06-02',
+        resolvedAt: '2024-06-03',
+        closedAt: '2024-06-04',
+        reopenedCount: 2,
+        isOverdue: true,
+        overdueDurationMs: 5000,
+        bus: { id: 'b1', busNumber: 'B-9' },
+        category: { id: 'c1', name: 'Fuel' },
+        createdBy: { id: 'u2', username: 'sam', displayName: 'Sam' },
+        assignedTo: { id: 'u3', username: 'worker', displayName: 'Worker' },
+      })
+    })
+
+    it('getHistory includes created tickets and status breakdown', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          data: {
+            user: { userId: 'u1', username: 'alex', role: { label: 'Custom' } },
+            generatedAt: '2024-06-01',
+            ticketCounts: { assigned: 1, created: 2, actedOn: 3 },
+            ticketsByStatus: {
+              assigned: { in_progress: 1 },
+              created: { created: 2, resolved: 1 },
+            },
+            metrics: {
+              window: { days: 7, from: '2024-05-25', to: '2024-06-01' },
+              assigned: {
+                totalCount: 1,
+                openCount: 1,
+                overdueOpenCount: 0,
+                resolvedAllTimeCount: 5,
+                resolvedInWindowCount: 1,
+                resolvedPerDay: [{ date: '2024-06-01', count: 1 }, { count: 2 }],
+                averageResolutionTimeMs: null,
+                slaCompliancePercent: 90,
+              },
+              created: { totalCount: 2 },
+              actedOn: { distinctTicketCount: 2, activityCount: 4 },
+            },
+            recent: {
+              assignedTickets: [],
+              createdTickets: [{ id: 't-new', title: 'Created ticket', status: 'created' }],
+              activity: [],
+            },
+          },
+        },
+      })
+
+      const snapshot = await userHistoryService.getHistory('u1', 7, 3)
+
+      expect(snapshot.user.role.label).toBe('Custom')
+      expect(snapshot.ticketsByStatus.created).toEqual({ created: 2, resolved: 1 })
+      expect(snapshot.metrics.assigned.resolvedPerDay).toEqual([{ date: '2024-06-01', count: 1 }])
+      expect(snapshot.metrics.assigned.averageResolutionTimeMs).toBeNull()
+      expect(snapshot.recent.createdTickets[0]?.title).toBe('Created ticket')
+    })
+
+    it('listTickets uses defaults when query options omitted', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: { data: { items: [] }, meta: { total: 0 } },
+      })
+
+      await userHistoryService.listTickets('u1')
+
+      expect(apiClient.get).toHaveBeenCalledWith('/users/u1/tickets', {
+        params: { relation: 'assigned', page: 1, limit: 20 },
+      })
+    })
+
+    it('listTickets computes totalPages fallback from total', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: { data: { items: [] } },
+      })
+
+      const result = await userHistoryService.listTickets('u1', { page: 1, limit: 10 })
+      expect(result.meta.totalPages).toBe(1)
+    })
   })
 })

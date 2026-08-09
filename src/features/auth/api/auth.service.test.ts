@@ -149,4 +149,66 @@ describe('auth.service login', () => {
       'Unable to sign in right now. Please try again.',
     )
   })
+
+  it('throws when login envelope format is invalid', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ data: null })
+
+    await expect(login({ username: 'validuser', password: 'password12' })).rejects.toThrow(
+      'Login response format is invalid',
+    )
+  })
+
+  it('throws when user payload is malformed', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      data: { accessToken: 'token', user: { notAnId: true } },
+    })
+
+    await expect(login({ username: 'validuser', password: 'password12' })).rejects.toThrow(
+      'Login succeeded but user information is malformed',
+    )
+  })
+
+  it('parses jwt token and chairman user type from nested envelope', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      data: {
+        data: {
+          jwt: 'jwt-token',
+          user: { id: '1', username: 'u', userType: 'chairman' },
+          permissions: { items: [makePermission()] },
+        },
+        refreshToken: 'refresh',
+      },
+    })
+    vi.mocked(fetchMyPermissions).mockResolvedValue({ items: [], tree: [] })
+
+    const session = await login({ username: 'validuser', password: 'password12' })
+
+    expect(session.accessToken).toBe('jwt-token')
+    expect(session.refreshToken).toBe('refresh')
+    expect(session.user.userType).toBe('chairman')
+  })
+
+  it('rethrows ApiError from /auth/me', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ data: { accessToken: 'token' } })
+    vi.mocked(apiClient.get).mockRejectedValue(new ApiError('Forbidden', 403))
+
+    await expect(login({ username: 'validuser', password: 'password12' })).rejects.toThrow('Forbidden')
+  })
+
+  it('wraps non-ApiError failures from /auth/me', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ data: { accessToken: 'token' } })
+    vi.mocked(apiClient.get).mockRejectedValue(new Error('timeout'))
+
+    await expect(login({ username: 'validuser', password: 'password12' })).rejects.toThrow(
+      'Logged in but failed to load user profile',
+    )
+  })
+
+  it('uses default failure message when success:false has no message', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ data: { success: false } })
+
+    await expect(login({ username: 'validuser', password: 'password12' })).rejects.toThrow(
+      'Unable to sign in right now. Please try again.',
+    )
+  })
 })

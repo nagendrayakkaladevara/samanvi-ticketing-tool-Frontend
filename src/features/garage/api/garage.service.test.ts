@@ -584,5 +584,90 @@ describe('garageService', () => {
       expect(jobs[0]?.priority).toBe('high')
       expect(jobs[0]?.status).toBe('on_hold')
     })
+
+    it('tolerates malformed payloads across list endpoints', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: {
+          items: [
+            null,
+            { id: 'c-bad' },
+            { id: 'c1', name: 'Cat', level: '1' },
+            { id: 'c2', name: 'Bad', level: NaN },
+          ],
+          tree: [{ id: 'c3', name: 'Node', level: 1, children: [null, { id: '', name: 'X' }] }],
+        },
+      })
+      const categories = await garageService.listRepairCategories()
+      expect(categories.items).toHaveLength(1)
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [
+          { id: 'p1', partName: 'Bolt', price: '' },
+          { id: 'p2', partName: 'Nut', price: 3, description: 'text' },
+          { id: 'p3', partName: 'Washer', price: '4.00', description: 1 },
+        ],
+      })
+      const parts = await garageService.listRepairParts()
+      expect(parts).toHaveLength(2)
+      expect(parts[0]?.description).toBe('text')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: {
+          items: [
+            {
+              ...minimalJobPayload,
+              id: 'job-driver',
+              reportedDriver: {
+                id: 'd1',
+                driverIdNumber: 'D1',
+                aadharName: 'Driver',
+                dlName: 'DL',
+              },
+              assignedToOfficeStaff: {
+                id: 's1',
+                staffIdNumber: 'S1',
+                nickName: 'Nick',
+                aadharName: 'Staff',
+                designation: 'Mech',
+              },
+              parts: [
+                null,
+                { id: 'pl-bad', quantity: 0, unitPrice: '1', repairPart: { id: 'rp', partName: 'X' } },
+                {
+                  id: 'pl1',
+                  quantity: '2',
+                  unitPrice: '9.50',
+                  repairPart: { id: 'rp1', partName: 'Filter' },
+                  addedBy: null,
+                },
+              ],
+            },
+          ],
+        },
+      })
+      const [driverJob] = await garageService.listJobs()
+      expect(driverJob?.reportedDriver?.dlName).toBe('DL')
+      expect(driverJob?.parts).toHaveLength(1)
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [
+          { id: 'log-bad' },
+          {
+            id: 'log-part',
+            actionType: 'part_removed',
+            createdAt: '2024-01-01',
+            metadata: { repairJobPartId: 'x', repairPartId: 'y', partName: 'P', quantity: 'bad', unitPrice: '' },
+          },
+          {
+            id: 'log-repeat',
+            actionType: 'repeat_scheduled',
+            createdAt: '2024-01-02',
+            metadata: { scheduledFor: '' },
+          },
+        ],
+      })
+      const timeline = await garageService.getJobTimeline('job-1')
+      expect(timeline.items).toHaveLength(2)
+    })
   })
 })

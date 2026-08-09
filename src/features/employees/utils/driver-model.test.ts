@@ -75,4 +75,22 @@ describe('buildDriverPayload', () => {
       buildDriverPayload({ ...validDriverFormValues, mobileNumber: '123' }, 'create'),
     ).toThrow('Mobile number must be exactly 10 digits.')
   })
+
+  it('edit mode omits optional fields when blank', () => {
+    const payload = buildDriverPayload(
+      {
+        ...validDriverFormValues,
+        alternateMobile: '',
+        emergencyNumber: '',
+        upiId: '',
+        remarks: '',
+        dateOfLeaving: '',
+        upiScanner: '',
+      },
+      'edit',
+    )
+    expect(payload.alternateMobile).toBeNull()
+    expect(payload.emergencyNumber).toBeNull()
+    expect(payload.upiScanner).toBeNull()
+  })
 })

@@ -62,4 +62,26 @@ describe('officeStaffService', () => {
     await officeStaffService.remove('s1')
     expect(apiClient.delete).toHaveBeenCalledWith('/master/office-staff/s1')
   })
+
+  it('list extracts nested payloads and nullable fields', async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      data: { data: [{ ...minimalStaff, remarks: null, upiId: 'upi@test' }] },
+    })
+    expect((await officeStaffService.list())[0]?.upiId).toBe('upi@test')
+
+    vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { items: [minimalStaff] } })
+    expect((await officeStaffService.list())[0]?.id).toBe('s1')
+  })
+
+  it('create and update throw when response cannot be parsed', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ data: { data: { id: 's1' } } })
+    await expect(officeStaffService.create(minimalStaff as never)).rejects.toThrow(
+      'Office staff was created but the response could not be parsed.',
+    )
+
+    vi.mocked(apiClient.patch).mockResolvedValue({ data: { data: null } })
+    await expect(officeStaffService.update({ staffId: 's1', nickName: 'X' })).rejects.toThrow(
+      'Office staff was updated but the response could not be parsed.',
+    )
+  })
 })

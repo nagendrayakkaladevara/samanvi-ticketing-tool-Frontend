@@ -92,6 +92,26 @@ describe('useCreateTicketForm', () => {
 
     expect(result.current.values.slaDueAtLocal).not.toBe(before)
     expect(result.current.values.slaDueAtLocal).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)
+
+    act(() => {
+      result.current.applySuggestedSla('p3')
+    })
+    expect(result.current.values.slaDueAtLocal).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)
+  })
+
+  it('returns undefined for non-validated fields', () => {
+    expect(
+      getCreateTicketFieldError('severity', {
+        title: '',
+        description: '',
+        severity: 'medium',
+        priority: 'p2',
+        categoryId: '',
+        busNumber: '',
+        slaDueAtLocal: '',
+        assignedToId: '',
+      }),
+    ).toBeUndefined()
   })
 
   it('resetForm clears values and errors', () => {

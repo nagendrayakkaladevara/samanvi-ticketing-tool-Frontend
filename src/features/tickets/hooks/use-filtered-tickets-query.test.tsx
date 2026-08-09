@@ -68,6 +68,49 @@ describe('useFilteredTicketsQuery', () => {
     expect(result.current.data?.map((t) => t.id)).toEqual(['c1', 'r1'])
   })
 
+  it('merges closed_resolved with days filter', async () => {
+    vi.mocked(ticketsService.list)
+      .mockResolvedValueOnce([makeTicket({ id: 'r1', createdAt: '2024-03-01' })])
+      .mockResolvedValueOnce([makeTicket({ id: 'c1', createdAt: '2024-04-01' })])
+
+    const { result } = renderHook(() => useFilteredTicketsQuery('closed_resolved', { days: 30 }), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(ticketsService.list).toHaveBeenCalledWith({ status: 'resolved', days: 30 })
+    expect(ticketsService.list).toHaveBeenCalledWith({ status: 'closed', days: 30 })
+  })
+
+  it('sorts tickets by id when createdAt is equal', async () => {
+    vi.mocked(ticketsService.list).mockResolvedValue([
+      makeTicket({ id: 'a-ticket', createdAt: '2024-01-01' }),
+      makeTicket({ id: 'b-ticket', createdAt: '2024-01-01' }),
+    ])
+
+    const { result } = renderHook(() => useFilteredTicketsQuery('open'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.map((t) => t.id)).toEqual(['b-ticket', 'a-ticket'])
+  })
+
+  it('sorts tickets with missing createdAt as zero', async () => {
+    vi.mocked(ticketsService.list).mockResolvedValue([
+      makeTicket({ id: 'older', createdAt: undefined }),
+      makeTicket({ id: 'newer', createdAt: '2024-02-01' }),
+    ])
+
+    const { result } = renderHook(() => useFilteredTicketsQuery('open'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.[0]?.id).toBe('newer')
+  })
+
   it('respects enabled:false', () => {
     const { result } = renderHook(() => useFilteredTicketsQuery('open', { enabled: false }), {
       wrapper: createWrapper(),
@@ -75,5 +118,20 @@ describe('useFilteredTicketsQuery', () => {
 
     expect(result.current.fetchStatus).toBe('idle')
     expect(ticketsService.list).not.toHaveBeenCalled()
+  })
+
+  it('fetches tickets without days when days option omitted', async () => {
+    vi.mocked(ticketsService.list).mockResolvedValue([
+      makeTicket({ id: 'older', createdAt: '2024-01-01' }),
+      makeTicket({ id: 'newer', createdAt: '2024-02-01' }),
+    ])
+
+    const { result } = renderHook(() => useFilteredTicketsQuery('assigned'), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(ticketsService.list).toHaveBeenCalledWith({ status: 'assigned' })
+    expect(result.current.data?.[0]?.id).toBe('newer')
   })
 })

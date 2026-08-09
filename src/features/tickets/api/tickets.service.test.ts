@@ -45,6 +45,14 @@ describe('ticketsService', () => {
       expect(apiClient.get).toHaveBeenCalledWith('/tickets', { params: { status: 'open', days: 7 } })
     })
 
+    it('passes only days when status omitted', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: [] })
+
+      await ticketsService.list({ days: 14 })
+
+      expect(apiClient.get).toHaveBeenCalledWith('/tickets', { params: { days: 14 } })
+    })
+
     it('normalizes nested tickets array and alternate keys', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         data: {
@@ -276,20 +284,90 @@ describe('ticketsService', () => {
   })
 
   describe('normalization and payload extraction', () => {
-    it('extracts tickets from all nested array shapes', async () => {
-      const payloads = [
-        { data: [{ ...baseTicket, id: 't-data' }] },
-        { data: { tickets: [{ ...baseTicket, id: 't-nested' }] } },
-        { data: { items: [{ ...baseTicket, id: 't-items' }] } },
-        { tickets: [{ ...baseTicket, id: 't-top' }] },
-        { items: [{ ...baseTicket, id: 't-items-top' }] },
-      ]
+    it('extracts tickets from nested data shapes', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { data: [{ ...baseTicket, id: 't-data' }] } })
+      expect((await ticketsService.list())[0]?.id).toBe('t-data')
 
-      for (const data of payloads) {
-        vi.mocked(apiClient.get).mockResolvedValueOnce({ data })
-        const [ticket] = await ticketsService.list()
-        expect(ticket?.id).toMatch(/^t-/)
-      }
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: { tickets: [{ ...baseTicket, id: 't-nested' }] } },
+      })
+      expect((await ticketsService.list())[0]?.id).toBe('t-nested')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: { items: [{ ...baseTicket, id: 't-items' }] } },
+      })
+      expect((await ticketsService.list())[0]?.id).toBe('t-items')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { tickets: [{ ...baseTicket, id: 't-top' }] } })
+      expect((await ticketsService.list())[0]?.id).toBe('t-top')
+    })
+
+    it('extracts timeline from nested activityLogs', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: { activityLogs: [{ id: 'e1', action: 'note', createdAt: '2024-01-01' }] } },
+      })
+      expect((await ticketsService.getTimeline('t1'))[0]?.id).toBe('e1')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { activityLogs: [{ id: 'e2', event: 'custom', createdAt: '2024-01-02' }] },
+      })
+      expect((await ticketsService.getTimeline('t1'))[0]?.action).toBe('custom')
+    })
+
+    it('extracts categories from nested payload keys', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: { categories: [{ id: 'c1', label: 'Body' }] } },
+      })
+      expect((await ticketsService.listIssueCategories())[0]).toEqual({
+        id: 'c1',
+        name: 'Body',
+        isActive: true,
+      })
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { categories: [{ issueCategoryId: 'c2', title: 'Fuel' }] },
+      })
+      expect((await ticketsService.listIssueCategories())[0]?.name).toBe('Fuel')
+    })
+
+    it('normalizes blocked status and remaining bus or person aliases', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          {
+            id: 't-blocked',
+            title: 'Blocked',
+            status: 'BLOCKED',
+            bus_number_plate: 'PLATE-1',
+            createdByDisplayName: 'Creator',
+            assigneeName: 'Assignee',
+            assignedToId: 'w5',
+          },
+        ],
+      })
+      const [ticket] = await ticketsService.list()
+      expect(ticket).toMatchObject({
+        status: 'BLOCKED',
+        busNumber: 'PLATE-1',
+        createdByName: 'Creator',
+        assignedToName: 'Assignee',
+        assignedToUserId: 'w5',
+      })
+    })
+
+    it('getPersonDisplayName handles string names and empty person objects', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          {
+            id: 't1',
+            title: 'String creator',
+            createdBy: '  Named  ',
+            assignedToUser: '  ',
+          },
+        ],
+      })
+      const [ticket] = await ticketsService.list()
+      expect(ticket?.createdByName).toBe('Named')
+      expect(ticket?.assignedToName).toBeUndefined()
     })
 
     it('normalizes ticket bus number and person name fallbacks', async () => {
@@ -378,6 +456,47 @@ describe('ticketsService', () => {
       expect(entry.action).toBe('custom')
       expect(entry.actorUsername).toBe('tech')
       expect(entry.id).toMatch(/^timeline-/)
+    })
+
+    it('tolerates malformed ticket payloads across endpoints', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [
+          null,
+          { id: 't-bad' },
+          {
+            id: 't-full',
+            title: 'Full',
+            status: 'blocked',
+            severity: 'medium',
+            priority: 'p2',
+            bus_number_plate: 'PLATE-1',
+            createdByUser: 'Creator',
+            assignee: 'Assignee',
+            assignedToId: 'w1',
+          },
+        ],
+      })
+      const [ticket] = await ticketsService.list()
+      expect(ticket?.busNumber).toBe('PLATE-1')
+      expect(ticket?.createdByName).toBe('Creator')
+      expect(ticket?.assignedToName).toBe('Assignee')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { activityLogs: [{ actionType: 'assigned', actor: { username: 'u1' } }] },
+      })
+      const [timelineEntry] = await ticketsService.getTimeline('t1')
+      expect(timelineEntry.action).toBe('assigned')
+      expect(timelineEntry.actorUsername).toBe('u1')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [{ id: 'w1', displayName: 'Worker', role: 'ADMIN' }],
+      })
+      expect((await ticketsService.listAssignableUsers())[0]?.role).toBe('ADMIN')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: { categories: [{ issueCategoryId: 8, label: 'Body' }] } },
+      })
+      expect((await ticketsService.listIssueCategories())[0]?.name).toBe('Body')
     })
   })
 })

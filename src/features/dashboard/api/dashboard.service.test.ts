@@ -137,4 +137,61 @@ describe('dashboardService', () => {
     expect(summary.trends?.totalTicketsPct).toBe(12.5)
     expect(summary.trends?.openTicketsPct).toBe(-3)
   })
+
+  it('normalizes alternate metric sources and trend fallbacks', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: {
+        scope: 'ops',
+        generatedAt: '2024-06-02',
+        ticketMetrics: { totalTickets: 20 },
+        status: { open: 4, inProgress: 2, closed: 3, resolved: 1 },
+        ticketsByPriority: { p1: 1, p2: 2, p3: 3 },
+        queue: {
+          openTickets: 6,
+          inProgressTickets: 2,
+          openByPriority: { high: 1, medium: 2, low: 3 },
+          openByStatus: { created: 1, assigned: 1, in_progress: 2, reopened: 1, blocked: 1 },
+          openTicketsChangePercent: { percentageChange: 5 },
+          inProgressTicketsChangePercent: { trendPercent: -2 },
+        },
+        sla: {
+          overdueCount: 2,
+          overdueChangePercent: 1,
+          atRiskOpenCount: 1,
+          resolvedWithinSlaCount: 10,
+          resolvedInWindowCount: 4,
+          slaCompliancePercent: 88,
+        },
+        speed: {
+          averageResolutionTimeHours: 3,
+          resolvedChangePercent: 7,
+        },
+        window: { days: 7, fromInclusive: '2024-05-26', toInclusive: '2024-06-02' },
+        snapshot: {
+          oldestOpenTicket: { id: 't-old', ticketNumber: 'TN-9', priority: 'p2', status: 'assigned' },
+        },
+        agentLeaderboard: [
+          { userId: 'u2', username: 'bob', openAssignedCount: 1, resolvedInWindow: 2 },
+          { userId: 'u3', displayName: 'Only Name' },
+        ],
+        closedResolvedTicketsChangePercent: { changePercent: 4 },
+        overdueTicketsChangePercent: { deltaPct: -1 },
+      },
+    })
+
+    const summary = await dashboardService.getAdminSummary(7)
+
+    expect(summary.totalTickets).toBe(20)
+    expect(summary.openTickets).toBe(6)
+    expect(summary.inProgressTickets).toBe(2)
+    expect(summary.closedResolvedTickets).toBe(4)
+    expect(summary.overdueTickets).toBe(2)
+    expect(summary.priority).toEqual({ high: 1, medium: 2, low: 3 })
+    expect(summary.trends?.inProgressTicketsPct).toBe(-2)
+    expect(summary.trends?.closedResolvedTicketsPct).toBe(7)
+    expect(summary.trends?.overdueTicketsPct).toBe(1)
+    expect(summary.meta.windowFrom).toBe('2024-05-26')
+    expect(summary.snapshot.oldestOpenTicket?.ticketNumber).toBe('TN-9')
+    expect(summary.leaderboard[1]?.displayName).toBe('Only Name')
+  })
 })

@@ -40,4 +40,13 @@ describe('useTicketsQuery', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(ticketsService.list).toHaveBeenCalled()
   })
+
+  it('does not poll when poll option is false', async () => {
+    vi.mocked(ticketsService.list).mockResolvedValue([])
+
+    const { result } = renderHook(() => useTicketsQuery({ poll: false }), { wrapper: createWrapper() })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(ticketsService.list).toHaveBeenCalledTimes(1)
+  })
 })

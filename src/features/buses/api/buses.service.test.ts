@@ -136,4 +136,87 @@ describe('busesService', () => {
       ])
     })
   })
+
+  describe('payload extraction and normalization', () => {
+    it.each([
+      [{ data: [{ id: '1', busNumber: 'B-1' }] }],
+      [{ data: { buses: [{ id: '2', bus_no: 'B-2' }] } }],
+      [{ buses: [{ id: '3', busNo: 'B-3' }] }],
+      [{ items: [{ id: '4', number: 'B-4' }] }],
+    ] as const)('list from %#', async (payload) => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: payload })
+      expect((await busesService.list())[0]?.busNumber).toMatch(/^B-/)
+    })
+
+    it('listBusNumbers uses nested data array and bus number aliases', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { data: ['A-1', 'B-2'] } })
+      expect(await busesService.listBusNumbers()).toEqual(['A-1', 'B-2'])
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { busNumbers: [{ bus_no: 'C-3' }, { number: 'D-4' }] },
+      })
+      expect(await busesService.listBusNumbers()).toEqual(['C-3', 'D-4'])
+    })
+
+    it('create falls back when normalize fails', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({ data: { bus: { busNumber: 'only' } } })
+      expect(await busesService.create({ busNumber: 'X' })).toEqual({ busNumber: 'only' })
+    })
+
+    it('listTicketHistory normalizes all status severity priority branches', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          {
+            id: 't1',
+            title: 'Blocked',
+            status: 'blocked',
+            severity: 'critical',
+            priority: 'p1',
+            assigneeName: 'Worker',
+            created_at: '2024-01-01',
+          },
+          {
+            ticketId: 't2',
+            title: 'Reopened',
+            status: 'REOPENED',
+            severity: 'HIGH',
+            priority: 'P2',
+            assignedTo: { name: 'Alex' },
+          },
+          { id: 't3', title: 'Defaults', status: 'bogus', severity: 'bogus', priority: 'bogus' },
+        ],
+      })
+
+      const tickets = await busesService.listTicketHistory('bus-1')
+      expect(tickets).toEqual([
+        {
+          id: 't1',
+          title: 'Blocked',
+          status: 'BLOCKED',
+          severity: 'CRITICAL',
+          priority: 'P1',
+          assignedToName: 'Worker',
+          createdAt: '2024-01-01',
+        },
+        {
+          id: 't2',
+          title: 'Reopened',
+          status: 'REOPENED',
+          severity: 'HIGH',
+          priority: 'P2',
+          assignedToName: 'Alex',
+          createdAt: undefined,
+        },
+        {
+          id: 't3',
+          title: 'Defaults',
+          status: 'CREATED',
+          severity: 'LOW',
+          priority: 'P3',
+          assignedToName: undefined,
+          createdAt: undefined,
+        },
+      ])
+    })
+  })
 })

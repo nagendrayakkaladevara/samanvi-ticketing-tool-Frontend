@@ -57,4 +57,29 @@ describe('helpersService', () => {
     await helpersService.remove('h1')
     expect(apiClient.delete).toHaveBeenCalledWith('/master/helpers/h1')
   })
+
+  it('list extracts nested payloads and optional nullable fields', async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      data: { data: [{ ...minimalHelper, alternateNumber: null, remarks: '  note  ' }] },
+    })
+    const [helper] = await helpersService.list()
+    expect(helper?.remarks).toBe('note')
+
+    vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { items: [minimalHelper] } })
+    expect((await helpersService.list())[0]?.id).toBe('h1')
+  })
+
+  it('create throws when response cannot be parsed', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ data: { data: { id: 'h1' } } })
+    await expect(helpersService.create(minimalHelper as never)).rejects.toThrow(
+      'Helper was created but the response could not be parsed.',
+    )
+  })
+
+  it('update throws when response cannot be parsed', async () => {
+    vi.mocked(apiClient.patch).mockResolvedValue({ data: { data: null } })
+    await expect(helpersService.update({ helperId: 'h1', nickName: 'X' })).rejects.toThrow(
+      'Helper was updated but the response could not be parsed.',
+    )
+  })
 })

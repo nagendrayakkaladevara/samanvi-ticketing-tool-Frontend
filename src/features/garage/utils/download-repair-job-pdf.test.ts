@@ -109,5 +109,10 @@ describe('downloadRepairJobPdf', () => {
       expect(column.value(part)).toEqual(expect.any(String))
     }
     expect(tableCall.columns[4].value(part)).toContain('tech')
+
+    const namedPart = makeRepairJobPart({
+      addedBy: { id: 'u2', username: 'tech', displayName: 'Technician' },
+    })
+    expect(tableCall.columns[4].value(namedPart)).toContain('Technician')
   })
 })
