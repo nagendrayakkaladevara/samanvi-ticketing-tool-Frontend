@@ -24,7 +24,12 @@ import { fetchMyPermissions } from '@/features/auth/api/permissions-me.service'
 
 describe('auth.service login', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.mocked(apiClient.get).mockReset()
+    vi.mocked(apiClient.post).mockReset()
+    vi.mocked(apiClient.patch).mockReset()
+    vi.mocked(apiClient.put).mockReset()
+    vi.mocked(apiClient.delete).mockReset()
+    vi.mocked(fetchMyPermissions).mockReset()
   })
 
   it('throws ApiError for short username', async () => {

@@ -45,6 +45,6 @@ afterEach(() => {
   }
   useAuthStore.getState().logout()
   useUiStore.setState({ sidebarCollapsed: false })
-  vi.clearAllMocks()
+  vi.resetAllMocks()
   vi.useRealTimers()
 })

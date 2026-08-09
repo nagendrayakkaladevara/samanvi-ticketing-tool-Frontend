@@ -26,6 +26,7 @@ vi.mock('framer-motion', async () => {
 
 describe('NetworkStatusAlert', () => {
   beforeEach(() => {
+    useReducedMotionMock.mockReturnValue(true)
     useNetworkStatusMock.mockReturnValue({ isOnline: true, showReconnected: false })
   })
 
