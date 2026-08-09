@@ -36,6 +36,15 @@ describe('reporting-period', () => {
       localStorage.setItem(REPORTING_PERIOD_DEFAULT_DAYS_KEY, raw)
       expect(readReportingPeriodDefaultDays()).toBe(DEFAULT_TICKET_LIST_WINDOW_DAYS)
     })
+
+    it('returns default when localStorage throws', () => {
+      const getItem = Storage.prototype.getItem
+      Storage.prototype.getItem = vi.fn(() => {
+        throw new Error('blocked')
+      })
+      expect(readReportingPeriodDefaultDays()).toBe(DEFAULT_TICKET_LIST_WINDOW_DAYS)
+      Storage.prototype.getItem = getItem
+    })
   })
 
   describe('persistReportingPeriodDefaultDays', () => {
@@ -45,6 +54,15 @@ describe('reporting-period', () => {
 
       persistReportingPeriodDefaultDays(999)
       expect(localStorage.getItem(REPORTING_PERIOD_DEFAULT_DAYS_KEY)).toBe('30')
+    })
+
+    it('ignores storage errors when persisting', () => {
+      const setItem = Storage.prototype.setItem
+      Storage.prototype.setItem = vi.fn(() => {
+        throw new Error('quota')
+      })
+      persistReportingPeriodDefaultDays(14)
+      Storage.prototype.setItem = setItem
     })
   })
 

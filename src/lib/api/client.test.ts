@@ -104,6 +104,35 @@ describe('apiClient', () => {
 
       expect(captured?.headers.get('Authorization')).toBe('Bearer existing')
     })
+
+    it('does not overwrite lowercase authorization on AxiosHeaders', async () => {
+      mockGetAccessToken.mockReturnValue('new-token')
+      let captured: AdapterConfig | undefined
+      installAdapter(async (config) => {
+        captured = config
+        return { data: {}, status: 200, statusText: 'OK', headers: {}, config }
+      })
+
+      const headers = new AxiosHeaders()
+      headers.set('authorization', 'Bearer lowercase')
+
+      await apiClient.get('/test', { headers })
+
+      expect(captured?.headers.get('authorization')).toBe('Bearer lowercase')
+    })
+
+    it('skips token when request has no headers object', async () => {
+      mockGetAccessToken.mockReturnValue('secret-token')
+      let captured: AdapterConfig | undefined
+      installAdapter(async (config) => {
+        captured = { ...config, headers: undefined as never }
+        return { data: {}, status: 200, statusText: 'OK', headers: {}, config: captured }
+      })
+
+      await apiClient.get('/test')
+
+      expect(captured?.headers).toBeUndefined()
+    })
   })
 
   describe('response interceptor', () => {

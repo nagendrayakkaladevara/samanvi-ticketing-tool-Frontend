@@ -274,4 +274,110 @@ describe('ticketsService', () => {
       expect(apiClient.delete).toHaveBeenCalledWith('/tickets/t1')
     })
   })
+
+  describe('normalization and payload extraction', () => {
+    it('extracts tickets from all nested array shapes', async () => {
+      const payloads = [
+        { data: [{ ...baseTicket, id: 't-data' }] },
+        { data: { tickets: [{ ...baseTicket, id: 't-nested' }] } },
+        { data: { items: [{ ...baseTicket, id: 't-items' }] } },
+        { tickets: [{ ...baseTicket, id: 't-top' }] },
+        { items: [{ ...baseTicket, id: 't-items-top' }] },
+      ]
+
+      for (const data of payloads) {
+        vi.mocked(apiClient.get).mockResolvedValueOnce({ data })
+        const [ticket] = await ticketsService.list()
+        expect(ticket?.id).toMatch(/^t-/)
+      }
+    })
+
+    it('normalizes ticket bus number and person name fallbacks', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          {
+            id: 't-bus',
+            title: 'Bus variants',
+            busNo: 'BUS-A',
+            ticketNumber: 42,
+            severity: 'critical',
+            priority: 'p1',
+            createdByName: '  Named Creator  ',
+            assignedTo: { _id: 'w9', name: 'Assignee' },
+          },
+        ],
+      })
+      const [ticket] = await ticketsService.list()
+      expect(ticket).toMatchObject({
+        busNumber: 'BUS-A',
+        ticketNumber: '42',
+        severity: 'CRITICAL',
+        priority: 'P1',
+        createdByName: 'Named Creator',
+        assignedToName: 'Assignee',
+        assignedToUserId: 'w9',
+      })
+    })
+
+    it('getPersonDisplayName handles string and first/last name objects', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          activityLogs: [
+            {
+              id: 'e1',
+              action: 'note',
+              user: { firstName: 'John', lastName: 'Smith' },
+              timestamp: '2024-01-01',
+            },
+          ],
+        },
+      })
+      const entries = await ticketsService.getTimeline('t1')
+      expect(entries[0]?.actorName).toBe('John Smith')
+    })
+
+    it('listIssueCategories extracts nested issueCategories and numeric ids', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: { issueCategories: [{ categoryId: 3, title: 'Fuel' }] } },
+      })
+      expect((await ticketsService.listIssueCategories())[0]).toEqual({
+        id: '3',
+        name: 'Fuel',
+        isActive: true,
+      })
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: { data: { categories: [{ id: 'c2', label: 'Body', isActive: false }] } },
+      })
+      expect((await ticketsService.listIssueCategories())[0]).toMatchObject({
+        id: 'c2',
+        name: 'Body',
+        isActive: false,
+      })
+    })
+
+    it('getById and search fall back to raw payload when normalize fails', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { data: { id: 'raw' } } })
+      expect(await ticketsService.getById('raw')).toEqual({ id: 'raw' })
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { id: 'search-raw' } })
+      expect(await ticketsService.searchByTicketNumber('TN')).toEqual({ id: 'search-raw' })
+    })
+
+    it('assign omits blank note', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({ data: baseTicket })
+      await ticketsService.assign({ ticketId: 't1', assignedToId: 'w1', note: '   ' })
+      expect(apiClient.post).toHaveBeenCalledWith('/tickets/t1/assign', { assignedToId: 'w1' })
+    })
+
+    it('timeline generates id when missing and uses event alias', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [{ event: 'custom', actorUsername: 'tech', createdAt: '2024-01-01' }],
+      })
+      const [entry] = await ticketsService.getTimeline('t1')
+      expect(entry.action).toBe('custom')
+      expect(entry.actorUsername).toBe('tech')
+      expect(entry.id).toMatch(/^timeline-/)
+    })
+  })
 })

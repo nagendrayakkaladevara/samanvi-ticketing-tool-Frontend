@@ -115,4 +115,43 @@ describe('notificationsService', () => {
       expect(await notificationsService.markAllRead()).toBe(0)
     })
   })
+
+  describe('normalization edge cases', () => {
+    it('normalizes ticketNumber from number and invalid dates', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          {
+            id: 'n2',
+            type: 'ticket_assigned',
+            title: 'T',
+            createdAt: 1_704_067_200_000,
+            ticketNumber: 99,
+            readAt: '2024-01-02',
+          },
+        ],
+      })
+      const result = await notificationsService.list()
+      const [item] = result.items
+      expect(item?.ticketNumber).toBe(99)
+      expect(item?.readAt).toBeTruthy()
+    })
+
+    it('filters notifications with blank createdAt string', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [{ id: 'n3', title: 'T', createdAt: '   ' }],
+      })
+      expect((await notificationsService.list()).items).toEqual([])
+    })
+
+    it('list uses default pagination without unreadOnly', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: [] })
+      await notificationsService.list()
+      expect(apiClient.get).toHaveBeenCalledWith('/notifications', { params: { page: 1, limit: 20 } })
+    })
+
+    it('markAllRead unwraps nested data payload', async () => {
+      vi.mocked(apiClient.patch).mockResolvedValue({ data: { data: { updatedCount: 5 } } })
+      expect(await notificationsService.markAllRead()).toBe(5)
+    })
+  })
 })

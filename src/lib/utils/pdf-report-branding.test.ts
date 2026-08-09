@@ -191,4 +191,41 @@ describe('pdf-report-branding', () => {
       }),
     ).rejects.toThrow('Failed to load image for PDF.')
   })
+
+  it('createQrDataUrl rejects when canvas context is unavailable', async () => {
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'canvas') {
+        return {
+          width: 0,
+          height: 0,
+          getContext: () => null,
+          toDataURL: () => 'data:image/png;base64,abc',
+        } as unknown as HTMLCanvasElement
+      }
+      return document.createElement.bind(document)(tag)
+    })
+
+    const { createQrDataUrl } = await import('./pdf-report-branding')
+    await expect(createQrDataUrl('https://example.com')).rejects.toThrow('Failed to render QR code for PDF.')
+  })
+
+  it('createQrDataUrl rejects when qr image fails to load', async () => {
+    class FailingQrImage {
+      onload: (() => void) | null = null
+      onerror: (() => void) | null = null
+      private _src = ''
+
+      set src(_value: string) {
+        queueMicrotask(() => this.onerror?.())
+      }
+
+      get src() {
+        return this._src
+      }
+    }
+    vi.stubGlobal('Image', FailingQrImage)
+
+    const { createQrDataUrl } = await import('./pdf-report-branding')
+    await expect(createQrDataUrl('https://example.com')).rejects.toThrow('Failed to render QR code for PDF.')
+  })
 })

@@ -45,6 +45,8 @@ vi.mock('@/lib/utils/pdf-report-layout', () => ({
   PDF_A4: { margin: 16, width: 210 },
 }))
 
+import { drawPdfDataTable } from '@/lib/utils/pdf-report-layout'
+
 describe('downloadRepairJobPdf', () => {
   beforeEach(() => {
     mockSave.mockClear()
@@ -87,5 +89,25 @@ describe('downloadRepairJobPdf', () => {
   it('sanitizes unsafe filename characters', async () => {
     await downloadRepairJobPdf(makeRepairJob({ jobIdNumber: 'RJ/001' }))
     expect(mockSave).toHaveBeenCalledWith('RepairJob-RJ-001.pdf')
+  })
+
+  it('evaluates spare parts table column callbacks', async () => {
+    const part = makeRepairJobPart({
+      addedBy: { id: 'u1', username: 'tech', displayName: '' },
+    })
+    await downloadRepairJobPdf(makeRepairJob({ parts: [part] }))
+
+    const tableCall = vi.mocked(drawPdfDataTable).mock.calls[0][0]
+    expect(tableCall.columns.map((col: { header: string }) => col.header)).toEqual([
+      'Part Name',
+      'Qty',
+      'Unit Price',
+      'Line Total',
+      'Added By',
+    ])
+    for (const column of tableCall.columns) {
+      expect(column.value(part)).toEqual(expect.any(String))
+    }
+    expect(tableCall.columns[4].value(part)).toContain('tech')
   })
 })

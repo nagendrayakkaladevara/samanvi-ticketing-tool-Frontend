@@ -328,4 +328,261 @@ describe('garageService', () => {
       expect(apiClient.delete).toHaveBeenCalledWith('/garage/jobs/job-1')
     })
   })
+
+  describe('normalization edge cases', () => {
+    it('collectLeafRepairCategories walks nested non-leaf nodes', () => {
+      const tree = [
+        {
+          id: 'root',
+          name: 'Root',
+          level: 1,
+          parentId: null,
+          createdAt: '',
+          updatedAt: '',
+          children: [
+            {
+              id: 'mid',
+              name: 'Mid',
+              level: 2,
+              parentId: 'root',
+              createdAt: '',
+              updatedAt: '',
+              children: [
+                {
+                  id: 'leaf',
+                  name: 'Leaf',
+                  level: 3,
+                  parentId: 'mid',
+                  createdAt: '',
+                  updatedAt: '',
+                  children: [],
+                },
+              ],
+            },
+          ],
+        },
+      ]
+      expect(collectLeafRepairCategories(tree)).toEqual([
+        { id: 'leaf', label: 'Root › Mid › Leaf', level: 3 },
+      ])
+    })
+
+    it('listRepairCategories handles direct array and invalid tree nodes', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [{ id: 'c1', name: 'Cat', level: 1 }],
+      })
+      expect((await garageService.listRepairCategories()).items).toHaveLength(1)
+
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: { tree: [{ id: '', name: 'Bad' }] },
+      })
+      const emptyTree = await garageService.listRepairCategories()
+      expect(emptyTree.tree).toEqual([])
+    })
+
+    it('createRepairCategory omits blank parentId', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: { data: { id: 'c1', name: 'New', level: 1 } },
+      })
+      await garageService.createRepairCategory({ name: 'New', parentId: '  ' })
+      expect(apiClient.post).toHaveBeenCalledWith('/garage/masters/repair-categories', { name: 'New' })
+    })
+
+    it('updateRepairCategory throws on invalid response', async () => {
+      vi.mocked(apiClient.patch).mockResolvedValue({ data: { data: null } })
+      await expect(garageService.updateRepairCategory('c1', 'X')).rejects.toThrow(
+        'Unexpected response when updating repair category.',
+      )
+    })
+
+    it('listRepairParts uses default pagination', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: [] })
+      await garageService.listRepairParts()
+      expect(apiClient.get).toHaveBeenCalledWith('/garage/masters/repair-parts', {
+        params: { page: 1, limit: 50 },
+      })
+    })
+
+    it('normalizes repair parts with string price and null description', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [{ id: 'p1', partName: 'Bolt', price: '12.50', description: null }],
+      })
+      const parts = await garageService.listRepairParts()
+      expect(parts[0]?.price).toBe('12.50')
+      expect(parts[0]?.description).toBeNull()
+    })
+
+    it('createRepairPart throws on invalid response', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({ data: { data: { id: '' } } })
+      await expect(
+        garageService.createRepairPart({ partName: 'X', price: '1.00' }),
+      ).rejects.toThrow('Unexpected response when creating repair part.')
+    })
+
+    it('updateRepairPart throws on invalid response', async () => {
+      vi.mocked(apiClient.patch).mockResolvedValue({ data: { data: null } })
+      await expect(garageService.updateRepairPart({ partId: 'p1', price: '2.00' })).rejects.toThrow(
+        'Unexpected response when updating repair part.',
+      )
+    })
+
+    it('deleteRepairPart removes part master', async () => {
+      vi.mocked(apiClient.delete).mockResolvedValue({})
+      await garageService.deleteRepairPart('p1')
+      expect(apiClient.delete).toHaveBeenCalledWith('/garage/masters/repair-parts/p1')
+    })
+
+    it('normalizes full job with drivers, staff, parts, and activity metadata', async () => {
+      const fullJob = {
+        ...minimalJobPayload,
+        reportedDriverId: 'd1',
+        assignedToOfficeStaffId: 's1',
+        isRepeatJob: true,
+        repeatScheduledFor: '2024-07-01',
+        previousJob: { id: 'prev', jobIdNumber: 'RJ-000' },
+        parts: [
+          {
+            id: 'pl1',
+            quantity: 2,
+            unitPrice: 10,
+            repairPart: { id: 'rp1', partName: 'Filter' },
+            addedBy: { id: 'u1', username: 'tech', displayName: 'Tech' },
+          },
+        ],
+        activityLogs: [
+          {
+            id: 'log1',
+            actionType: 'part_added',
+            createdAt: '2024-01-01T00:00:00Z',
+            metadata: {
+              repairJobPartId: 'pl1',
+              repairPartId: 'rp1',
+              partName: 'Filter',
+              quantity: 2,
+              unitPrice: '10.00',
+            },
+          },
+          {
+            id: 'log2',
+            actionType: 'repeat_scheduled',
+            createdAt: '2024-01-02T00:00:00Z',
+            metadata: { scheduledFor: '2024-08-01' },
+          },
+          {
+            id: 'log3',
+            actionType: 'repeat_created',
+            createdAt: '2024-01-03T00:00:00Z',
+            metadata: { relatedJobId: 'j2', relatedJobIdNumber: 'RJ-002' },
+          },
+          {
+            id: 'log4',
+            actionType: 'created',
+            createdAt: '2024-01-04T00:00:00Z',
+            metadata: {
+              isRepeatJob: true,
+              previousJobId: 'prev',
+              previousJobIdNumber: 'RJ-000',
+            },
+          },
+          {
+            id: 'log5',
+            actionType: 'commented',
+            createdAt: '2024-01-05T00:00:00Z',
+            note: null,
+          },
+        ],
+      }
+
+      vi.mocked(apiClient.get).mockResolvedValue({ data: { data: fullJob } })
+      const job = await garageService.getJob('job-1')
+
+      expect(job.reportedDriver).toEqual({
+        id: 'd1',
+        driverIdNumber: '',
+        aadharName: '',
+        dlName: '',
+      })
+      expect(job.assignedToOfficeStaff?.nickName).toBe('')
+      expect(job.parts).toHaveLength(1)
+      expect(job.activityLogs).toHaveLength(5)
+      expect(job.previousJob?.jobIdNumber).toBe('RJ-000')
+    })
+
+    it('getJobTimeline falls back to jobId param when missing in payload', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: { items: [] } })
+      const timeline = await garageService.getJobTimeline('job-99')
+      expect(timeline.jobId).toBe('job-99')
+    })
+
+    it('updateJob sends all optional patch fields', async () => {
+      vi.mocked(apiClient.patch).mockResolvedValue({ data: { data: minimalJobPayload } })
+      await garageService.updateJob({
+        jobId: 'job-1',
+        odometerReading: 2000,
+        repairCategoryId: 'cat-2',
+        priority: 'urgent',
+        reportedDriverId: 'd1',
+        assignedToOfficeStaffId: 's1',
+      })
+      expect(apiClient.patch).toHaveBeenCalledWith('/garage/jobs/job-1', {
+        odometerReading: 2000,
+        repairCategoryId: 'cat-2',
+        priority: 'urgent',
+        reportedDriverId: 'd1',
+        assignedToOfficeStaffId: 's1',
+      })
+    })
+
+    it('addJobComment throws on invalid response', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({ data: { data: { id: '' } } })
+      await expect(garageService.addJobComment({ jobId: 'job-1', note: 'x' })).rejects.toThrow(
+        'Unexpected response when adding comment.',
+      )
+    })
+
+    it('addJobPart without quantity and throws on invalid response', async () => {
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ data: { data: minimalJobPayload } })
+      await garageService.addJobPart({ jobId: 'job-1', repairPartId: 'rp-1' })
+      expect(apiClient.post).toHaveBeenCalledWith('/garage/jobs/job-1/parts', { repairPartId: 'rp-1' })
+
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ data: { data: null } })
+      await expect(
+        garageService.addJobPart({ jobId: 'job-1', repairPartId: 'rp-1', quantity: 1 }),
+      ).rejects.toThrow('Unexpected response when adding spare part to repair job.')
+    })
+
+    it('removeJobPart throws on invalid response', async () => {
+      vi.mocked(apiClient.delete).mockResolvedValue({ data: { data: null } })
+      await expect(garageService.removeJobPart('job-1', 'line-1')).rejects.toThrow(
+        'Unexpected response when removing spare part from repair job.',
+      )
+    })
+
+    it('createJob throws on invalid response', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({ data: { data: null } })
+      await expect(
+        garageService.createJob({
+          busNumber: 'BUS-01',
+          odometerReading: 100,
+          repairCategoryId: 'c1',
+          priority: 'low',
+          description: 'Issue',
+        }),
+      ).rejects.toThrow('Unexpected response when creating repair job.')
+    })
+
+    it('filters invalid job priorities and normalizes spaced statuses', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          { ...minimalJobPayload, priority: 'bogus', status: 'bogus' },
+          { ...minimalJobPayload, id: 'job-2', priority: 'HIGH', status: 'ON HOLD' },
+        ],
+      })
+      const jobs = await garageService.listJobs()
+      expect(jobs).toHaveLength(1)
+      expect(jobs[0]?.id).toBe('job-2')
+      expect(jobs[0]?.priority).toBe('high')
+      expect(jobs[0]?.status).toBe('on_hold')
+    })
+  })
 })

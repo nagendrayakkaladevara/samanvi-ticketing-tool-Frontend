@@ -154,4 +154,50 @@ describe('usePwaInstall', () => {
     expect(result.current.isInstalling).toBe(false)
     expect(result.current.isInstalled).toBe(false)
   })
+
+  it('does not show banner when dismiss is still active', () => {
+    localStorage.setItem('samanvi.pwa.installDismissedUntil', String(Date.now() + 60_000))
+
+    const { result } = renderHook(() => usePwaInstall())
+
+    expect(result.current.canShow).toBe(false)
+  })
+
+  it('treats fullscreen display mode as installed', () => {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query.includes('fullscreen'),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
+
+    const { result } = renderHook(() => usePwaInstall())
+    expect(result.current.isInstalled).toBe(true)
+  })
+
+  it('keeps installed false when install prompt is dismissed', async () => {
+    const { result } = renderHook(() => usePwaInstall())
+    const event = createBeforeInstallPromptEvent()
+    event.userChoice = Promise.resolve({ outcome: 'dismissed', platform: 'web' })
+
+    act(() => {
+      window.dispatchEvent(event)
+    })
+
+    await waitFor(() => expect(result.current.canInstall).toBe(true))
+
+    await act(async () => {
+      await result.current.install()
+    })
+
+    expect(result.current.isInstalled).toBe(false)
+  })
 })

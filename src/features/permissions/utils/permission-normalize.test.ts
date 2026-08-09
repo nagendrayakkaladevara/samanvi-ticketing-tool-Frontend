@@ -127,6 +127,35 @@ describe('normalizePermissionTree', () => {
 
     expect(tree[0]?.submodules[0]?.permissions).toHaveLength(1)
   })
+
+  it('skips tree groups and submodules without permissions', () => {
+    expect(
+      normalizePermissionTree(
+        {
+          tree: [
+            { module: 'empty', submodules: [{ submodule: 'x', permissions: [] }] },
+            { submodules: [{ submodule: '', permissions: [{ id: '1', module: 'm', action: 'view' }] }] },
+          ],
+        },
+        [],
+      ),
+    ).toEqual([])
+
+    expect(
+      normalizePermissionTree(
+        {
+          tree: [
+            {
+              module: 'users',
+              label: 'Custom Users',
+              submodules: [{ submodule: 'profile', label: 'Profile', permissions: [] }],
+            },
+          ],
+        },
+        [],
+      ).length,
+    ).toBe(0)
+  })
 })
 
 describe('normalizePermissionsCatalog', () => {

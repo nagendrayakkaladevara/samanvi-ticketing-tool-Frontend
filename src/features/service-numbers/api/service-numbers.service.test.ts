@@ -64,4 +64,63 @@ describe('serviceNumbersService', () => {
     await serviceNumbersService.remove('sn1')
     expect(apiClient.delete).toHaveBeenCalledWith('/master/service-numbers/sn1')
   })
+
+  describe('payload extraction and normalization', () => {
+    it.each([
+      [{ data: [minimalServiceNumber] }],
+      [{ data: { items: [minimalServiceNumber] } }],
+      [{ data: { serviceNumbers: [minimalServiceNumber] } }],
+      [{ items: [minimalServiceNumber] }],
+      [{ serviceNumbers: [minimalServiceNumber] }],
+      [[minimalServiceNumber]],
+    ] as const)('list from payload %#', async (payload) => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: payload })
+      expect((await serviceNumbersService.list())[0]?.serviceNo).toBe('101')
+    })
+
+    it('filters invalid service numbers and normalizes numeric fields', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          null,
+          { id: 'bad' },
+          {
+            serviceNumberId: 5,
+            serviceNo: '202',
+            from: 'A',
+            to: 'B',
+            via: 'V',
+            parkingAmount: '10',
+            driverOneBeta: 1,
+            driverTwoBeta: 2,
+            helperBeta: 3,
+            conductorBeta: 4,
+            distance: '50',
+            optDriver: 'D',
+            optHelper: 'H',
+            remarks: 'R',
+            serviceFor: { serviceForId: 9, serviceFor: 'Local' },
+          },
+        ],
+      })
+      const [item] = await serviceNumbersService.list()
+      expect(item?.id).toBe('5')
+      expect(item?.parkingAmount).toBe(10)
+      expect(item?.distance).toBe(50)
+      expect(item?.serviceFor.id).toBe('9')
+    })
+
+    it('create and update fall back when normalize fails', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({ data: { data: { id: 'raw' } } })
+      expect(await serviceNumbersService.create(minimalServiceNumber as never)).toEqual({ id: 'raw' })
+
+      vi.mocked(apiClient.patch).mockResolvedValue({ data: { serviceNumber: { id: 'raw-2' } } })
+      expect(await serviceNumbersService.update({ serviceNumberId: 'sn1', remarks: 'Z' })).toEqual({ id: 'raw-2' })
+    })
+
+    it('list uses default pagination', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: [] })
+      await serviceNumbersService.list()
+      expect(apiClient.get).toHaveBeenCalledWith('/master/service-numbers', { params: { page: 1, limit: 50 } })
+    })
+  })
 })

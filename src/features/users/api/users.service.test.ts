@@ -107,4 +107,52 @@ describe('usersService', () => {
       expect(apiClient.delete).toHaveBeenCalledWith('/users/u1')
     })
   })
+
+  describe('payload extraction and role normalization', () => {
+    it.each([
+      [{ data: [{ id: 'u1', username: 'a' }] }],
+      [{ data: { users: [{ id: 'u2', username: 'b' }] } }],
+      [{ data: { items: [{ id: 'u3', username: 'c' }] } }],
+      [{ users: [{ id: 'u4', username: 'd' }] }],
+      [{ items: [{ id: 'u5', username: 'e' }] }],
+    ] as const)('list from %#', async (payload) => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: payload })
+      expect((await usersService.list())[0]?.id).toMatch(/^u/)
+    })
+
+    it('normalizes nested role label and supervisor role', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          { _id: 'u6', role: { label: 'supervisor' }, name: 'Sam', email: '  sam@test.com  ' },
+        ],
+      })
+      const [user] = await usersService.list()
+      expect(user).toMatchObject({
+        id: 'u6',
+        displayName: 'Sam',
+        email: 'sam@test.com',
+        role: 'SUPERVISOR',
+      })
+    })
+
+    it('create falls back when normalize fails', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({ data: { data: { username: 'only-name' } } })
+      expect(
+        await usersService.create({
+          username: 'x',
+          displayName: 'X',
+          password: 'p',
+          role: 'WORKER',
+        }),
+      ).toEqual({ username: 'only-name' })
+    })
+
+    it('update extracts nested user from data payload', async () => {
+      vi.mocked(apiClient.patch).mockResolvedValue({
+        data: { data: { user: { id: 'u7', username: 'z', displayName: 'Z', role: 'ADMIN' } } },
+      })
+      const user = await usersService.update({ userId: 'u7', displayName: 'Z2' })
+      expect(user.role).toBe('ADMIN')
+    })
+  })
 })

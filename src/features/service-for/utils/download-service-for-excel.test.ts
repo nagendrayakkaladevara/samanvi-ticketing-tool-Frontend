@@ -41,4 +41,15 @@ describe('downloadServiceForExcel', () => {
     expect(mockJsonToSheet).toHaveBeenCalled()
     expect(mockWriteFile).toHaveBeenCalledWith(expect.anything(), expect.stringMatching(/^service-for-/))
   })
+
+  it('formats invalid and missing updatedAt as em dash', async () => {
+    await downloadServiceForExcel([
+      makeServiceFor({ updatedAt: undefined }),
+      makeServiceFor({ id: 'sf-2', updatedAt: 'not-a-date' }),
+    ])
+
+    const rows = mockJsonToSheet.mock.calls[0][0]
+    expect(rows[0]['Last Updated']).toBe('—')
+    expect(rows[1]['Last Updated']).toBe('—')
+  })
 })
