@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Samanvi</string>
+    <string name="title_activity_main">Samanvi</string>
+    <string name="package_name">com.samanvi.issuereport</string>
+    <string name="custom_url_scheme">com.samanvi.issuereport</string>
+</resources>

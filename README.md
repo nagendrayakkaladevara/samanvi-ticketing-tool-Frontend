@@ -63,6 +63,49 @@ By default, Vite starts with `--host`, so it is accessible on your local network
 - `npm run build` - Type-check and build for production
 - `npm run preview` - Preview production build locally
 - `npm run lint` - Run ESLint
+- `npm run cap:sync` - Build web assets and sync to Android
+- `npm run android:debug` - Build a debug APK (requires Android SDK)
+- `npm run android:release` - Build a release APK (requires signing config)
+
+## Android APK (Capacitor)
+
+This app can be packaged as a native Android APK using [Capacitor](https://capacitorjs.com/).
+
+### Prerequisites
+
+- Node.js 20+
+- Java JDK 17+ (21 recommended)
+- [Android SDK](https://developer.android.com/studio) with platform tools and build tools
+- Set `ANDROID_HOME` (or create `android/local.properties` with `sdk.dir=/path/to/android-sdk`)
+
+### Build debug APK
+
+1. Set the API URL in `.env` (see Environment Variables above).
+2. Install dependencies: `npm install`
+3. Build and package:
+
+```bash
+npm run android:debug
+```
+
+The debug APK is written to:
+
+`android/app/build/outputs/apk/debug/app-debug.apk`
+
+Install on a device with USB debugging enabled:
+
+```bash
+adb install android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+### Open in Android Studio
+
+```bash
+npm run cap:sync
+npm run cap:open:android
+```
+
+Use Android Studio to run on an emulator, configure app icons, or create a signed release build for Play Store distribution.
 
 ## Project Structure
 
