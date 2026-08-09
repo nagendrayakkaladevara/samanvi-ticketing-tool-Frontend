@@ -1,0 +1,160 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { makeActivityLog, makeRepairJob, makeRepairJobPart } from '@/test/fixtures/garage'
+import { downloadRepairJobPdf } from './download-repair-job-pdf'
+
+const { mockSave, MockJsPDF } = vi.hoisted(() => {
+  const mockSave = vi.fn()
+  class MockJsPDF {
+    setFontSize = vi.fn()
+    setFont = vi.fn()
+    setTextColor = vi.fn()
+    setDrawColor = vi.fn()
+    text = vi.fn()
+    line = vi.fn()
+    splitTextToSize = vi.fn().mockReturnValue(['line'])
+    addPage = vi.fn()
+    setPage = vi.fn()
+    getNumberOfPages = vi.fn().mockReturnValue(1)
+    save = mockSave
+  }
+  return { mockSave, MockJsPDF }
+})
+
+vi.mock('jspdf', () => ({
+  jsPDF: MockJsPDF,
+}))
+
+vi.mock('@/lib/utils/pdf-report-branding', () => ({
+  drawPdfQrSection: vi.fn().mockResolvedValue(50),
+  drawPdfReportHeader: vi.fn().mockResolvedValue(30),
+}))
+
+vi.mock('@/lib/utils/pdf-report-layout', () => ({
+  drawPdfSummaryBand: vi.fn().mockReturnValue(40),
+  drawPdfSectionTitle: vi.fn().mockReturnValue(45),
+  drawPdfDetailCard: vi.fn().mockReturnValue(60),
+  drawPdfTextPanel: vi.fn().mockReturnValue(70),
+  drawPdfDataTable: vi.fn().mockReturnValue(80),
+  drawPdfCommentCards: vi.fn().mockReturnValue(90),
+  drawPdfPageFooters: vi.fn(),
+  ensurePdfSpace: vi.fn().mockImplementation(({ y }) => y),
+  getPdfContentWidth: vi.fn().mockReturnValue(180),
+  getJobPriorityBadgeColor: vi.fn().mockReturnValue('#000'),
+  getJobStatusBadgeColor: vi.fn().mockReturnValue('#111'),
+  PDF_A4: { margin: 16, width: 210 },
+}))
+
+import { drawPdfDataTable } from '@/lib/utils/pdf-report-layout'
+
+describe('downloadRepairJobPdf', () => {
+  beforeEach(() => {
+    mockSave.mockClear()
+  })
+
+  it('generates PDF and saves with job id in filename', async () => {
+    const job = makeRepairJob({ jobIdNumber: 'RJ-001' })
+    await downloadRepairJobPdf(job)
+
+    expect(mockSave).toHaveBeenCalledWith('RepairJob-RJ-001.pdf')
+  })
+
+  it('includes parts and comments sections when present', async () => {
+    const job = makeRepairJob({
+      parts: [makeRepairJobPart()],
+      activityLogs: [makeActivityLog({ actionType: 'commented', note: 'Note' })],
+      isRepeatJob: true,
+      previousJob: { id: 'prev', jobIdNumber: 'RJ-000' },
+      repeatScheduledFor: '2024-07-01T00:00:00Z',
+      repeatProcessedAt: '2024-07-02T00:00:00Z',
+      reportedDriver: {
+        id: 'd1',
+        driverIdNumber: 'DRV-1',
+        aadharName: 'Driver',
+        dlName: 'D',
+      },
+      assignedToOfficeStaff: {
+        id: 's1',
+        staffIdNumber: 'S1',
+        nickName: 'Alex',
+        aadharName: 'Alex',
+        designation: 'Mech',
+      },
+    })
+
+    await downloadRepairJobPdf(job)
+    expect(mockSave).toHaveBeenCalled()
+  })
+
+  it('sanitizes unsafe filename characters', async () => {
+    await downloadRepairJobPdf(makeRepairJob({ jobIdNumber: 'RJ/001' }))
+    expect(mockSave).toHaveBeenCalledWith('RepairJob-RJ-001.pdf')
+  })
+
+  it('evaluates spare parts table column callbacks', async () => {
+    const part = makeRepairJobPart({
+      addedBy: { id: 'u1', username: 'tech', displayName: '' },
+    })
+    await downloadRepairJobPdf(makeRepairJob({ parts: [part] }))
+
+    const tableCall = vi.mocked(drawPdfDataTable).mock.calls[0][0]
+    expect(tableCall.columns.map((col: { header: string }) => col.header)).toEqual([
+      'Part Name',
+      'Qty',
+      'Unit Price',
+      'Line Total',
+      'Added By',
+    ])
+    for (const column of tableCall.columns) {
+      expect(column.value(part)).toEqual(expect.any(String))
+    }
+    expect(tableCall.columns[4].value(part)).toContain('tech')
+
+    const namedPart = makeRepairJobPart({
+      addedBy: { id: 'u2', username: 'tech', displayName: 'Technician' },
+    })
+    expect(tableCall.columns[4].value(namedPart)).toContain('Technician')
+  })
+
+  it('renders minimal job without parts or comments', async () => {
+    await downloadRepairJobPdf(
+      makeRepairJob({
+        parts: [],
+        activityLogs: [],
+        assignedToOfficeStaff: null,
+        reportedDriver: null,
+        isRepeatJob: false,
+        createdBy: { id: 'u1', username: 'creator', displayName: '' },
+      }),
+    )
+    expect(mockSave).toHaveBeenCalled()
+  })
+
+  it('covers assigned and driver label branches in detail fields', async () => {
+    await downloadRepairJobPdf(
+      makeRepairJob({
+        assignedToOfficeStaff: {
+          id: 's1',
+          staffIdNumber: 'S1',
+          nickName: 'Alex',
+          aadharName: 'Alex',
+          designation: '',
+        },
+        reportedDriver: {
+          id: 'd1',
+          driverIdNumber: 'D1',
+          aadharName: '',
+          dlName: 'DL Only',
+        },
+        isRepeatJob: true,
+        previousJob: { id: 'prev', jobIdNumber: 'RJ-000' },
+      }),
+    )
+    expect(mockSave).toHaveBeenCalled()
+  })
+
+  it('falls back to repair-job filename when job id sanitizes to empty', async () => {
+    await downloadRepairJobPdf(makeRepairJob({ jobIdNumber: '   ' }))
+    expect(mockSave).toHaveBeenCalledWith('RepairJob-repair-job.pdf')
+  })
+})

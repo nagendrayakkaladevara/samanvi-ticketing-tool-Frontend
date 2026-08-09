@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-function readDarkMode(): boolean {
+export function readDarkMode(): boolean {
   if (typeof document === 'undefined') {
     return false
   }

@@ -493,7 +493,7 @@ Use this as a work queue. Each bullet is a required test module (or modules) tar
 ## 9) Coverage Enforcement Rules
 
 1. Run `npm run test:coverage` before merging test work.
-2. Global thresholds must stay at **95%** for lines, branches, functions, statements on included files.
+2. Global thresholds must stay at **95%** for lines, branches, functions, and statements on included files.
 3. New production code in-scope **must** ship with tests in the same PR.
 4. Do not lower thresholds to make CI green.
 5. If a branch is unreachable, delete the dead code or test the reachable design — do not leave untested branches.
