@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const saveMock = vi.fn()
+const jsPDFMock = vi.fn()
 let pageCount = 1
 let splitLineCount = 1
+let lastInstance: {
+  splitTextToSize: ReturnType<typeof vi.fn>
+  addPage: ReturnType<typeof vi.fn>
+} | null = null
 
 vi.mock('jspdf', () => ({
   jsPDF: class MockJsPDF {
@@ -19,10 +24,13 @@ vi.mock('jspdf', () => ({
     getNumberOfPages = () => pageCount
     setPage = vi.fn()
     save = saveMock
+
+    constructor(...args: unknown[]) {
+      jsPDFMock(...args)
+      lastInstance = this
+    }
   },
 }))
-
-import { jsPDF } from 'jspdf'
 
 import { downloadPdfTable } from './pdf-table-export'
 
@@ -31,6 +39,7 @@ describe('downloadPdfTable', () => {
     vi.clearAllMocks()
     pageCount = 1
     splitLineCount = 1
+    lastInstance = null
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2026, 7, 9, 10, 30, 0))
   })
@@ -63,7 +72,7 @@ describe('downloadPdfTable', () => {
       ],
     })
 
-    expect(jsPDF).toHaveBeenCalledWith({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+    expect(jsPDFMock).toHaveBeenCalledWith({ unit: 'mm', format: 'a4', orientation: 'portrait' })
     expect(saveMock).toHaveBeenCalledWith('tickets.pdf')
     expect(pageCount).toBeGreaterThanOrEqual(1)
   })
@@ -77,7 +86,7 @@ describe('downloadPdfTable', () => {
       rows: [{ id: '1' }],
     })
 
-    expect(jsPDF).toHaveBeenCalledWith({ unit: 'mm', format: 'a4', orientation: 'landscape' })
+    expect(jsPDFMock).toHaveBeenCalledWith({ unit: 'mm', format: 'a4', orientation: 'landscape' })
     expect(saveMock).toHaveBeenCalledWith('wide.pdf')
   })
 
@@ -89,10 +98,7 @@ describe('downloadPdfTable', () => {
       rows: [{ id: '1' }],
     })
 
-    const instance = vi.mocked(jsPDF).mock.instances.at(-1) as {
-      splitTextToSize: ReturnType<typeof vi.fn>
-    }
-    expect(instance.splitTextToSize).toHaveBeenCalledWith('—', expect.any(Number))
+    expect(lastInstance?.splitTextToSize).toHaveBeenCalledWith('—', expect.any(Number))
     expect(saveMock).toHaveBeenCalled()
   })
 
@@ -106,8 +112,7 @@ describe('downloadPdfTable', () => {
       rows: [{ id: '1' }, { id: '2' }],
     })
 
-    const instance = vi.mocked(jsPDF).mock.instances.at(-1) as { addPage: ReturnType<typeof vi.fn> }
-    expect(instance.addPage).toHaveBeenCalled()
+    expect(lastInstance?.addPage).toHaveBeenCalled()
     expect(saveMock).toHaveBeenCalledWith('long.pdf')
   })
 })

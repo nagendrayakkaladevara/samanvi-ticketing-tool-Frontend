@@ -47,7 +47,8 @@ vi.mock('@/lib/utils/pdf-report-layout', () => ({
 
 describe('downloadRepairJobPdf', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockSave.mockClear()
+    mockJsPDF.mockClear()
   })
 
   it('generates PDF and saves with job id in filename', async () => {

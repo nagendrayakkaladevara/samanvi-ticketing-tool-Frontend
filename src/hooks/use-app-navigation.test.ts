@@ -93,7 +93,7 @@ describe('useFirstAllowedRoute', () => {
     expect(result.current).toBe('/')
   })
 
-  it('returns first matching non-hidden nav route for specialized permissions', () => {
+  it('returns welcome route for authenticated users without higher-priority home access', () => {
     const session = makeAuthSession({
       permissions: {
         items: [
@@ -111,6 +111,6 @@ describe('useFirstAllowedRoute', () => {
     useAuthStore.getState().setSession(session)
 
     const { result } = renderHook(() => useFirstAllowedRoute())
-    expect(result.current).toBe('/garage/masters')
+    expect(result.current).toBe('/')
   })
 })

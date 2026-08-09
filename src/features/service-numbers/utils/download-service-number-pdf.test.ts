@@ -27,7 +27,8 @@ vi.mock('jspdf', () => ({
 
 describe('downloadServiceNumberPdf', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockSave.mockClear()
+    mockJsPDF.mockClear()
   })
 
   it('generates and saves service number PDF', () => {

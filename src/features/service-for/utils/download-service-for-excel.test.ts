@@ -3,27 +3,28 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeServiceFor } from '@/test/fixtures/masters'
 import { downloadServiceForExcel } from './download-service-for-excel'
 
-const mockWriteFile = vi.fn()
-const mockJsonToSheet = vi.fn().mockReturnValue({})
-const mockBookNew = vi.fn().mockReturnValue({})
-const mockBookAppendSheet = vi.fn()
+const { mockWriteFile, mockJsonToSheet, mockBookNew, mockBookAppendSheet } = vi.hoisted(() => {
+  const worksheet = {}
+  return {
+    mockWriteFile: vi.fn(),
+    mockJsonToSheet: vi.fn(() => worksheet),
+    mockBookNew: vi.fn(() => ({})),
+    mockBookAppendSheet: vi.fn(),
+  }
+})
 
-vi.mock('xlsx', () => ({
-  default: {
-    utils: {
-      json_to_sheet: mockJsonToSheet,
-      book_new: mockBookNew,
-      book_append_sheet: mockBookAppendSheet,
-    },
-    writeFile: mockWriteFile,
-  },
-  utils: {
+vi.mock('xlsx', () => {
+  const utils = {
     json_to_sheet: mockJsonToSheet,
     book_new: mockBookNew,
     book_append_sheet: mockBookAppendSheet,
-  },
-  writeFile: mockWriteFile,
-}))
+  }
+  return {
+    default: { utils, writeFile: mockWriteFile },
+    utils,
+    writeFile: mockWriteFile,
+  }
+})
 
 describe('downloadServiceForExcel', () => {
   beforeEach(() => {
