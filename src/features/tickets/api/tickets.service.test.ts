@@ -24,7 +24,11 @@ const baseTicket = {
 
 describe('ticketsService', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.mocked(apiClient.get).mockReset()
+    vi.mocked(apiClient.post).mockReset()
+    vi.mocked(apiClient.patch).mockReset()
+    vi.mocked(apiClient.put).mockReset()
+    vi.mocked(apiClient.delete).mockReset()
   })
 
   describe('list', () => {
@@ -500,7 +504,7 @@ describe('ticketsService', () => {
     })
 
     it('handles non-object person candidates and name composition', async () => {
-      vi.mocked(apiClient.get).mockResolvedValue({
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
         data: [
           {
             id: 't-num',
