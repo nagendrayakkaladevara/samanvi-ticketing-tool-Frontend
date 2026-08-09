@@ -15,7 +15,11 @@ vi.mock('@/lib/api/client', () => ({
 
 describe('dashboardService', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.mocked(apiClient.get).mockReset()
+    vi.mocked(apiClient.post).mockReset()
+    vi.mocked(apiClient.patch).mockReset()
+    vi.mocked(apiClient.put).mockReset()
+    vi.mocked(apiClient.delete).mockReset()
   })
 
   it('requests admin summary with days param', async () => {
@@ -193,5 +197,36 @@ describe('dashboardService', () => {
     expect(summary.meta.windowFrom).toBe('2024-05-26')
     expect(summary.snapshot.oldestOpenTicket?.ticketNumber).toBe('TN-9')
     expect(summary.leaderboard[1]?.displayName).toBe('Only Name')
+  })
+
+  it('derives snapshot totals and handles invalid leaderboard entries', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: {
+        snapshot: {
+          closedTickets: 8,
+          oldestOpenTicket: { id: 't-old', ticketNumber: 'TN-OLD' },
+        },
+        queue: {
+          openByStatus: { assigned: 2, reopened: 1, blocked: 1, created: 1 },
+        },
+        agentLeaderboard: [null, { username: 'no-id' }, { userId: 'u4', username: 'z' }],
+        closedResolvedTicketsChangePercent: { resolvedTicketsChangePercent: 6 },
+      },
+    })
+
+    const summary = await dashboardService.getAdminSummary()
+
+    expect(summary.totalTickets).toBe(8)
+    expect(summary.openTickets).toBe(5)
+    expect(summary.trends?.closedResolvedTicketsPct).toBe(6)
+    expect(summary.snapshot.oldestOpenTicket).toEqual({
+      id: 't-old',
+      ticketNumber: 'TN-OLD',
+      priority: '-',
+      status: '-',
+    })
+    expect(summary.leaderboard).toEqual([
+      { userId: 'u4', username: 'z', displayName: 'z', openAssignedCount: 0, resolvedInWindow: 0 },
+    ])
   })
 })
