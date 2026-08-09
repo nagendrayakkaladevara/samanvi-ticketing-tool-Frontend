@@ -506,7 +506,7 @@ describe('ticketsService', () => {
             id: 't-num',
             title: 'Numeric person',
             createdBy: 42,
-            assignedToUserName: 'Named User',
+            assignedToUsername: 'Named User',
           },
           {
             id: 't-fl',
@@ -526,6 +526,115 @@ describe('ticketsService', () => {
     it('returns empty arrays for non-array ticket payloads', async () => {
       vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { foo: 'bar' } })
       expect(await ticketsService.list()).toEqual([])
+    })
+
+    it('covers alternate ticket field keys and invalid person shapes', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          {
+            ticketId: 'alt-1',
+            title: 'Alt keys',
+            ticket_no: 'TN-9',
+            bus_number: 'BN-1',
+            status: true,
+            severity: 'unknown',
+            priority: 'nope',
+            category: 12,
+            slaDueAt: 99,
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-02T00:00:00Z',
+            createdBy: { displayName: '  ' },
+            assignedTo: { name: '  ' },
+            createdById: 'c1',
+            assignedToUserId: 'a1',
+          },
+          {
+            id: 'alt-2',
+            title: 'Bus object',
+            bus: { busNumber: 'FROM-BUS' },
+            createdBy: { username: 'creator' },
+            assignedTo: { username: 'assignee' },
+            ticketNumber: 77,
+          },
+          {
+            id: 'alt-3',
+            title: 'Bus no key',
+            busNo: 'NO-KEY',
+            createdBy: { firstName: '', lastName: '' },
+            assignedTo: null,
+          },
+          {
+            id: 'alt-4',
+            title: 'Whitespace names',
+            createdBy: '   ',
+            assignedToUsername: '   ',
+          },
+        ],
+      })
+
+      const tickets = await ticketsService.list()
+      expect(tickets).toHaveLength(4)
+      expect(tickets[0]).toMatchObject({
+        id: 'alt-1',
+        ticketNumber: 'TN-9',
+        busNumber: 'BN-1',
+        status: 'CREATED',
+        severity: 'LOW',
+        priority: 'P3',
+        category: 'General',
+        slaDueAt: '',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-02T00:00:00Z',
+      })
+      expect(tickets[1]?.ticketNumber).toBe('77')
+      expect(tickets[1]?.busNumber).toBe('FROM-BUS')
+      expect(tickets[1]?.createdByName).toBe('creator')
+      expect(tickets[2]?.busNumber).toBe('NO-KEY')
+      expect(tickets[2]?.createdByName).toBeUndefined()
+      expect(tickets[3]?.createdByName).toBeUndefined()
+    })
+
+    it('covers timeline alternate id and actor fields', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          { eventId: 'e1', type: 'note', actor: { displayName: 'Act' }, timestamp: '2024-02-01' },
+          { activityId: 'a1', actionType: 'closed', actorUsername: 'tech' },
+          { id: 'x1', note: 'n', actor: true, createdAt: 1 },
+        ],
+      })
+      const entries = await ticketsService.getTimeline('t1')
+      expect(entries[0]?.id).toBe('e1')
+      expect(entries[0]?.action).toBe('note')
+      expect(entries[0]?.actorName).toBe('Act')
+      expect(entries[0]?.createdAt).toBe('2024-02-01')
+      expect(entries[1]?.id).toBe('a1')
+      expect(entries[1]?.action).toBe('closed')
+      expect(entries[2]?.id).toBe('x1')
+    })
+
+    it('covers assignable user and category alternate keys', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: {
+          data: {
+            items: [
+              { _id: 'w2', name: 'Worker Two', roleCode: 'supervisor' },
+              { userId: 'w3', fullName: 'Worker Three', role: 'not-a-role' },
+              { id: 'w4', username: 'num' },
+              null,
+            ],
+          },
+        },
+      })
+      const users = await ticketsService.listAssignableUsers()
+      expect(users.map((u) => u.id)).toEqual(['w2', 'w3', 'w4'])
+      expect(users[0]?.role).toBe('SUPERVISOR')
+      expect(users[1]?.role).toBe('VIEWER')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [{ categoryId: 'c9', title: 'Cat Title' }, { id: 'c10' }, 'bad'],
+      })
+      const categories = await ticketsService.listIssueCategories()
+      expect(categories[0]).toMatchObject({ id: 'c9', name: 'Cat Title' })
     })
   })
 })
