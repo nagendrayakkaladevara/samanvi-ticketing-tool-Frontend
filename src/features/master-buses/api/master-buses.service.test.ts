@@ -157,5 +157,49 @@ describe('masterBusesService', () => {
       const bus = await masterBusesService.update({ busId: 'b1', odometer: 1 })
       expect(bus).toEqual({ id: 'raw-2' })
     })
+
+    it('normalizes _id key and rejects invalid numeric fields', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          {
+            _id: 'legacy',
+            busNumber: 'B-1',
+            engineNumber: 'E',
+            chassisNumber: 'C',
+            odometer: 'not-a-number',
+            insuranceValidity: '01-01-2025',
+          },
+          {
+            id: 'good',
+            busNumber: 'B-2',
+            engineNumber: 'E2',
+            chassisNumber: 'C2',
+            odometer: 100,
+            insuranceValidity: '01-01-2025',
+            purchaseDate: 123,
+            remarks: 456,
+          },
+        ],
+      })
+
+      const buses = await masterBusesService.list()
+      expect(buses).toHaveLength(1)
+      expect(buses[0]?.id).toBe('good')
+      expect(buses[0]?.purchaseDate).toBeNull()
+      expect(buses[0]?.remarks).toBeNull()
+    })
+
+    it('listBusNumbers falls back to extractArrayPayload', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: { items: [{ busNumber: 'FALLBACK-1' }, { busNumber: '  ' }] },
+      })
+      expect(await masterBusesService.listBusNumbers()).toEqual(['FALLBACK-1'])
+    })
+
+    it('create extracts entity without nested bus wrapper', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({ data: { data: minimalBus } })
+      const bus = await masterBusesService.create(minimalBus as never)
+      expect(bus.busNumber).toBe('BUS-01')
+    })
   })
 })

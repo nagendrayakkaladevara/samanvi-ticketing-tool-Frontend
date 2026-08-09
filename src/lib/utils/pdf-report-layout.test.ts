@@ -190,6 +190,52 @@ describe('pdf-report-layout', () => {
     expect(doc.addPage).toHaveBeenCalled()
   })
 
+  it('drawPdfDataTable renders without footer and uses em dash for empty cells', () => {
+    type Row = { value: string }
+    const columns = [{ header: 'Value', width: 60, value: (row: Row) => row.value }]
+
+    const nextY = drawPdfDataTable({
+      doc: doc as never,
+      margin: PDF_A4.margin,
+      contentWidth: 60,
+      columns,
+      rows: [{ value: '' }],
+      y: 70,
+    })
+
+    expect(doc.splitTextToSize).toHaveBeenCalledWith('—', expect.any(Number))
+    expect(nextY).toBeGreaterThan(70)
+  })
+
+  it('drawPdfDetailCard uses em dash for empty field values', () => {
+    drawPdfDetailCard({
+      doc: doc as never,
+      margin: PDF_A4.margin,
+      contentWidth: getPdfContentWidth(),
+      fields: [{ label: 'Empty', value: '' }],
+      y: 40,
+      columns: 1,
+    })
+    expect(doc.splitTextToSize).toHaveBeenCalledWith('—', expect.any(Number))
+  })
+
+  it('drawPdfCommentCards uses em dash for empty notes', () => {
+    drawPdfCommentCards({
+      doc: doc as never,
+      margin: PDF_A4.margin,
+      contentWidth: getPdfContentWidth(),
+      comments: [{ meta: 'User', note: '' }],
+      y: 60,
+    })
+    expect(doc.splitTextToSize).toHaveBeenCalledWith('—', expect.any(Number))
+  })
+
+  it('ensurePdfSpace respects custom margin when adding a page', () => {
+    const y = ensurePdfSpace({ doc: doc as never, y: PDF_A4.contentBottom, needed: 20, margin: 20 })
+    expect(doc.addPage).toHaveBeenCalled()
+    expect(y).toBe(20)
+  })
+
   it('drawPdfPageFooters renders on every page', () => {
     doc.getNumberOfPages.mockReturnValue(2)
     drawPdfPageFooters(doc as never, 'Samanvi Ticketing')

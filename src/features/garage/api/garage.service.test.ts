@@ -721,6 +721,187 @@ describe('garageService', () => {
 
       vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { notItems: true } })
       expect(await garageService.listRepairParts()).toEqual([])
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: 'not-an-object' })
+      expect(await garageService.listJobs()).toEqual([])
+    })
+
+    it('covers activity metadata null, invalid, and default branches', async () => {
+      const job = {
+        ...minimalJobPayload,
+        activityLogs: [
+          {
+            id: 'log-null-meta',
+            actionType: 'part_added',
+            createdAt: '2024-01-01T00:00:00Z',
+            metadata: null,
+          },
+          {
+            id: 'log-bad-meta',
+            actionType: 'part_added',
+            createdAt: '2024-01-02T00:00:00Z',
+            metadata: 'not-an-object',
+          },
+          {
+            id: 'log-created-false',
+            actionType: 'created',
+            createdAt: '2024-01-03T00:00:00Z',
+            metadata: { isRepeatJob: false, previousJobId: 'p1', previousJobIdNumber: 'RJ-0' },
+          },
+          {
+            id: 'log-created-missing',
+            actionType: 'created',
+            createdAt: '2024-01-04T00:00:00Z',
+            metadata: { isRepeatJob: true, previousJobId: 'p1' },
+          },
+          {
+            id: 'log-default',
+            actionType: 'status_changed',
+            createdAt: '2024-01-05T00:00:00Z',
+            metadata: { fromStatus: 'created', toStatus: 'assigned' },
+          },
+          {
+            id: 'log-part-qty-string',
+            actionType: 'part_added',
+            createdAt: '2024-01-06T00:00:00Z',
+            metadata: {
+              repairJobPartId: 'pl1',
+              repairPartId: 'rp1',
+              partName: 'Bolt',
+              quantity: '3',
+              unitPrice: 12.5,
+            },
+          },
+          {
+            id: 'log-part-bad-price',
+            actionType: 'part_removed',
+            createdAt: '2024-01-07T00:00:00Z',
+            metadata: {
+              repairJobPartId: 'pl1',
+              repairPartId: 'rp1',
+              partName: 'Bolt',
+              quantity: 1,
+              unitPrice: '   ',
+            },
+          },
+        ],
+      }
+
+      vi.mocked(apiClient.get).mockResolvedValue({ data: { data: job } })
+      const result = await garageService.getJob('job-1')
+
+      expect(result.activityLogs.map((log) => log.metadata)).toEqual([
+        null,
+        null,
+        null,
+        null,
+        null,
+        { repairJobPartId: 'pl1', repairPartId: 'rp1', partName: 'Bolt', quantity: 3, unitPrice: '12.50' },
+        null,
+      ])
+    })
+
+    it('covers job person object fallbacks and previousJob filtering', async () => {
+      const job = {
+        ...minimalJobPayload,
+        reportedDriver: {
+          id: 'd-full',
+          driverIdNumber: 'D-1',
+          aadharName: 'Aadhar',
+          dlName: 'DL Name',
+        },
+        assignedToOfficeStaff: {
+          id: 's-full',
+          staffIdNumber: 'S-1',
+          nickName: 'Nick',
+          aadharName: 'Staff',
+          designation: 'Lead',
+        },
+        previousJob: { jobIdNumber: 'RJ-000' },
+        parts: [
+          {
+            id: 'pl-num-price',
+            quantity: 1,
+            unitPrice: 15,
+            repairPart: { id: 'rp1', partName: 'Gasket' },
+          },
+        ],
+        repairCategory: { id: 'cat-1', name: 'Brakes', level: '2' },
+      }
+
+      vi.mocked(apiClient.get).mockResolvedValue({ data: job })
+      const result = await garageService.getJob('job-1')
+
+      expect(result.reportedDriver).toMatchObject({ dlName: 'DL Name' })
+      expect(result.assignedToOfficeStaff).toMatchObject({ designation: 'Lead' })
+      expect(result.previousJob).toBeNull()
+      expect(result.parts[0]?.unitPrice).toBe('15.00')
+      expect(result.repairCategory.level).toBe(2)
+    })
+
+    it('filters reportedDriver and assignedToOfficeStaff without resolvable ids', async () => {
+      const job = {
+        ...minimalJobPayload,
+        reportedDriverId: '   ',
+        assignedToOfficeStaffId: '   ',
+      }
+
+      vi.mocked(apiClient.get).mockResolvedValue({ data: { data: job } })
+      const result = await garageService.getJob('job-1')
+
+      expect(result.reportedDriver).toBeNull()
+      expect(result.assignedToOfficeStaff).toBeNull()
+    })
+
+    it('updateJob throws on invalid response', async () => {
+      vi.mocked(apiClient.patch).mockResolvedValue({ data: { data: null } })
+      await expect(garageService.updateJob({ jobId: 'job-1', status: 'closed' })).rejects.toThrow(
+        'Unexpected response when updating repair job.',
+      )
+    })
+
+    it('listRepairCategories filters invalid tree children and part price types', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: {
+          items: [{ id: 'c1', name: 'Cat', level: 1 }],
+          tree: [{ id: 'c1', name: 'Cat', level: 1, children: 'not-array' }],
+        },
+      })
+      expect((await garageService.listRepairCategories()).tree[0]?.children).toEqual([])
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [
+          { id: 'p1', partName: 'Bolt', price: true },
+          { id: 'p2', partName: 'Nut', price: 4, description: 123 },
+        ],
+      })
+      const parts = await garageService.listRepairParts()
+      expect(parts).toHaveLength(1)
+      expect(parts[0]?.description).toBeNull()
+    })
+
+    it('getJobTimeline uses extractDataPayload and filters invalid logs', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          jobId: '  ',
+          items: [
+            null,
+            { id: 'log-1', actionType: 'commented', createdAt: '2024-01-01', note: 123 },
+            {
+              id: 'log-2',
+              actionType: 'commented',
+              createdAt: '2024-01-02',
+              fromStatus: 'created',
+              toStatus: 'assigned',
+            },
+          ],
+        },
+      })
+
+      const timeline = await garageService.getJobTimeline('job-fallback')
+      expect(timeline.jobId).toBe('job-fallback')
+      expect(timeline.items).toHaveLength(2)
+      expect(timeline.items[0]?.note).toBeNull()
     })
   })
 })

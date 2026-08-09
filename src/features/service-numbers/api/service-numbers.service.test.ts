@@ -122,5 +122,30 @@ describe('serviceNumbersService', () => {
       await serviceNumbersService.list()
       expect(apiClient.get).toHaveBeenCalledWith('/master/service-numbers', { params: { page: 1, limit: 50 } })
     })
+
+    it('filters records with invalid numeric fields and serviceFor refs', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          { ...minimalServiceNumber, parkingAmount: 'bad' },
+          { ...minimalServiceNumber, id: 'sn-bad-sf', serviceFor: { serviceFor: 'Missing id' } },
+          {
+            ...minimalServiceNumber,
+            id: 'sn-dates',
+            createdAt: '2024-01-01',
+            updatedAt: '2024-02-01',
+          },
+        ],
+      })
+
+      const items = await serviceNumbersService.list()
+      expect(items).toHaveLength(1)
+      expect(items[0]?.id).toBe('sn-dates')
+      expect(items[0]?.createdAt).toBe('2024-01-01')
+    })
+
+    it('returns empty list for invalid payloads', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: null })
+      expect(await serviceNumbersService.list()).toEqual([])
+    })
   })
 })

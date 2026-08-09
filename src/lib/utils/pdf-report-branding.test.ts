@@ -106,6 +106,30 @@ describe('pdf-report-branding', () => {
     )
   })
 
+  it('drawPdfReportHeader scales wide logos to max width', async () => {
+    const { drawPdfReportHeader } = await import('./pdf-report-branding')
+    const doc = createMockJsPdf()
+    doc.getImageProperties.mockReturnValue({ width: 800, height: 50, fileType: 'PNG' })
+
+    await drawPdfReportHeader({
+      doc: doc as never,
+      margin: 14,
+      pageWidth: 210,
+      title: 'Report',
+      subtitle: 'Generated',
+      y: 10,
+    })
+
+    expect(doc.addImage).toHaveBeenCalledWith(
+      expect.any(String),
+      'PNG',
+      14,
+      10,
+      48,
+      expect.closeTo(3, 1),
+    )
+  })
+
   it('createQrDataUrl renders QR to png data url', async () => {
     const { createQrDataUrl } = await import('./pdf-report-branding')
     const dataUrl = await createQrDataUrl('https://example.com/job/1')

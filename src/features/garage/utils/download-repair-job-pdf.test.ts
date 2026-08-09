@@ -115,4 +115,46 @@ describe('downloadRepairJobPdf', () => {
     })
     expect(tableCall.columns[4].value(namedPart)).toContain('Technician')
   })
+
+  it('renders minimal job without parts or comments', async () => {
+    await downloadRepairJobPdf(
+      makeRepairJob({
+        parts: [],
+        activityLogs: [],
+        assignedToOfficeStaff: null,
+        reportedDriver: null,
+        isRepeatJob: false,
+        createdBy: { id: 'u1', username: 'creator', displayName: '' },
+      }),
+    )
+    expect(mockSave).toHaveBeenCalled()
+  })
+
+  it('covers assigned and driver label branches in detail fields', async () => {
+    await downloadRepairJobPdf(
+      makeRepairJob({
+        assignedToOfficeStaff: {
+          id: 's1',
+          staffIdNumber: 'S1',
+          nickName: 'Alex',
+          aadharName: 'Alex',
+          designation: '',
+        },
+        reportedDriver: {
+          id: 'd1',
+          driverIdNumber: 'D1',
+          aadharName: '',
+          dlName: 'DL Only',
+        },
+        isRepeatJob: true,
+        previousJob: { id: 'prev', jobIdNumber: 'RJ-000' },
+      }),
+    )
+    expect(mockSave).toHaveBeenCalled()
+  })
+
+  it('falls back to repair-job filename when job id sanitizes to empty', async () => {
+    await downloadRepairJobPdf(makeRepairJob({ jobIdNumber: '   ' }))
+    expect(mockSave).toHaveBeenCalledWith('RepairJob-repair-job.pdf')
+  })
 })

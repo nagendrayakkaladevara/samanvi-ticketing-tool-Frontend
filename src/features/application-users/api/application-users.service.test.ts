@@ -232,4 +232,40 @@ describe('applicationUsersService', () => {
     })
     expect((await applicationUsersService.list())[0]?.permissionIds).toEqual(['p1'])
   })
+
+  it('normalizes admin user type and email from alternate keys', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: [{ id: 'u12', username: 'admin1', userType: 'admin', email: '  admin@test.com  ' }],
+    })
+    const [user] = await applicationUsersService.list()
+    expect(user?.userType).toBe('admin')
+    expect(user?.email).toBe('admin@test.com')
+  })
+
+  it('checkUsernameExists normalizes nested data payload', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: { data: { user: { username: 'nested', exists: false } } },
+    })
+    expect(await applicationUsersService.checkUsernameExists('nested')).toEqual({
+      username: 'nested',
+      exists: false,
+    })
+  })
+
+  it('list returns empty array for invalid payloads and update falls back', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: null })
+    expect(await applicationUsersService.list()).toEqual([])
+
+    vi.mocked(apiClient.patch).mockResolvedValue({ data: { data: { displayName: 'Only' } } })
+    expect(await applicationUsersService.update({ userId: 'u1', fullName: 'X' })).toEqual({
+      displayName: 'Only',
+    })
+  })
+
+  it('normalizes displayName fallback to username then id', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: [{ id: 'u13', username: 'fallback-name' }],
+    })
+    expect((await applicationUsersService.list())[0]?.displayName).toBe('fallback-name')
+  })
 })

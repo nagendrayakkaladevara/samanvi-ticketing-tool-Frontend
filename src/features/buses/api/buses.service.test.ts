@@ -163,6 +163,13 @@ describe('busesService', () => {
       expect(await busesService.create({ busNumber: 'X' })).toEqual({ busNumber: 'only' })
     })
 
+    it('listBusNumbers maps array items directly when extractArrayPayload is non-empty', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [{ busNumber: 'ARR-1' }, { number: 'ARR-2' }],
+      })
+      expect(await busesService.listBusNumbers()).toEqual(['ARR-1', 'ARR-2'])
+    })
+
     it('listTicketHistory normalizes all status severity priority branches', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         data: [
@@ -184,6 +191,16 @@ describe('busesService', () => {
             assignedTo: { name: 'Alex' },
           },
           { id: 't3', title: 'Defaults', status: 'bogus', severity: 'bogus', priority: 'bogus' },
+          {
+            id: 't4',
+            title: 'Resolved',
+            status: 'resolved',
+            severity: 'medium',
+            priority: 'p3',
+            assignedToName: 'Direct Assignee',
+          },
+          { id: 't5', title: 'Closed', status: 'CLOSED', severity: 'HIGH', priority: 'P1' },
+          { id: 't6', title: 'Assigned', status: 'assigned', severity: 'critical', priority: 'p2' },
         ],
       })
 
@@ -213,6 +230,33 @@ describe('busesService', () => {
           status: 'CREATED',
           severity: 'LOW',
           priority: 'P3',
+          assignedToName: undefined,
+          createdAt: undefined,
+        },
+        {
+          id: 't4',
+          title: 'Resolved',
+          status: 'RESOLVED',
+          severity: 'MEDIUM',
+          priority: 'P3',
+          assignedToName: 'Direct Assignee',
+          createdAt: undefined,
+        },
+        {
+          id: 't5',
+          title: 'Closed',
+          status: 'CLOSED',
+          severity: 'HIGH',
+          priority: 'P1',
+          assignedToName: undefined,
+          createdAt: undefined,
+        },
+        {
+          id: 't6',
+          title: 'Assigned',
+          status: 'ASSIGNED',
+          severity: 'CRITICAL',
+          priority: 'P2',
           assignedToName: undefined,
           createdAt: undefined,
         },

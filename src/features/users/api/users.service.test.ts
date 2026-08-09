@@ -154,5 +154,22 @@ describe('usersService', () => {
       const user = await usersService.update({ userId: 'u7', displayName: 'Z2' })
       expect(user.role).toBe('ADMIN')
     })
+
+    it('normalizes role from nested name and list from raw array', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [{ id: 'u8', username: 'raw', role: { name: 'admin' } }],
+      })
+      expect((await usersService.list())[0]?.role).toBe('ADMIN')
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: [{ id: 'u9', username: 'worker', role: { label: 'not-valid' } }],
+      })
+      expect((await usersService.list())[0]?.role).toBe('WORKER')
+    })
+
+    it('returns empty list for invalid payloads', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: null })
+      expect(await usersService.list()).toEqual([])
+    })
   })
 })

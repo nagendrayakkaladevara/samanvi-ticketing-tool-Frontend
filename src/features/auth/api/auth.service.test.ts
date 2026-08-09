@@ -211,4 +211,57 @@ describe('auth.service login', () => {
       'Unable to sign in right now. Please try again.',
     )
   })
+
+  it('parses permissions from nested data envelope and object catalog', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      data: {
+        accessToken: 'token',
+        data: {
+          permissions: { items: [makePermission({ id: 'nested' })], tree: [] },
+          user: { id: '1', username: 'u', name: 'Named User' },
+        },
+      },
+    })
+    vi.mocked(fetchMyPermissions).mockResolvedValue({ items: [], tree: [] })
+
+    const session = await login({ username: 'validuser', password: 'password12' })
+    expect(session.user.name).toBe('Named User')
+    expect(session.permissions?.items[0]?.id).toBe('nested')
+  })
+
+  it('parses permissions array from nested data.permissions', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      data: {
+        accessToken: 'token',
+        user: { id: '1', username: 'u' },
+        data: { permissions: [makePermission({ id: 'arr-perm' })] },
+      },
+    })
+    vi.mocked(fetchMyPermissions).mockResolvedValue({ items: [], tree: [] })
+
+    const session = await login({ username: 'validuser', password: 'password12' })
+    expect(session.permissions?.items[0]?.id).toBe('arr-perm')
+  })
+
+  it('reads access token from nested source token alias', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      data: {
+        data: {
+          token: 'nested-token',
+          user: { id: '1', username: 'u', role: 'accountant' },
+        },
+      },
+    })
+    vi.mocked(fetchMyPermissions).mockResolvedValue({ items: [], tree: [] })
+
+    const session = await login({ username: 'validuser', password: 'password12' })
+    expect(session.accessToken).toBe('nested-token')
+    expect(session.user.userType).toBe('accountant')
+  })
+
+  it('throws ApiError for username that is too long', async () => {
+    await expect(
+      login({ username: 'a'.repeat(65), password: 'password12' }),
+    ).rejects.toThrow('Username is too long')
+  })
 })
