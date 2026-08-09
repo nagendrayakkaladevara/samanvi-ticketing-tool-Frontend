@@ -22,12 +22,12 @@ function mockMatchMedia(matches: boolean) {
 }
 
 function createBeforeInstallPromptEvent(): BeforeInstallPromptEvent {
-  return {
-    preventDefault: vi.fn(),
-    platforms: ['web'],
-    prompt: vi.fn().mockResolvedValue(undefined),
-    userChoice: Promise.resolve({ outcome: 'accepted', platform: 'web' }),
-  } as unknown as BeforeInstallPromptEvent
+  const event = new Event('beforeinstallprompt') as BeforeInstallPromptEvent
+  event.preventDefault = vi.fn()
+  event.platforms = ['web']
+  event.prompt = vi.fn().mockResolvedValue(undefined)
+  event.userChoice = Promise.resolve({ outcome: 'accepted', platform: 'web' })
+  return event
 }
 
 describe('isIosSafari', () => {

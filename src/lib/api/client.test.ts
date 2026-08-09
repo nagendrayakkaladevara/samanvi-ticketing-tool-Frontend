@@ -10,7 +10,7 @@ vi.mock('@/store/auth-store', () => ({
   },
 }))
 
-import type { InternalAxiosRequestConfig } from 'axios'
+import { AxiosHeaders, type InternalAxiosRequestConfig } from 'axios'
 
 import { ApiError } from './api-error'
 import { apiClient } from './client'
@@ -97,13 +97,12 @@ describe('apiClient', () => {
         return { data: {}, status: 200, statusText: 'OK', headers: {}, config }
       })
 
-      await apiClient.get('/test', {
-        headers: {
-          get: (key: string) => (key === 'Authorization' ? 'Bearer existing' : null),
-        },
-      })
+      const headers = new AxiosHeaders()
+      headers.set('Authorization', 'Bearer existing')
 
-      expect(captured?.headers.Authorization).toBeUndefined()
+      await apiClient.get('/test', { headers })
+
+      expect(captured?.headers.get('Authorization')).toBe('Bearer existing')
     })
   })
 

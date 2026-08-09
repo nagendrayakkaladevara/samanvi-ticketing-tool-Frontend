@@ -54,7 +54,7 @@ describe('isValidRepeatScheduleDateInput', () => {
 describe('repeatScheduleDateInputToIso', () => {
   beforeEach(() => {
     vi.useFakeTimers()
-    vi.setSystemTime(new Date('2024-06-15T08:00:00Z'))
+    vi.setSystemTime(new Date('2024-06-15T20:00:00Z'))
   })
 
   it('throws for invalid date input', () => {

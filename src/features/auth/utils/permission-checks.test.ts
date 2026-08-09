@@ -155,25 +155,18 @@ describe('getFirstAllowedRoute', () => {
     expect(getFirstAllowedRoute(emptySet, false)).toBe('/login')
   })
 
-  it('returns /application-access when user has users:view', () => {
+  it('returns /application-access when user has users:view (priority route)', () => {
     expect(getFirstAllowedRoute(usersView, true)).toBe('/application-access')
   })
 
-  it('returns /garage/create-job when user has garage repair_job create', () => {
-    expect(getFirstAllowedRoute(garageCreate, true)).toBe('/garage/create-job')
+  it('returns auth-only welcome route when only generic access is available', () => {
+    expect(getFirstAllowedRoute(garageCreate, true)).toBe('/')
+    expect(getFirstAllowedRoute(emptySet, true)).toBe('/')
+    expect(getFirstAllowedRoute(makePermissionSet([['tickets', '', 'view']]), true)).toBe('/')
   })
 
-  it('returns /tickets fallback when authenticated but no nav matches', () => {
-    expect(getFirstAllowedRoute(emptySet, true)).toBe('/tickets')
-  })
-
-  it('returns priority home route when user has tickets view (hidden routes in priority)', () => {
-    const set = makePermissionSet([['tickets', '', 'view']])
-    expect(getFirstAllowedRoute(set, true)).toBe('/dashboard')
-  })
-
-  it('returns admin-first visible route for admin', () => {
-    expect(getFirstAllowedRoute(emptySet, true, true)).toBe('/dashboard')
+  it('returns priority home route for admin on application-access', () => {
+    expect(getFirstAllowedRoute(emptySet, true, true)).toBe('/application-access')
   })
 })
 

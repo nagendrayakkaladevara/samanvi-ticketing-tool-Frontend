@@ -1,9 +1,9 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createTestQueryClient } from '@/test/render-with-providers'
+import { createTestQueryClient } from '@/test/test-utils'
 
 import { useTicketsQuery } from './use-tickets-query'
 
@@ -22,6 +22,10 @@ function createWrapper() {
   }
 }
 
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 describe('useTicketsQuery', () => {
   it('fetches tickets with default query key', async () => {
     vi.mocked(ticketsService.list).mockResolvedValue([])
@@ -33,11 +37,17 @@ describe('useTicketsQuery', () => {
   })
 
   it('enables polling when poll option is true', async () => {
+    vi.useFakeTimers()
     vi.mocked(ticketsService.list).mockResolvedValue([])
 
     const { result } = renderHook(() => useTicketsQuery({ poll: true }), { wrapper: createWrapper() })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.refetchInterval).toBe(10_000)
+    expect(ticketsService.list).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    await waitFor(() => expect(ticketsService.list).toHaveBeenCalledTimes(2))
+    vi.useRealTimers()
   })
 })

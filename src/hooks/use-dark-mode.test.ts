@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { useDarkMode } from './use-dark-mode'
@@ -23,18 +23,18 @@ describe('useDarkMode', () => {
     expect(result.current).toBe(true)
   })
 
-  it('updates when dark class toggles via mutation observer', () => {
+  it('updates when dark class toggles via mutation observer', async () => {
     const { result } = renderHook(() => useDarkMode())
     expect(result.current).toBe(false)
 
     act(() => {
       document.documentElement.classList.add('dark')
     })
-    expect(result.current).toBe(true)
+    await waitFor(() => expect(result.current).toBe(true))
 
     act(() => {
       document.documentElement.classList.remove('dark')
     })
-    expect(result.current).toBe(false)
+    await waitFor(() => expect(result.current).toBe(false))
   })
 })

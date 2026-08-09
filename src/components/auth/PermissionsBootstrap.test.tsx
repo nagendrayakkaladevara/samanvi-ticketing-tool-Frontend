@@ -3,7 +3,7 @@ import { render, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { makeAuthSession, makePermission } from '@/test/fixtures/auth'
-import { createTestQueryClient } from '@/test/render-with-providers'
+import { createTestQueryClient } from '@/test/test-utils'
 import { useAuthStore } from '@/store/auth-store'
 
 import { PermissionsBootstrap } from './PermissionsBootstrap'

@@ -3,7 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { createTestQueryClient } from '@/test/render-with-providers'
+import { createTestQueryClient } from '@/test/test-utils'
 
 import { useApplicationUsersQuery } from './use-application-users-query'
 

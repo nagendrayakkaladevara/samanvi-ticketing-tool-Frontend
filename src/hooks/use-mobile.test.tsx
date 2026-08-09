@@ -8,7 +8,7 @@ describe('useIsMobile', () => {
 
   beforeEach(() => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
-    vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+    vi.stubGlobal('matchMedia', (query: string) => ({
       matches: window.innerWidth < 768,
       media: query,
       onchange: null,
@@ -28,7 +28,7 @@ describe('useIsMobile', () => {
 
   afterEach(() => {
     listeners.clear()
-    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('returns false for desktop width', () => {

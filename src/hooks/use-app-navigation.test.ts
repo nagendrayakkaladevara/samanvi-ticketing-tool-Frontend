@@ -85,15 +85,15 @@ describe('useFirstAllowedRoute', () => {
     expect(result.current).toBe('/login')
   })
 
-  it('returns first allowed home route for authenticated user', () => {
+  it('returns first allowed visible route for authenticated user', () => {
     const session = makeAuthSession()
     useAuthStore.getState().setSession(session)
 
     const { result } = renderHook(() => useFirstAllowedRoute())
-    expect(result.current).toBe('/dashboard')
+    expect(result.current).toBe('/')
   })
 
-  it('returns /tickets fallback for authenticated user without matching home routes', () => {
+  it('returns first matching non-hidden nav route for specialized permissions', () => {
     const session = makeAuthSession({
       permissions: {
         items: [

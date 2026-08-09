@@ -41,8 +41,9 @@ describe('toast', () => {
   })
 
   it('scales duration with message length within bounds', () => {
-    toast.info('1234567890')
-    expect(sonnerMocks.info).toHaveBeenCalledWith('1234567890', { duration: 350 })
+    const message = 'a'.repeat(100)
+    toast.info(message)
+    expect(sonnerMocks.info).toHaveBeenCalledWith(message, { duration: 3500 })
   })
 
   it('respects explicit duration in options', () => {

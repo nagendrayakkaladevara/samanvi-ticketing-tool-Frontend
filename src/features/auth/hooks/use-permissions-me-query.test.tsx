@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/auth-store'
 import { makeAuthSession, makePermission } from '@/test/fixtures/auth'
-import { createTestQueryClient } from '@/test/render-with-providers'
+import { createTestQueryClient } from '@/test/test-utils'
 
 import { usePermissionsMeQuery } from './use-permissions-me-query'
 

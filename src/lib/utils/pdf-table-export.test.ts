@@ -5,22 +5,24 @@ let pageCount = 1
 let splitLineCount = 1
 
 vi.mock('jspdf', () => ({
-  jsPDF: vi.fn(() => ({
-    setFontSize: vi.fn(),
-    setFont: vi.fn(),
-    setTextColor: vi.fn(),
-    setFillColor: vi.fn(),
-    text: vi.fn(),
-    rect: vi.fn(),
-    splitTextToSize: vi.fn(() => Array(splitLineCount).fill('line')),
-    addPage: vi.fn(() => {
+  jsPDF: class MockJsPDF {
+    setFontSize = vi.fn()
+    setFont = vi.fn()
+    setTextColor = vi.fn()
+    setFillColor = vi.fn()
+    text = vi.fn()
+    rect = vi.fn()
+    splitTextToSize = vi.fn(() => Array(splitLineCount).fill('line'))
+    addPage = vi.fn(() => {
       pageCount += 1
-    }),
-    getNumberOfPages: () => pageCount,
-    setPage: vi.fn(),
-    save: saveMock,
-  })),
+    })
+    getNumberOfPages = () => pageCount
+    setPage = vi.fn()
+    save = saveMock
+  },
 }))
+
+import { jsPDF } from 'jspdf'
 
 import { downloadPdfTable } from './pdf-table-export'
 
@@ -61,6 +63,7 @@ describe('downloadPdfTable', () => {
       ],
     })
 
+    expect(jsPDF).toHaveBeenCalledWith({ unit: 'mm', format: 'a4', orientation: 'portrait' })
     expect(saveMock).toHaveBeenCalledWith('tickets.pdf')
     expect(pageCount).toBeGreaterThanOrEqual(1)
   })
@@ -74,10 +77,11 @@ describe('downloadPdfTable', () => {
       rows: [{ id: '1' }],
     })
 
+    expect(jsPDF).toHaveBeenCalledWith({ unit: 'mm', format: 'a4', orientation: 'landscape' })
     expect(saveMock).toHaveBeenCalledWith('wide.pdf')
   })
 
-  it('uses em dash for empty cell values', async () => {
+  it('uses em dash for empty cell values', () => {
     downloadPdfTable({
       title: 'Report',
       filename: 'report.pdf',
@@ -85,15 +89,14 @@ describe('downloadPdfTable', () => {
       rows: [{ id: '1' }],
     })
 
-    const { jsPDF } = await import('jspdf')
-    const instance = vi.mocked(jsPDF).mock.results.at(-1)?.value as {
+    const instance = vi.mocked(jsPDF).mock.instances.at(-1) as {
       splitTextToSize: ReturnType<typeof vi.fn>
     }
     expect(instance.splitTextToSize).toHaveBeenCalledWith('—', expect.any(Number))
     expect(saveMock).toHaveBeenCalled()
   })
 
-  it('adds new page when row would overflow footer', async () => {
+  it('adds new page when row would overflow footer', () => {
     splitLineCount = 80
 
     downloadPdfTable({
@@ -103,8 +106,7 @@ describe('downloadPdfTable', () => {
       rows: [{ id: '1' }, { id: '2' }],
     })
 
-    const { jsPDF } = await import('jspdf')
-    const instance = vi.mocked(jsPDF).mock.results.at(-1)?.value as { addPage: ReturnType<typeof vi.fn> }
+    const instance = vi.mocked(jsPDF).mock.instances.at(-1) as { addPage: ReturnType<typeof vi.fn> }
     expect(instance.addPage).toHaveBeenCalled()
     expect(saveMock).toHaveBeenCalledWith('long.pdf')
   })

@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Ticket } from '@/features/tickets/types/ticket'
-import { createTestQueryClient } from '@/test/render-with-providers'
+import { createTestQueryClient } from '@/test/test-utils'
 
 import { useFilteredTicketsQuery } from './use-filtered-tickets-query'
 

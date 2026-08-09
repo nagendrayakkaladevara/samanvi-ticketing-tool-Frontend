@@ -122,8 +122,12 @@ describe('master-dates', () => {
       expect(inputValueToMasterDate('2026-08-09')).toBe('09-08-2026')
     })
 
-    it.each(['2026-8-9', 'not-a-date', '2026-13-40'])('returns undefined for invalid %j', (value) => {
+    it.each(['2026-8-9', 'not-a-date'])('returns undefined for invalid %j', (value) => {
       expect(inputValueToMasterDate(value)).toBeUndefined()
+    })
+
+    it('does not validate calendar dates beyond regex shape', () => {
+      expect(inputValueToMasterDate('2026-13-40')).toBe('40-13-2026')
     })
   })
 

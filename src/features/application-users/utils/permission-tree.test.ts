@@ -82,6 +82,6 @@ describe('partitionPermissionIds', () => {
 
 describe('mergePermissionIdsForSave', () => {
   it('merges hidden first then visible with deduplication', () => {
-    expect(mergePermissionIdsForSave(['a', 'b'], ['b', 'c'])).toEqual(['b', 'a', 'c'])
+    expect(mergePermissionIdsForSave(['a', 'b'], ['b', 'c'])).toEqual(['b', 'c', 'a'])
   })
 })

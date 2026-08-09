@@ -23,34 +23,31 @@ function mockCanvasContext() {
   }
 }
 
-function mockImage(onLoad?: () => void) {
+function installSuccessfulImageMock() {
   class MockImage {
     naturalWidth = 100
     naturalHeight = 50
     onload: (() => void) | null = null
     onerror: (() => void) | null = null
-    src = ''
+    private _src = ''
 
-    constructor() {
-      queueMicrotask(() => {
-        if (onLoad) {
-          onLoad()
-        } else {
-          this.onload?.()
-        }
-      })
+    set src(value: string) {
+      this._src = value
+      queueMicrotask(() => this.onload?.())
+    }
+
+    get src() {
+      return this._src
     }
   }
-  return MockImage
+
+  vi.stubGlobal('Image', MockImage)
 }
 
 describe('pdf-report-branding', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
-    vi.stubGlobal(
-      'Image',
-      mockImage(),
-    )
+    installSuccessfulImageMock()
     vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
       if (tag === 'canvas') {
         return {
@@ -62,10 +59,8 @@ describe('pdf-report-branding', () => {
       }
       return document.createElement.bind(document)(tag)
     })
-    vi.stubGlobal('URL', {
-      createObjectURL: vi.fn(() => 'blob:qr'),
-      revokeObjectURL: vi.fn(),
-    })
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:qr')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
   })
 
   it('drawPdfReportHeader renders logo and text and returns next y', async () => {
@@ -101,7 +96,14 @@ describe('pdf-report-branding', () => {
       y: 10,
     })
 
-    expect(doc.addImage).toHaveBeenCalledWith(expect.any(String), 'JPEG', 14, 10, expect.any(Number), expect.any(Number))
+    expect(doc.addImage).toHaveBeenCalledWith(
+      expect.any(String),
+      'JPEG',
+      14,
+      10,
+      expect.any(Number),
+      expect.any(Number),
+    )
   })
 
   it('createQrDataUrl renders QR to png data url', async () => {
@@ -163,10 +165,14 @@ describe('pdf-report-branding', () => {
     class FailingImage {
       onload: (() => void) | null = null
       onerror: (() => void) | null = null
-      src = ''
+      private _src = ''
 
-      constructor() {
+      set src(_value: string) {
         queueMicrotask(() => this.onerror?.())
+      }
+
+      get src() {
+        return this._src
       }
     }
     vi.stubGlobal('Image', FailingImage)

@@ -3,20 +3,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeServiceNumber } from '@/test/fixtures/masters'
 import { downloadServiceNumberPdf } from './download-service-number-pdf'
 
-const mockSave = vi.fn()
-const mockJsPDF = vi.fn().mockImplementation(() => ({
-  setFontSize: vi.fn(),
-  setFont: vi.fn(),
-  setTextColor: vi.fn(),
-  setDrawColor: vi.fn(),
-  text: vi.fn(),
-  line: vi.fn(),
-  splitTextToSize: vi.fn().mockReturnValue(['line']),
-  addPage: vi.fn(),
-  setPage: vi.fn(),
-  getNumberOfPages: vi.fn().mockReturnValue(1),
-  save: mockSave,
-}))
+const { mockSave, mockJsPDF } = vi.hoisted(() => {
+  const mockSave = vi.fn()
+  const mockJsPDF = vi.fn().mockImplementation(() => ({
+    setFontSize: vi.fn(),
+    setFont: vi.fn(),
+    setTextColor: vi.fn(),
+    setDrawColor: vi.fn(),
+    text: vi.fn(),
+    line: vi.fn(),
+    splitTextToSize: vi.fn().mockReturnValue(['line']),
+    addPage: vi.fn(),
+    setPage: vi.fn(),
+    getNumberOfPages: vi.fn().mockReturnValue(1),
+    save: mockSave,
+  }))
+  return { mockSave, mockJsPDF }
+})
 
 vi.mock('jspdf', () => ({
   jsPDF: mockJsPDF,

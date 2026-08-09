@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeSpareTank } from '@/test/fixtures/masters'
 import { downloadSpareTanksPdf } from './download-spare-tanks-pdf'
 
-const mockDownloadPdfTable = vi.fn()
+const { mockDownloadPdfTable } = vi.hoisted(() => ({
+  mockDownloadPdfTable: vi.fn(),
+}))
 
 vi.mock('@/lib/utils/pdf-table-export', () => ({
   downloadPdfTable: mockDownloadPdfTable,
