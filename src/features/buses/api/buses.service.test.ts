@@ -1,0 +1,139 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { apiClient } from '@/lib/api/client'
+import { busesService } from './buses.service'
+
+vi.mock('@/lib/api/client', () => ({
+  apiClient: {
+    get: vi.fn(),
+    post: vi.fn(),
+    patch: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  },
+}))
+
+describe('busesService', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('list', () => {
+    it('normalizes buses from a top-level array', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [{ id: '1', busNumber: ' BUS-01 ' }],
+      })
+
+      const result = await busesService.list()
+
+      expect(apiClient.get).toHaveBeenCalledWith('/buses')
+      expect(result).toEqual([{ id: '1', busNumber: 'BUS-01' }])
+    })
+
+    it('extracts buses from nested data.items payload', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: {
+          data: {
+            items: [
+              { busId: 42, bus_no: 'B-42', last_maintenance_date: '2024-01-01' },
+              { id: '', busNumber: 'skip' },
+              null,
+            ],
+          },
+        },
+      })
+
+      const result = await busesService.list()
+
+      expect(result).toEqual([
+        { id: '42', busNumber: 'B-42', lastMaintenanceDate: '2024-01-01' },
+      ])
+    })
+
+    it('returns empty array for invalid payloads', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({ data: null })
+      expect(await busesService.list()).toEqual([])
+    })
+  })
+
+  describe('listBusNumbers', () => {
+    it('deduplicates and sorts bus numbers numerically', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: { busNumbers: ['10', '2', '10', '  ', { busNo: '1' }] },
+      })
+
+      const result = await busesService.listBusNumbers()
+
+      expect(apiClient.get).toHaveBeenCalledWith('/buses/bus-numbers')
+      expect(result).toEqual(['1', '2', '10'])
+    })
+
+    it('extracts numbers from nested data.busNumbers', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: { data: { busNumbers: ['A-1', 'B-2'] } },
+      })
+
+      expect(await busesService.listBusNumbers()).toEqual(['A-1', 'B-2'])
+    })
+  })
+
+  describe('create', () => {
+    it('trims bus number and omits empty maintenance date', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: { data: { id: 'new', busNumber: 'X-1' } },
+      })
+
+      const result = await busesService.create({ busNumber: '  X-1  ' })
+
+      expect(apiClient.post).toHaveBeenCalledWith('/buses', { busNumber: 'X-1' })
+      expect(result).toEqual({ id: 'new', busNumber: 'X-1' })
+    })
+
+    it('includes lastMaintenanceDate when provided', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: { bus: { id: '1', busNumber: 'X-1', maintenanceDate: '01-02-2024' } },
+      })
+
+      await busesService.create({ busNumber: 'X-1', lastMaintenanceDate: '01-02-2024' })
+
+      expect(apiClient.post).toHaveBeenCalledWith('/buses', {
+        busNumber: 'X-1',
+        lastMaintenanceDate: '01-02-2024',
+      })
+    })
+  })
+
+  describe('listTicketHistory', () => {
+    it('normalizes ticket history with alternate keys and defaults', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        data: [
+          {
+            ticketId: 't1',
+            title: ' Brake issue ',
+            status: 'in_progress',
+            severity: 'bogus',
+            priority: 'p2',
+            assignedTo: { displayName: 'Alex' },
+            created_at: '2024-01-01T00:00:00Z',
+          },
+          { id: 't2' },
+        ],
+      })
+
+      const result = await busesService.listTicketHistory('bus-1')
+
+      expect(apiClient.get).toHaveBeenCalledWith('/buses/bus-1/tickets')
+      expect(result).toEqual([
+        {
+          id: 't1',
+          title: 'Brake issue',
+          status: 'IN_PROGRESS',
+          severity: 'LOW',
+          priority: 'P2',
+          assignedToName: 'Alex',
+          createdAt: '2024-01-01T00:00:00Z',
+        },
+      ])
+    })
+  })
+})
