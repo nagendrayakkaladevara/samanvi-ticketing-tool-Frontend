@@ -88,9 +88,9 @@ export const appRouter = createBrowserRouter([
           {
             path: 'tickets/by-status/:statusFilter',
             element: (
-              <RoleGuard allowedRoles={['ADMIN']}>
+              <PermissionGuard module="tickets">
                 <TicketsByStatusPage />
-              </RoleGuard>
+              </PermissionGuard>
             ),
           },
           {
