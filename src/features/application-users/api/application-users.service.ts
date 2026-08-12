@@ -149,6 +149,29 @@ function extractArrayPayload(raw: unknown): unknown[] {
   return []
 }
 
+function extractPaginationMeta(
+  raw: unknown,
+  fallback: { page: number; limit: number },
+): { page: number; limit: number; total: number; totalPages: number; hasExplicitTotalPages: boolean } {
+  const record = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
+  const metaCandidate =
+    (record.meta && typeof record.meta === 'object' ? (record.meta as Record<string, unknown>) : null) ??
+    (record.data && typeof record.data === 'object'
+      ? ((record.data as Record<string, unknown>).meta as Record<string, unknown> | undefined)
+      : undefined) ??
+    {}
+
+  const page = typeof metaCandidate.page === 'number' ? metaCandidate.page : fallback.page
+  const limit = typeof metaCandidate.limit === 'number' ? metaCandidate.limit : fallback.limit
+  const total = typeof metaCandidate.total === 'number' ? metaCandidate.total : extractArrayPayload(raw).length
+  const hasExplicitTotalPages = typeof metaCandidate.totalPages === 'number'
+  const totalPages = hasExplicitTotalPages
+    ? (metaCandidate.totalPages as number)
+    : Math.max(1, Math.ceil(total / Math.max(limit, 1)))
+
+  return { page, limit, total, totalPages, hasExplicitTotalPages }
+}
+
 function extractEntityPayload(raw: unknown): unknown {
   if (!raw || typeof raw !== 'object') {
     return raw
@@ -179,9 +202,45 @@ function normalizeUsernameExists(raw: unknown): UsernameExistsResult | null {
 }
 
 export const applicationUsersService = {
+  /**
+   * Loads every application user for admin management.
+   * The API defaults to page=1&limit=20 and omits inactive users unless
+   * includeInactive=true — without paging through all results, accounts
+   * beyond the first page are invisible for edit/deactivate/delete.
+   */
   async list(): Promise<ApplicationUser[]> {
-    const { data } = await apiClient.get<unknown>(endpoint)
-    return extractArrayPayload(data).map(normalizeUser).filter((user): user is ApplicationUser => Boolean(user))
+    const limit = 100
+    const maxPages = 50
+    const usersById = new Map<string, ApplicationUser>()
+
+    for (let page = 1; page <= maxPages; page += 1) {
+      const { data } = await apiClient.get<unknown>(endpoint, {
+        params: {
+          page,
+          limit,
+          includeInactive: true,
+        },
+      })
+
+      const pageUsers = extractArrayPayload(data)
+        .map(normalizeUser)
+        .filter((user): user is ApplicationUser => Boolean(user))
+
+      for (const user of pageUsers) {
+        usersById.set(user.id, user)
+      }
+
+      if (pageUsers.length === 0 || pageUsers.length < limit) {
+        break
+      }
+
+      const meta = extractPaginationMeta(data, { page, limit })
+      if (meta.hasExplicitTotalPages && page >= meta.totalPages) {
+        break
+      }
+    }
+
+    return Array.from(usersById.values())
   },
 
   async checkUsernameExists(username: string): Promise<UsernameExistsResult> {
