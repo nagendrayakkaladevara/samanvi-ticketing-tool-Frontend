@@ -321,17 +321,36 @@ export function ApplicationUserFormPage({ mode }: ApplicationUserFormPageProps) 
   const updateMutation = useMutation({
     mutationFn: async (payload: UpdateApplicationUserInput & { permissionIds: string[]; assignPermissions: boolean }) => {
       const { permissionIds, assignPermissions, userId: targetUserId, ...updatePayload } = payload
+      // Profile update and permission assignment are separate API calls. If assign
+      // fails after update succeeds, treat that as partial success so the UI does
+      // not claim the whole save failed (profile changes are already persisted).
       await applicationUsersService.update({ userId: targetUserId, ...updatePayload })
-      if (assignPermissions) {
+
+      if (!assignPermissions) {
+        return { permissionsUpdated: false as const, permissionsFailed: false as const }
+      }
+
+      try {
         await applicationUsersService.assignPermissions(targetUserId, permissionIds)
+        return { permissionsUpdated: true as const, permissionsFailed: false as const }
+      } catch {
+        return { permissionsUpdated: false as const, permissionsFailed: true as const }
       }
     },
-    onSuccess: () => {
-      toast.success('Application user updated successfully.')
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['application-users'] })
       if (userId) {
         queryClient.invalidateQueries({ queryKey: ['application-users', userId] })
       }
+
+      if (result.permissionsFailed) {
+        toast.warning(
+          'Account details were saved, but updating permissions failed. Review the Permissions/Access section and try saving again.',
+        )
+        return
+      }
+
+      toast.success('Application user updated successfully.')
       navigate(applicationAccessRoutes.list)
     },
     onError: (mutationError) => {
