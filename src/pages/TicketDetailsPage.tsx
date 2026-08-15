@@ -50,9 +50,14 @@ function isSelectableStatus(status: TicketStatus): status is SelectableStatus {
   return isUpdatableStatus(status) || status === 'REOPENED'
 }
 
-function getStatusDialogOptions(currentStatus: TicketStatus, allowedStatuses: UpdatableStatus[]): TicketStatus[] {
+function getStatusDialogOptions(
+  currentStatus: TicketStatus,
+  allowedStatuses: UpdatableStatus[],
+  canReopen: boolean,
+): TicketStatus[] {
   if (currentStatus === 'CLOSED') {
-    return ['CLOSED', 'REOPENED']
+    // Reopen is Supervisor/Admin only — do not offer it from the CLOSED special-case alone.
+    return canReopen ? ['CLOSED', 'REOPENED'] : ['CLOSED']
   }
   const options = new Set<TicketStatus>(allowedStatuses)
   options.add(currentStatus)
@@ -68,6 +73,7 @@ const roleCapabilityMatrix: Record<
     canUpdateStatus: boolean
     canComment: boolean
     canAssign: boolean
+    canReopen: boolean
     allowedStatuses: UpdatableStatus[]
   }
 > = {
@@ -75,24 +81,28 @@ const roleCapabilityMatrix: Record<
     canUpdateStatus: true,
     canComment: true,
     canAssign: true,
+    canReopen: true,
     allowedStatuses: adminStatuses,
   },
   SUPERVISOR: {
     canUpdateStatus: true,
     canComment: true,
     canAssign: true,
+    canReopen: true,
     allowedStatuses: adminStatuses,
   },
   WORKER: {
     canUpdateStatus: true,
     canComment: true,
     canAssign: false,
+    canReopen: false,
     allowedStatuses: workerStatuses,
   },
   VIEWER: {
     canUpdateStatus: false,
     canComment: false,
     canAssign: false,
+    canReopen: false,
     allowedStatuses: [],
   },
 }
@@ -298,6 +308,7 @@ export function TicketDetailsPage() {
 
   const capabilities = roleCapabilityMatrix[normalizedRole]
   const canUpdateStatus = capabilities.canUpdateStatus && canUpdateStatusByPermission
+  const canReopen = capabilities.canReopen
   const canComment = capabilities.canComment
   const canAssign = capabilities.canAssign && canAssignByPermission
   const canEditAnyAction = canUpdateStatus || canComment || canAssign
@@ -318,6 +329,9 @@ export function TicketDetailsPage() {
       }
       if (!isSelectableStatus(nextStatus)) {
         throw new Error('This status cannot be applied.')
+      }
+      if (nextStatus === 'REOPENED' && !canReopen) {
+        throw new Error('Only supervisors and admins can reopen closed tickets.')
       }
       const invalidTransition = getInvalidStatusTransitionMessage(ticket.status, nextStatus)
       if (invalidTransition) {
@@ -425,7 +439,9 @@ export function TicketDetailsPage() {
   const hasStatusChanged = nextStatus !== '' && nextStatus !== ticket.status
   const isStatusNoteRequired =
     hasStatusChanged && isSelectableStatus(nextStatus) && isNoteRequiredForTransition(nextStatus)
-  const statusDialogOptions = getStatusDialogOptions(ticket.status, capabilities.allowedStatuses)
+  const statusDialogOptions = getStatusDialogOptions(ticket.status, capabilities.allowedStatuses, canReopen)
+  const canEditStatusOnThisTicket =
+    canUpdateStatus && (ticket.status !== 'CLOSED' || canReopen)
   const ticketRouteUrl = getTicketShareUrl(ticket.id)
 
   const handlePrintTicket = () => {
@@ -502,7 +518,7 @@ export function TicketDetailsPage() {
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground print-muted">Status</p>
               <EditableDetailValue
                 value={formatWord(ticket.status)}
-                editable={canUpdateStatus}
+                editable={canEditStatusOnThisTicket}
                 onClick={openStatusDialog}
                 ariaLabel="Update status"
               />
