@@ -5,7 +5,7 @@ import { driversService } from '@/features/employees/api/drivers.service'
 export function useDriversQuery() {
   return useQuery({
     queryKey: ['drivers'],
-    queryFn: () => driversService.list({ page: 1, limit: 100 }),
+    queryFn: () => driversService.list(),
   })
 }
 
