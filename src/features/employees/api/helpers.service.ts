@@ -2,6 +2,7 @@ import { apiClient } from '@/lib/api/client'
 import {
   extractArrayPayload,
   extractEntityPayload,
+  extractPaginationMeta,
   normalizeString,
   resolveEntityId,
 } from '@/lib/utils/master-api'
@@ -59,11 +60,44 @@ function normalizeHelper(raw: unknown): Helper | null {
 }
 
 export const helpersService = {
+  /**
+   * Loads helpers for the Employees masters page.
+   * When `page` is omitted, pages through the API (max limit 100) so helpers
+   * beyond the first response are not silently missing from the list.
+   */
   async list(params?: { page?: number; limit?: number }): Promise<Helper[]> {
-    const page = params?.page ?? 1
-    const limit = params?.limit ?? 100
-    const { data } = await apiClient.get<unknown>(endpoint, { params: { page, limit } })
-    return extractArrayPayload(data).map(normalizeHelper).filter((item): item is Helper => Boolean(item))
+    if (params?.page != null) {
+      const page = params.page
+      const limit = params.limit ?? 100
+      const { data } = await apiClient.get<unknown>(endpoint, { params: { page, limit } })
+      return extractArrayPayload(data).map(normalizeHelper).filter((item): item is Helper => Boolean(item))
+    }
+
+    const limit = Math.min(params?.limit ?? 100, 100)
+    const maxPages = 50
+    const helpersById = new Map<string, Helper>()
+
+    for (let page = 1; page <= maxPages; page += 1) {
+      const { data } = await apiClient.get<unknown>(endpoint, { params: { page, limit } })
+      const pageHelpers = extractArrayPayload(data)
+        .map(normalizeHelper)
+        .filter((item): item is Helper => Boolean(item))
+
+      for (const helper of pageHelpers) {
+        helpersById.set(helper.id, helper)
+      }
+
+      if (pageHelpers.length === 0 || pageHelpers.length < limit) {
+        break
+      }
+
+      const meta = extractPaginationMeta(data, { page, limit })
+      if (meta.hasExplicitTotalPages && page >= meta.totalPages) {
+        break
+      }
+    }
+
+    return Array.from(helpersById.values())
   },
 
   async getById(helperId: string): Promise<Helper> {

@@ -5,7 +5,7 @@ import { helpersService } from '@/features/employees/api/helpers.service'
 export function useHelpersQuery() {
   return useQuery({
     queryKey: ['helpers'],
-    queryFn: () => helpersService.list({ page: 1, limit: 100 }),
+    queryFn: () => helpersService.list(),
   })
 }
 
