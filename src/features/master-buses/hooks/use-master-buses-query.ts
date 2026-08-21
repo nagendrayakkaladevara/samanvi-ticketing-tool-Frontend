@@ -5,7 +5,7 @@ import { masterBusesService } from '@/features/master-buses/api/master-buses.ser
 export function useMasterBusesQuery() {
   return useQuery({
     queryKey: ['master-buses'],
-    queryFn: () => masterBusesService.list({ page: 1, limit: 50 }),
+    queryFn: () => masterBusesService.list(),
   })
 }
 
