@@ -43,16 +43,16 @@ export type CreateMasterBusInput = {
   chassisNumber: string
   odometer: number
   insuranceValidity: string
-  purchaseDate?: string
-  pollutionValidity?: string
-  fcValidity?: string
-  basePermitValidity?: string
-  homeTaxValidity?: string
-  aitpValidity?: string
-  aitpAuthorizationValidity?: string
-  serviceOutDate?: string
-  remarks?: string
-  lastMaintenanceDate?: string
+  purchaseDate?: string | null
+  pollutionValidity?: string | null
+  fcValidity?: string | null
+  basePermitValidity?: string | null
+  homeTaxValidity?: string | null
+  aitpValidity?: string | null
+  aitpAuthorizationValidity?: string | null
+  serviceOutDate?: string | null
+  remarks?: string | null
+  lastMaintenanceDate?: string | null
 }
 
 export type UpdateMasterBusInput = Partial<CreateMasterBusInput> & {
