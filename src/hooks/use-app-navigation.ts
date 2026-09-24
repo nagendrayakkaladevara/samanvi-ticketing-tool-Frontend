@@ -16,6 +16,7 @@ export type AppNavItem = {
   icon?: NavRegistryEntry['icon']
   end?: boolean
   external?: boolean
+  badge?: string
 }
 
 export type AppNavGroup = {
@@ -76,6 +77,7 @@ function buildGroupItems(
       icon: entry.icon,
       end: entry.end,
       external: entry.external,
+      badge: entry.badge,
     }
   })
 }

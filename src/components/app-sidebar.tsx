@@ -170,8 +170,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       >
                         {item.icon ? <item.icon /> : null}
                         <span>{item.label}</span>
+                        {item.badge ? (
+                          <span className="ml-auto rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 group-data-[collapsible=icon]:hidden dark:bg-violet-500/20 dark:text-violet-300">
+                            {item.badge}
+                          </span>
+                        ) : null}
                         <ExternalLink
-                          className="ml-auto shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                          className="shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden"
                           aria-hidden
                         />
                       </a>
@@ -179,6 +184,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <NavLink to={item.to} end={item.end} onClick={handleNavItemClick}>
                         {item.icon ? <item.icon /> : null}
                         <span>{item.label}</span>
+                        {item.badge ? (
+                          <span className="ml-auto rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 group-data-[collapsible=icon]:hidden dark:bg-violet-500/20 dark:text-violet-300">
+                            {item.badge}
+                          </span>
+                        ) : null}
                       </NavLink>
                     )}
                   </SidebarMenuButton>
