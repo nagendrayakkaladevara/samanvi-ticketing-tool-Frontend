@@ -9,6 +9,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { PublicOnlyRoute } from '@/components/auth/PublicOnlyRoute'
 import { AppShell } from '@/components/layout/AppShell'
 import {
+  AUDIO_APP_VIEW_CHECKS,
   BUS_NO_VIEW_CHECKS,
   EMPLOYEE_VIEW_CHECKS,
   GARAGE_MASTERS_VIEW_CHECKS,
@@ -46,6 +47,7 @@ import {
   EditApplicationUserPage,
 } from '@/pages/application-access/ApplicationUserFormPage'
 import { ApplicationUserViewPage } from '@/pages/application-access/ApplicationUserViewPage'
+import { AudioAppPage } from '@/pages/AudioAppPage'
 
 function RoleGuard({
   allowedRoles,
@@ -110,6 +112,14 @@ export const appRouter = createBrowserRouter([
             ),
           },
           { path: 'settings', element: <SettingsPage /> },
+          {
+            path: 'audio-app',
+            element: (
+              <PermissionGuard requirement={{ anyOf: AUDIO_APP_VIEW_CHECKS }}>
+                <AudioAppPage />
+              </PermissionGuard>
+            ),
+          },
           {
             path: 'dashboard',
             element: (

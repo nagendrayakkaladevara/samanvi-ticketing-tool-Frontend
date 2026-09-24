@@ -5,6 +5,7 @@ import {
   Home,
   KeyRound,
   LayoutDashboard,
+  AudioLines,
   Mic,
   Settings,
   Ticket,
@@ -37,6 +38,7 @@ export type NavRegistryEntry = {
   sortOrder: number
   end?: boolean
   external?: boolean
+  badge?: string
   hidden?: boolean
   authOnly?: boolean
   permission?: RoutePermissionRequirement
@@ -58,6 +60,12 @@ export const BUS_NO_VIEW_CHECKS: PermissionCheck[] = [
 export const GARAGE_MASTERS_VIEW_CHECKS: PermissionCheck[] = [
   { module: 'garage', submodule: 'repair_category', action: 'view' },
   { module: 'garage', submodule: 'repair_part', action: 'view' },
+]
+
+export const AUDIO_APP_VIEW_CHECKS: PermissionCheck[] = [
+  { module: 'announcements', submodule: 'routes', action: 'view' },
+  { module: 'announcements', submodule: 'audios', action: 'view' },
+  { module: 'announcements', submodule: 'settings', action: 'edit' },
 ]
 
 export const NAV_REGISTRY: NavRegistryEntry[] = [
@@ -135,12 +143,22 @@ export const NAV_REGISTRY: NavRegistryEntry[] = [
     permission: { module: 'users', submodule: '', action: 'view' },
   },
   {
+    id: 'audio-app',
+    to: '/audio-app',
+    label: 'Audio App',
+    icon: AudioLines,
+    group: 'main',
+    sortOrder: 70,
+    badge: 'New',
+    permission: { anyOf: AUDIO_APP_VIEW_CHECKS },
+  },
+  {
     id: 'voice-app-access',
     to: 'https://samanvidashboard.netlify.app/voice-app-access',
     label: 'Voice app access',
     icon: Mic,
     group: 'main',
-    sortOrder: 70,
+    sortOrder: 75,
     external: true,
     permission: { module: 'users', submodule: '', action: 'view' },
   },
