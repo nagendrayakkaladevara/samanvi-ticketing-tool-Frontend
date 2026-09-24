@@ -34,6 +34,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import {
   archiveAudio,
@@ -272,10 +279,10 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
         </CardHeader>
         <CardContent className="max-h-[58vh] space-y-2 overflow-y-auto">
           {visibleRoutes.length ? visibleRoutes.map((item) => (
-            <button key={item.id} type="button" onClick={() => { setSelectedId(item.id); setPlaylistDraft(null) }} className={cn('w-full rounded-xl border p-3 text-left transition-colors hover:bg-muted/60', activeRouteId === item.id && 'border-violet-400 bg-violet-50/70 ring-1 ring-violet-300 dark:bg-violet-500/10')}>
+            <Button key={item.id} type="button" variant="outline" onClick={() => { setSelectedId(item.id); setPlaylistDraft(null) }} className={cn('h-auto w-full flex-col items-stretch gap-0 rounded-xl p-3 text-left font-normal hover:bg-muted/60', activeRouteId === item.id && 'border-violet-400 bg-violet-50/70 ring-1 ring-violet-300 dark:bg-violet-500/10')}>
               <div className="flex items-start justify-between gap-2"><div><p className="font-semibold">{item.name}</p><p className="mt-0.5 text-xs text-muted-foreground">{item.routeCode}</p></div><span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase', statusStyles[item.status])}>{item.status}</span></div>
               <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><span>{item.origin}</span><ArrowRight className="size-3" /><span>{item.destination}</span><span className="ml-auto">{item._count?.audios ?? 0} stops</span></div>
-            </button>
+            </Button>
           )) : <EmptyState icon={MapPinned} title="No routes found" description="Create a route or change your search." />}
         </CardContent>
       </Card>
@@ -296,10 +303,10 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
             <CardContent className="space-y-5 pt-6">
               <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-muted/20 p-4">
                 <label className="min-w-56 flex-1 space-y-1.5 text-sm font-medium">Add stop announcement
-                  <select className="h-9 w-full rounded-md border bg-background px-3 text-sm" value={selectedAudioId} onChange={(event) => setSelectedAudioId(event.target.value)} disabled={!canAssign}>
-                    <option value="">Select an available audio</option>
-                    {readyStops.map((audio) => <option key={audio.id} value={audio.id}>{audio.title}</option>)}
-                  </select>
+                  <Select value={selectedAudioId || undefined} onValueChange={setSelectedAudioId} disabled={!canAssign || readyStops.length === 0}>
+                    <SelectTrigger><SelectValue placeholder={readyStops.length ? 'Select an available audio' : 'No available stop audio'} /></SelectTrigger>
+                    <SelectContent>{readyStops.map((audio) => <SelectItem key={audio.id} value={audio.id}>{audio.title}</SelectItem>)}</SelectContent>
+                  </Select>
                 </label>
                 <Button variant="outline" disabled={!selectedAudioId || !canAssign} onClick={addAudio}><CirclePlus /> Add to route</Button>
               </div>
@@ -359,12 +366,17 @@ function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader><DialogTitle>Upload audio</DialogTitle><DialogDescription>Add an MP3, M4A, AAC, WAV, or OGG file up to 50 MB.</DialogDescription></DialogHeader>
-        <button type="button" onClick={() => inputRef.current?.click()} className="flex min-h-32 w-full flex-col items-center justify-center rounded-xl border-2 border-dashed bg-muted/20 px-5 text-center hover:bg-muted/40">
+        <Button type="button" variant="outline" onClick={() => inputRef.current?.click()} className="flex h-auto min-h-32 w-full flex-col items-center justify-center rounded-xl border-2 border-dashed bg-muted/20 px-5 text-center font-normal hover:bg-muted/40">
           <CloudUpload className="mb-2 size-7 text-violet-600" /><span className="font-medium">{file ? file.name : 'Choose an audio file'}</span><span className="mt-1 text-xs text-muted-foreground">{file ? formatBytes(String(file.size)) : 'Click to browse'}</span>
-        </button>
+        </Button>
         <input ref={inputRef} className="hidden" type="file" accept="audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/x-wav,audio/ogg" onChange={(event) => chooseFile(event.target.files?.[0])} />
         <label className="space-y-1.5 text-sm font-medium">Title<Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Majestic bus stand" /></label>
-        <label className="space-y-1.5 text-sm font-medium">Category<select className="h-9 w-full rounded-md border bg-background px-3 text-sm" value={category} onChange={(event) => setCategory(event.target.value as AudioCategory)}>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label className="space-y-1.5 text-sm font-medium">Category
+          <Select value={category} onValueChange={(value) => setCategory(value as AudioCategory)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{Object.entries(categoryLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
+          </Select>
+        </label>
         <label className="space-y-1.5 text-sm font-medium">Description <span className="font-normal text-muted-foreground">(optional)</span><Textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Where or when this audio should be used" /></label>
         {mutation.isPending ? <div className="space-y-1"><div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-violet-600 transition-all" style={{ width: `${progress}%` }} /></div><p className="text-right text-xs text-muted-foreground">{progress}%</p></div> : null}
         <DialogFooter><Button variant="outline" disabled={mutation.isPending} onClick={() => onOpenChange(false)}>Cancel</Button><Button disabled={!file || !title.trim() || mutation.isPending} onClick={() => mutation.mutate()}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <CloudUpload />} Upload audio</Button></DialogFooter>
@@ -405,7 +417,7 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
     <Card>
       <CardHeader className="space-y-4 border-b">
         <div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle>Audio library</CardTitle><p className="mt-1 text-sm text-muted-foreground">Upload once and reuse stop announcements across routes.</p></div>{can('announcements', 'audios', 'upload') ? <Button onClick={() => setUploadOpen(true)}><CloudUpload /> Upload audio</Button> : null}</div>
-        <div className="flex flex-col gap-2 sm:flex-row"><div className="relative flex-1"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search audio" /></div><select className="h-9 rounded-md border bg-background px-3 text-sm" value={category} onChange={(event) => setCategory(event.target.value as 'all' | AudioCategory)}><option value="all">All categories</option>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+        <div className="flex flex-col gap-2 sm:flex-row"><div className="relative flex-1"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search audio" /></div><Select value={category} onValueChange={(value) => setCategory(value as 'all' | AudioCategory)}><SelectTrigger className="sm:w-52"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{Object.entries(categoryLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div>
       </CardHeader>
       <CardContent className="pt-6">
         {filtered.length ? <div className="grid gap-4 lg:grid-cols-2">{filtered.map((audio) => (
@@ -440,7 +452,7 @@ function WelcomeSettings({ audios }: { audios: AnnouncementAudio[] }) {
     <Card>
       <CardHeader className="border-b"><CardTitle>Welcome note</CardTitle><p className="text-sm text-muted-foreground">Choose the global greeting played independently of route stop announcements.</p></CardHeader>
       <CardContent className="grid gap-6 pt-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-4"><label className="space-y-1.5 text-sm font-medium">Active welcome note<select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={selectedId} onChange={(event) => setSelectedOverride(event.target.value)}><option value="none">No welcome note</option>{welcomeNotes.map((audio) => <option key={audio.id} value={audio.id}>{audio.title}</option>)}</select></label><p className="text-sm text-muted-foreground">Common audio and welcome notes stay separate from stop playlists, preventing accidental route assignment.</p><Button disabled={mutation.isPending || selectedId === (settingsQuery.data?.activeWelcomeAudioId ?? 'none')} onClick={() => mutation.mutate()}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <Save />} Save setting</Button></div>
+        <div className="space-y-4"><label className="space-y-1.5 text-sm font-medium">Active welcome note<Select value={selectedId} onValueChange={setSelectedOverride}><SelectTrigger className="h-10"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No welcome note</SelectItem>{welcomeNotes.map((audio) => <SelectItem key={audio.id} value={audio.id}>{audio.title}</SelectItem>)}</SelectContent></Select></label><p className="text-sm text-muted-foreground">Common audio and welcome notes stay separate from stop playlists, preventing accidental route assignment.</p><Button disabled={mutation.isPending || selectedId === (settingsQuery.data?.activeWelcomeAudioId ?? 'none')} onClick={() => mutation.mutate()}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <Save />} Save setting</Button></div>
         <div className="rounded-xl border bg-muted/20 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Preview</p>{selected ? <div className="mt-4"><div className="flex items-center gap-3"><div className="rounded-full bg-violet-100 p-3 text-violet-700"><Music2 /></div><div><p className="font-semibold">{selected.title}</p><p className="text-xs text-muted-foreground">{formatBytes(selected.sizeBytes)}</p></div></div><audio className="mt-5 h-9 w-full" controls preload="none" src={selected.blobUrl} /></div> : <p className="mt-4 text-sm text-muted-foreground">No welcome note selected.</p>}</div>
       </CardContent>
     </Card>
@@ -467,13 +479,28 @@ export function AudioAppPage() {
   return (
     <section className="space-y-6">
       <PageGradientHeader eyebrow="Announcement management" title="Audio App" description="Build route playlists, maintain reusable audio, and control the passenger welcome note." accent="violet" actions={<Button variant="outline" onClick={() => { queryClient.invalidateQueries({ queryKey: ['announcements'] }); toast.info('Refreshing announcement data') }}><RefreshCw /> Refresh</Button>} />
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border bg-card p-4"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Routes</p><p className="mt-2 text-2xl font-semibold">{routesQuery.data?.pagination.total ?? '—'}</p></div>
-        <div className="rounded-xl border bg-card p-4"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Published</p><p className="mt-2 text-2xl font-semibold text-emerald-600">{canViewRoutes ? published : '—'}</p></div>
-        <div className="rounded-xl border bg-card p-4"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ready audio</p><p className="mt-2 text-2xl font-semibold text-violet-600">{ready}</p></div>
+      <div className="grid auto-rows-[112px] gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Audio app summary">
+        <Card className="relative overflow-hidden sm:col-span-2">
+          <CardContent className="flex h-full items-center justify-between p-5">
+            <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Routes</p><p className="mt-2 text-3xl font-semibold tracking-tight">{routesQuery.data?.pagination.total ?? '—'}</p><p className="mt-1 text-xs text-muted-foreground">Dynamic announcement routes</p></div>
+            <div className="rounded-2xl bg-violet-100 p-4 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"><MapPinned className="size-7" /></div>
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden">
+          <CardContent className="flex h-full items-center justify-between p-5">
+            <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Published</p><p className="mt-2 text-3xl font-semibold tracking-tight text-emerald-600">{canViewRoutes ? published : '—'}</p></div>
+            <CheckCircle2 className="size-6 text-emerald-600/70" />
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden">
+          <CardContent className="flex h-full items-center justify-between p-5">
+            <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Ready audio</p><p className="mt-2 text-3xl font-semibold tracking-tight text-violet-600">{ready}</p></div>
+            <Headphones className="size-6 text-violet-600/70" />
+          </CardContent>
+        </Card>
       </div>
       <div className="flex w-full gap-1 overflow-x-auto rounded-xl border bg-muted/30 p-1" role="tablist" aria-label="Audio app sections">
-        {availableTabs.map(({ id, label, icon: Icon }) => <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={cn('flex min-w-max flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors', tab === id ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}><Icon className="size-4" />{label}</button>)}
+        {availableTabs.map(({ id, label, icon: Icon }) => <Button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} variant={tab === id ? 'outline' : 'ghost'} className={cn('min-w-max flex-1 border-transparent', tab === id && 'border-border bg-background shadow-sm')}><Icon className="size-4" />{label}</Button>)}
       </div>
       {audiosQuery.isError ? <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">Unable to load audio: {errorMessage(audiosQuery.error)}</div> : null}
       {tab === 'routes' && canViewRoutes ? <RoutesWorkspace audios={audios} /> : null}
