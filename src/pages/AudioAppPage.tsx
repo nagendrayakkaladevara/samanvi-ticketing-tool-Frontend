@@ -479,28 +479,28 @@ export function AudioAppPage() {
   return (
     <section className="space-y-6">
       <PageGradientHeader eyebrow="Announcement management" title="Audio App" description="Build route playlists, maintain reusable audio, and control the passenger welcome note." accent="violet" actions={<Button variant="outline" onClick={() => { queryClient.invalidateQueries({ queryKey: ['announcements'] }); toast.info('Refreshing announcement data') }}><RefreshCw /> Refresh</Button>} />
-      <div className="grid auto-rows-[112px] gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Audio app summary">
-        <Card className="relative overflow-hidden sm:col-span-2">
-          <CardContent className="flex h-full items-center justify-between p-5">
+      <div className="grid auto-rows-[112px] grid-cols-2 gap-3 lg:grid-cols-3" aria-label="Audio app summary">
+        <Card className="relative col-span-2 overflow-hidden lg:col-span-1">
+          <CardContent className="flex h-full items-center justify-between p-4 sm:p-5">
             <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Routes</p><p className="mt-2 text-3xl font-semibold tracking-tight">{routesQuery.data?.pagination.total ?? '—'}</p><p className="mt-1 text-xs text-muted-foreground">Dynamic announcement routes</p></div>
-            <div className="rounded-2xl bg-violet-100 p-4 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"><MapPinned className="size-7" /></div>
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 sm:size-12 sm:rounded-2xl dark:bg-violet-500/15 dark:text-violet-300"><MapPinned className="size-5" /></div>
           </CardContent>
         </Card>
         <Card className="relative overflow-hidden">
-          <CardContent className="flex h-full items-center justify-between p-5">
-            <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Published</p><p className="mt-2 text-3xl font-semibold tracking-tight text-emerald-600">{canViewRoutes ? published : '—'}</p></div>
-            <CheckCircle2 className="size-6 text-emerald-600/70" />
+          <CardContent className="flex h-full items-center justify-between p-3 sm:p-5">
+            <div><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:text-xs sm:tracking-[0.16em]">Published</p><p className="mt-2 text-2xl font-semibold tracking-tight text-emerald-600 sm:text-3xl">{canViewRoutes ? published : '—'}</p></div>
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 sm:size-12 sm:rounded-2xl dark:bg-emerald-500/15 dark:text-emerald-300"><CheckCircle2 className="size-5" /></div>
           </CardContent>
         </Card>
         <Card className="relative overflow-hidden">
-          <CardContent className="flex h-full items-center justify-between p-5">
-            <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Ready audio</p><p className="mt-2 text-3xl font-semibold tracking-tight text-violet-600">{ready}</p></div>
-            <Headphones className="size-6 text-violet-600/70" />
+          <CardContent className="flex h-full items-center justify-between p-3 sm:p-5">
+            <div><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:text-xs sm:tracking-[0.16em]">Ready audio</p><p className="mt-2 text-2xl font-semibold tracking-tight text-violet-600 sm:text-3xl">{ready}</p></div>
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 sm:size-12 sm:rounded-2xl dark:bg-violet-500/15 dark:text-violet-300"><Headphones className="size-5" /></div>
           </CardContent>
         </Card>
       </div>
-      <div className="flex w-full gap-1 overflow-x-auto rounded-xl border bg-muted/30 p-1" role="tablist" aria-label="Audio app sections">
-        {availableTabs.map(({ id, label, icon: Icon }) => <Button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} variant={tab === id ? 'outline' : 'ghost'} className={cn('min-w-max flex-1 border-transparent', tab === id && 'border-border bg-background shadow-sm')}><Icon className="size-4" />{label}</Button>)}
+      <div className="grid w-full grid-cols-3 gap-1 rounded-xl border bg-muted/30 p-1" role="tablist" aria-label="Audio app sections">
+        {availableTabs.map(({ id, label, icon: Icon }) => <Button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} variant={tab === id ? 'outline' : 'ghost'} className={cn('h-9 min-w-0 gap-1 border-transparent px-1 text-[10px] sm:h-10 sm:gap-2 sm:px-4 sm:text-sm', tab === id && 'border-border bg-background shadow-sm')}><Icon className="size-3.5 shrink-0 sm:size-4" /><span className="whitespace-nowrap">{label}</span></Button>)}
       </div>
       {audiosQuery.isError ? <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">Unable to load audio: {errorMessage(audiosQuery.error)}</div> : null}
       {tab === 'routes' && canViewRoutes ? <RoutesWorkspace audios={audios} /> : null}
