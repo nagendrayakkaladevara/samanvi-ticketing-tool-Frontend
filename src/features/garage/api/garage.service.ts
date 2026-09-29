@@ -55,6 +55,29 @@ function extractArrayPayload(raw: unknown): unknown[] {
   return []
 }
 
+function extractPaginationMeta(
+  raw: unknown,
+  fallback: { page: number; limit: number },
+): { page: number; limit: number; total: number; totalPages: number; hasExplicitTotalPages: boolean } {
+  const record = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
+  const metaCandidate =
+    (record.meta && typeof record.meta === 'object' ? (record.meta as Record<string, unknown>) : null) ??
+    (record.data && typeof record.data === 'object'
+      ? ((record.data as Record<string, unknown>).meta as Record<string, unknown> | undefined)
+      : undefined) ??
+    {}
+
+  const page = typeof metaCandidate.page === 'number' ? metaCandidate.page : fallback.page
+  const limit = typeof metaCandidate.limit === 'number' ? metaCandidate.limit : fallback.limit
+  const total = typeof metaCandidate.total === 'number' ? metaCandidate.total : extractArrayPayload(raw).length
+  const hasExplicitTotalPages = typeof metaCandidate.totalPages === 'number'
+  const totalPages = hasExplicitTotalPages
+    ? (metaCandidate.totalPages as number)
+    : Math.max(1, Math.ceil(total / Math.max(limit, 1)))
+
+  return { page, limit, total, totalPages, hasExplicitTotalPages }
+}
+
 function normalizeRepairCategory(raw: unknown): RepairCategory | null {
   if (!raw || typeof raw !== 'object') return null
   const value = raw as Record<string, unknown>
@@ -511,13 +534,46 @@ export const garageService = {
     await apiClient.delete(`${categoriesEndpoint}/${categoryId}`)
   },
 
+  /**
+   * Loads repair parts catalog for Garage Masters + Add Job Part.
+   * When `page` is omitted, pages through the API (max limit 100) so parts beyond
+   * the first response are not silently missing from the catalog picker.
+   */
   async listRepairParts(params?: { page?: number; limit?: number }): Promise<RepairPart[]> {
-    const page = params?.page ?? 1
-    const limit = params?.limit ?? 50
-    const { data } = await apiClient.get<unknown>(partsEndpoint, { params: { page, limit } })
-    return extractArrayPayload(data)
-      .map(normalizeRepairPart)
-      .filter((item): item is RepairPart => Boolean(item))
+    if (params?.page != null) {
+      const page = params.page
+      const limit = params.limit ?? 50
+      const { data } = await apiClient.get<unknown>(partsEndpoint, { params: { page, limit } })
+      return extractArrayPayload(data)
+        .map(normalizeRepairPart)
+        .filter((item): item is RepairPart => Boolean(item))
+    }
+
+    const limit = Math.min(params?.limit ?? 100, 100)
+    const maxPages = 50
+    const partsById = new Map<string, RepairPart>()
+
+    for (let page = 1; page <= maxPages; page += 1) {
+      const { data } = await apiClient.get<unknown>(partsEndpoint, { params: { page, limit } })
+      const pageParts = extractArrayPayload(data)
+        .map(normalizeRepairPart)
+        .filter((item): item is RepairPart => Boolean(item))
+
+      for (const part of pageParts) {
+        partsById.set(part.id, part)
+      }
+
+      if (pageParts.length === 0 || pageParts.length < limit) {
+        break
+      }
+
+      const meta = extractPaginationMeta(data, { page, limit })
+      if (meta.hasExplicitTotalPages && page >= meta.totalPages) {
+        break
+      }
+    }
+
+    return Array.from(partsById.values())
   },
 
   async createRepairPart(input: CreateRepairPartInput): Promise<RepairPart> {
@@ -633,7 +689,10 @@ export const garageService = {
     const { data } = await apiClient.post<unknown>(`${jobsEndpoint}/${jobId}/parts`, payload)
     const job = normalizeRepairJob(extractDataPayload(data))
     if (!job) {
-      throw new Error('Unexpected response when adding spare part to repair job.')
+      // Part line may already be attached; retrying would add a second line (docs allow duplicates).
+      throw new Error(
+        'Spare part may have been added, but the updated job could not be parsed. Refresh the job before adding again.',
+      )
     }
     return job
   },
@@ -664,9 +723,22 @@ export const garageService = {
     }
 
     const { data } = await apiClient.post<unknown>(jobsEndpoint, payload)
-    const job = normalizeRepairJob(extractDataPayload(data))
+    const createdPayload = extractDataPayload(data)
+    const job = normalizeRepairJob(createdPayload)
     if (!job) {
-      throw new Error('Unexpected response when creating repair job.')
+      // POST likely succeeded; a generic failure toast invites a duplicate create on retry.
+      const record =
+        createdPayload && typeof createdPayload === 'object'
+          ? (createdPayload as Record<string, unknown>)
+          : null
+      const createdId = record ? resolveEntityId(record) : undefined
+      const createdJobNumber = record ? normalizeString(record.jobIdNumber) : undefined
+      const label = createdJobNumber ?? createdId
+      throw new Error(
+        label
+          ? `Repair job ${label} was created but details could not be loaded. Open it from Repair Tracking — do not create again.`
+          : 'Repair job may have been created, but the response could not be parsed. Check Repair Tracking before creating again.',
+      )
     }
     return job
   },

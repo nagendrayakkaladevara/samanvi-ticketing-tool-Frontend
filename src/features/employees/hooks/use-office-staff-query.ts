@@ -5,7 +5,7 @@ import { officeStaffService } from '@/features/employees/api/office-staff.servic
 export function useOfficeStaffQuery() {
   return useQuery({
     queryKey: ['office-staff'],
-    queryFn: () => officeStaffService.list({ page: 1, limit: 100 }),
+    queryFn: () => officeStaffService.list(),
   })
 }
 
