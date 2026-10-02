@@ -1,8 +1,6 @@
-import { upload } from '@vercel/blob/client'
+import axios from 'axios'
 
-import { env } from '@/config/env'
 import { apiClient } from '@/lib/api/client'
-import { getAccessToken } from '@/store/auth-store'
 
 import type {
   AnnouncementAudio,
@@ -25,7 +23,7 @@ export const announcementKeys = {
 
 export async function listRoutes() {
   const response = await apiClient.get<ApiEnvelope<Paginated<AnnouncementRoute>>>(`${BASE}/routes`, {
-    params: { page: 1, limit: 100 },
+    params: { page: 1, pageSize: 100 },
   })
   return response.data.data
 }
@@ -64,7 +62,7 @@ export async function archiveRoute(routeId: string, expectedVersion: number) {
 
 export async function listAudios() {
   const response = await apiClient.get<ApiEnvelope<Paginated<AnnouncementAudio>>>(`${BASE}/audios`, {
-    params: { page: 1, limit: 100 },
+    params: { page: 1, pageSize: 100 },
   })
   return response.data.data
 }
@@ -93,6 +91,25 @@ export async function updateSettings(activeWelcomeAudioId: string | null) {
   return response.data.data
 }
 
+type AudioUploadTicket = {
+  audioId: string
+  uploadUrl: string
+  method: 'PUT'
+  headers: Record<string, string>
+  expiresInSeconds: number
+}
+
+export async function completeAudioUpload(audioId: string) {
+  const response = await apiClient.post<ApiEnvelope<AnnouncementAudio>>(
+    `${BASE}/audios/${audioId}/upload-complete`,
+  )
+  return response.data.data
+}
+
+// This client has no backend authentication interceptors. Only signed R2 headers
+// are sent to object storage, and the browser supplies Content-Length for the File.
+const audioStorageClient = axios.create({ timeout: 300_000, withCredentials: false })
+
 export async function uploadAudio(input: {
   file: File
   title: string
@@ -100,23 +117,34 @@ export async function uploadAudio(input: {
   category: AudioCategory
   durationMs?: number
   onProgress?: (percentage: number) => void
+  onUploaded?: (audioId: string) => void
 }) {
-  const token = getAccessToken()
-  const handleUploadUrl = new URL(`${env.apiBaseUrl.replace(/\/$/, '')}${BASE}/audios/upload`, window.location.origin).toString()
-  return upload(input.file.name, input.file, {
-    access: 'public',
-    handleUploadUrl,
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    clientPayload: JSON.stringify({
-      title: input.title,
-      description: input.description || undefined,
-      category: input.category,
-      fileName: input.file.name,
-      mimeType: input.file.type,
-      sizeBytes: input.file.size,
-      durationMs: input.durationMs,
-    }),
-    onUploadProgress: ({ percentage }) => input.onProgress?.(Math.round(percentage)),
+  input.onProgress?.(0)
+  const response = await apiClient.post<ApiEnvelope<AudioUploadTicket>>(`${BASE}/audios/upload`, {
+    title: input.title,
+    description: input.description || undefined,
+    category: input.category,
+    fileName: input.file.name,
+    mimeType: input.file.type,
+    sizeBytes: input.file.size,
+    durationMs: input.durationMs,
   })
+  const ticket = response.data.data
+  try {
+    await audioStorageClient.request({
+      url: ticket.uploadUrl,
+      method: ticket.method,
+      headers: ticket.headers,
+      data: input.file,
+      onUploadProgress: ({ loaded, total }) => {
+        if (total) input.onProgress?.(Math.min(99, Math.round(loaded / total * 100)))
+      },
+    })
+  } catch {
+    throw new Error('Audio upload failed. Check your connection and try again.')
+  }
+  input.onUploaded?.(ticket.audioId)
+  const audio = await completeAudioUpload(ticket.audioId)
+  input.onProgress?.(100)
+  return audio
 }
-

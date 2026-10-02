@@ -47,6 +47,7 @@ import {
   archiveRoute,
   announcementKeys,
   createRoute,
+  completeAudioUpload,
   getRoute,
   getSettings,
   listAudios,
@@ -315,7 +316,7 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
                 <div key={item.id} className="flex flex-col gap-3 rounded-xl border bg-card p-3 sm:flex-row sm:items-center">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">{index + 1}</div>
                   <div className="min-w-0 flex-1"><p className="truncate font-medium">{item.audio.title}</p><Input className="mt-2 h-8" value={item.stopLabel ?? ''} disabled={!canAssign} placeholder="Optional stop label" onChange={(event) => { const value = event.target.value; setPlaylistDraft((current) => (current ?? playlist).map((row, rowIndex) => rowIndex === index ? { ...row, stopLabel: value } : row)) }} /></div>
-                  <audio className="h-8 w-full max-w-52" controls preload="none" src={item.audio.blobUrl} />
+                  <audio className="h-8 w-full max-w-52" controls preload="none" src={item.audio.downloadUrl ?? item.audio.blobUrl ?? undefined} />
                   {canAssign ? <div className="flex gap-1">
                     <Button aria-label="Move up" variant="ghost" size="icon" disabled={index === 0} onClick={() => moveAudio(index, -1)}><ArrowUp /></Button>
                     <Button aria-label="Move down" variant="ghost" size="icon" disabled={index === playlist.length - 1} onClick={() => moveAudio(index, 1)}><ArrowDown /></Button>
@@ -341,15 +342,21 @@ function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState<AudioCategory>('stop_announcement')
   const [progress, setProgress] = useState(0)
+  const [uploadedAudioId, setUploadedAudioId] = useState<string | null>(null)
 
   const mutation = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error('Choose an audio file')
-      await uploadAudio({ file, title, description, category, onProgress: setProgress })
+      if (uploadedAudioId) {
+        await completeAudioUpload(uploadedAudioId)
+        setProgress(100)
+      } else {
+        await uploadAudio({ file, title, description, category, onProgress: setProgress, onUploaded: setUploadedAudioId })
+      }
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: announcementKeys.audios })
-      toast.success('Audio uploaded and processing started')
+      toast.success('Audio uploaded and ready to use')
       onOpenChange(false)
     },
     onError: (error) => toast.error(errorMessage(error)),
@@ -357,29 +364,32 @@ function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
   function chooseFile(next: File | undefined) {
     if (!next) return
+    if (!next.size) { toast.error('Choose a non-empty audio file'); return }
+    if (!['audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/x-wav', 'audio/ogg'].includes(next.type)) { toast.error('Choose an MP3, M4A, AAC, WAV, or OGG file'); return }
     if (next.size > 50 * 1024 * 1024) { toast.error('Audio must be 50 MB or smaller'); return }
     setFile(next)
     if (!title) setTitle(next.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '))
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!mutation.isPending) onOpenChange(nextOpen) }}>
       <DialogContent>
         <DialogHeader><DialogTitle>Upload audio</DialogTitle><DialogDescription>Add an MP3, M4A, AAC, WAV, or OGG file up to 50 MB.</DialogDescription></DialogHeader>
-        <Button type="button" variant="outline" onClick={() => inputRef.current?.click()} className="flex h-auto min-h-32 w-full flex-col items-center justify-center rounded-xl border-2 border-dashed bg-muted/20 px-5 text-center font-normal hover:bg-muted/40">
+        <Button type="button" variant="outline" disabled={mutation.isPending || Boolean(uploadedAudioId)} onClick={() => inputRef.current?.click()} className="flex h-auto min-h-32 w-full flex-col items-center justify-center rounded-xl border-2 border-dashed bg-muted/20 px-5 text-center font-normal hover:bg-muted/40">
           <CloudUpload className="mb-2 size-7 text-violet-600" /><span className="font-medium">{file ? file.name : 'Choose an audio file'}</span><span className="mt-1 text-xs text-muted-foreground">{file ? formatBytes(String(file.size)) : 'Click to browse'}</span>
         </Button>
-        <input ref={inputRef} className="hidden" type="file" accept="audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/x-wav,audio/ogg" onChange={(event) => chooseFile(event.target.files?.[0])} />
-        <label className="space-y-1.5 text-sm font-medium">Title<Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Majestic bus stand" /></label>
+        <input ref={inputRef} className="hidden" type="file" disabled={mutation.isPending || Boolean(uploadedAudioId)} accept="audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/x-wav,audio/ogg" onChange={(event) => chooseFile(event.target.files?.[0])} />
+        <label className="space-y-1.5 text-sm font-medium">Title<Input disabled={mutation.isPending || Boolean(uploadedAudioId)} maxLength={150} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Majestic bus stand" /></label>
         <label className="space-y-1.5 text-sm font-medium">Category
-          <Select value={category} onValueChange={(value) => setCategory(value as AudioCategory)}>
+          <Select disabled={mutation.isPending || Boolean(uploadedAudioId)} value={category} onValueChange={(value) => setCategory(value as AudioCategory)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>{Object.entries(categoryLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
           </Select>
         </label>
-        <label className="space-y-1.5 text-sm font-medium">Description <span className="font-normal text-muted-foreground">(optional)</span><Textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Where or when this audio should be used" /></label>
-        {mutation.isPending ? <div className="space-y-1"><div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-violet-600 transition-all" style={{ width: `${progress}%` }} /></div><p className="text-right text-xs text-muted-foreground">{progress}%</p></div> : null}
-        <DialogFooter><Button variant="outline" disabled={mutation.isPending} onClick={() => onOpenChange(false)}>Cancel</Button><Button disabled={!file || !title.trim() || mutation.isPending} onClick={() => mutation.mutate()}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <CloudUpload />} Upload audio</Button></DialogFooter>
+        <label className="space-y-1.5 text-sm font-medium">Description <span className="font-normal text-muted-foreground">(optional)</span><Textarea disabled={mutation.isPending || Boolean(uploadedAudioId)} maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Where or when this audio should be used" /></label>
+        {mutation.isPending ? <div className="space-y-1"><div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-violet-600 transition-all" style={{ width: `${progress}%` }} /></div><p className="text-right text-xs text-muted-foreground">{uploadedAudioId ? 'Verifying audio...' : `${progress}%`}</p></div> : null}
+        {uploadedAudioId && mutation.isError ? <p role="alert" className="text-sm text-destructive">Your file is uploaded. Retry verification to make it available in the audio library.</p> : null}
+        <DialogFooter><Button variant="outline" disabled={mutation.isPending} onClick={() => onOpenChange(false)}>Cancel</Button><Button disabled={!file || !title.trim() || mutation.isPending} onClick={() => mutation.mutate()}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <CloudUpload />} {uploadedAudioId ? 'Retry verification' : 'Upload audio'}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -397,7 +407,7 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
   const filtered = useMemo(() => audios.filter((audio) => {
     const matchesCategory = category === 'all' || audio.category === category
     const term = search.trim().toLowerCase()
-    return matchesCategory && (!term || [audio.title, audio.fileName, audio.description ?? ''].some((value) => value.toLowerCase().includes(term)))
+    return matchesCategory && (!term || [audio.title, audio.originalFileName, audio.description ?? ''].some((value) => value.toLowerCase().includes(term)))
   }), [audios, category, search])
 
   const editMutation = useMutation({
@@ -422,10 +432,10 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
       <CardContent className="pt-6">
         {filtered.length ? <div className="grid gap-4 lg:grid-cols-2">{filtered.map((audio) => (
           <div key={audio.id} className="rounded-xl border p-4">
-            <div className="flex items-start gap-3"><div className="rounded-lg bg-violet-100 p-2 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300"><Headphones className="size-5" /></div><div className="min-w-0 flex-1"><p className="truncate font-semibold">{audio.title}</p><p className="mt-1 truncate text-xs text-muted-foreground">{audio.fileName} · {formatBytes(audio.sizeBytes)}</p></div><span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase', audio.status === 'ready' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' : audio.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800')}>{audio.status}</span></div>
+            <div className="flex items-start gap-3"><div className="rounded-lg bg-violet-100 p-2 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300"><Headphones className="size-5" /></div><div className="min-w-0 flex-1"><p className="truncate font-semibold">{audio.title}</p><p className="mt-1 truncate text-xs text-muted-foreground">{audio.originalFileName} · {formatBytes(audio.sizeBytes)}</p></div><span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase', audio.status === 'ready' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' : audio.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800')}>{audio.status}</span></div>
             <div className="mt-3 flex items-center justify-between gap-2"><span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">{categoryLabels[audio.category]}</span><div className="flex gap-1">{can('announcements', 'audios', 'edit') ? <Button aria-label="Edit audio" variant="ghost" size="icon" onClick={() => { setEditing(audio); setEditTitle(audio.title); setEditDescription(audio.description ?? '') }}><Pencil /></Button> : null}{can('announcements', 'audios', 'delete') ? <Button aria-label="Archive audio" variant="ghost" size="icon" className="text-destructive" disabled={archiveMutation.isPending} onClick={() => window.confirm('Archive this audio? Routes already using it will keep their reference.') && archiveMutation.mutate(audio.id)}><Archive /></Button> : null}</div></div>
             {audio.description ? <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{audio.description}</p> : null}
-            <audio className="mt-4 h-9 w-full" controls preload="none" src={audio.blobUrl} />
+            <audio className="mt-4 h-9 w-full" controls preload="none" src={audio.downloadUrl ?? audio.blobUrl ?? undefined} />
           </div>
         ))}</div> : <EmptyState icon={Music2} title="No audio found" description="Upload your first announcement or change the filters." />}
       </CardContent>
@@ -453,7 +463,7 @@ function WelcomeSettings({ audios }: { audios: AnnouncementAudio[] }) {
       <CardHeader className="border-b"><CardTitle>Welcome note</CardTitle><p className="text-sm text-muted-foreground">Choose the global greeting played independently of route stop announcements.</p></CardHeader>
       <CardContent className="grid gap-6 pt-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4"><label className="space-y-1.5 text-sm font-medium">Active welcome note<Select value={selectedId} onValueChange={setSelectedOverride}><SelectTrigger className="h-10"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No welcome note</SelectItem>{welcomeNotes.map((audio) => <SelectItem key={audio.id} value={audio.id}>{audio.title}</SelectItem>)}</SelectContent></Select></label><p className="text-sm text-muted-foreground">Common audio and welcome notes stay separate from stop playlists, preventing accidental route assignment.</p><Button disabled={mutation.isPending || selectedId === (settingsQuery.data?.activeWelcomeAudioId ?? 'none')} onClick={() => mutation.mutate()}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <Save />} Save setting</Button></div>
-        <div className="rounded-xl border bg-muted/20 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Preview</p>{selected ? <div className="mt-4"><div className="flex items-center gap-3"><div className="rounded-full bg-violet-100 p-3 text-violet-700"><Music2 /></div><div><p className="font-semibold">{selected.title}</p><p className="text-xs text-muted-foreground">{formatBytes(selected.sizeBytes)}</p></div></div><audio className="mt-5 h-9 w-full" controls preload="none" src={selected.blobUrl} /></div> : <p className="mt-4 text-sm text-muted-foreground">No welcome note selected.</p>}</div>
+        <div className="rounded-xl border bg-muted/20 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Preview</p>{selected ? <div className="mt-4"><div className="flex items-center gap-3"><div className="rounded-full bg-violet-100 p-3 text-violet-700"><Music2 /></div><div><p className="font-semibold">{selected.title}</p><p className="text-xs text-muted-foreground">{formatBytes(selected.sizeBytes)}</p></div></div><audio className="mt-5 h-9 w-full" controls preload="none" src={selected.downloadUrl ?? selected.blobUrl ?? undefined} /></div> : <p className="mt-4 text-sm text-muted-foreground">No welcome note selected.</p>}</div>
       </CardContent>
     </Card>
   )

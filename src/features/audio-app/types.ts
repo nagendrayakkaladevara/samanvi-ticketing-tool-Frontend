@@ -1,5 +1,5 @@
 export type AudioCategory = 'stop_announcement' | 'common_audio' | 'welcome_note'
-export type AudioStatus = 'processing' | 'ready' | 'failed' | 'archived'
+export type AudioStatus = 'uploading' | 'ready' | 'failed' | 'archived'
 export type AnnouncementRouteStatus = 'draft' | 'published' | 'archived'
 
 export type AnnouncementAudio = {
@@ -8,11 +8,12 @@ export type AnnouncementAudio = {
   description?: string | null
   category: AudioCategory
   status: AudioStatus
-  fileName: string
+  originalFileName: string
   mimeType: string
   sizeBytes: string
   durationMs?: number | null
-  blobUrl: string
+  blobUrl: string | null
+  downloadUrl: string | null
   createdAt: string
   updatedAt: string
 }
@@ -46,6 +47,6 @@ export type AnnouncementSettings = {
 
 export type Paginated<T> = {
   items: T[]
-  pagination: { page: number; limit: number; total: number; totalPages: number }
+  pagination: { page: number; pageSize: number; total: number; totalPages: number }
 }
 
