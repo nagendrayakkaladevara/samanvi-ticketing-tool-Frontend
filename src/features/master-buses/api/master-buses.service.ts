@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api/client'
+import { extractPaginationMeta } from '@/lib/utils/master-api'
 import type {
   CreateMasterBusInput,
   MasterBus,
@@ -143,11 +144,44 @@ function normalizeBusNumberValue(raw: unknown): string | null {
 }
 
 export const masterBusesService = {
+  /**
+   * Loads master buses for Bus No masters + Excel/PDF exports.
+   * When `page` is omitted, pages through the API so buses beyond the first
+   * response are not silently missing from the grid or downloads.
+   */
   async list(params?: { page?: number; limit?: number }): Promise<MasterBus[]> {
-    const page = params?.page ?? 1
-    const limit = params?.limit ?? 50
-    const { data } = await apiClient.get<unknown>(endpoint, { params: { page, limit } })
-    return extractArrayPayload(data).map(normalizeMasterBus).filter((bus): bus is MasterBus => Boolean(bus))
+    if (params?.page != null) {
+      const page = params.page
+      const limit = params.limit ?? 50
+      const { data } = await apiClient.get<unknown>(endpoint, { params: { page, limit } })
+      return extractArrayPayload(data).map(normalizeMasterBus).filter((bus): bus is MasterBus => Boolean(bus))
+    }
+
+    const limit = Math.min(params?.limit ?? 50, 100)
+    const maxPages = 50
+    const busesById = new Map<string, MasterBus>()
+
+    for (let page = 1; page <= maxPages; page += 1) {
+      const { data } = await apiClient.get<unknown>(endpoint, { params: { page, limit } })
+      const pageBuses = extractArrayPayload(data)
+        .map(normalizeMasterBus)
+        .filter((bus): bus is MasterBus => Boolean(bus))
+
+      for (const bus of pageBuses) {
+        busesById.set(bus.id, bus)
+      }
+
+      if (pageBuses.length === 0 || pageBuses.length < limit) {
+        break
+      }
+
+      const meta = extractPaginationMeta(data, { page, limit })
+      if (meta.hasExplicitTotalPages && page >= meta.totalPages) {
+        break
+      }
+    }
+
+    return Array.from(busesById.values())
   },
 
   async listBusNumbers(): Promise<string[]> {

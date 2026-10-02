@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api/client'
+import { extractPaginationMeta } from '@/lib/utils/master-api'
 import type {
   CreateServiceNumberInput,
   ServiceForRef,
@@ -133,13 +134,46 @@ function extractEntityPayload(raw: unknown): unknown {
 }
 
 export const serviceNumbersService = {
+  /**
+   * Loads service numbers for Service No masters.
+   * When `page` is omitted, pages through the API so routes beyond the first
+   * response are not silently missing from the grid.
+   */
   async list(params?: { page?: number; limit?: number }): Promise<ServiceNumber[]> {
-    const page = params?.page ?? 1
-    const limit = params?.limit ?? 50
-    const { data } = await apiClient.get<unknown>(endpoint, { params: { page, limit } })
-    return extractArrayPayload(data)
-      .map(normalizeServiceNumber)
-      .filter((item): item is ServiceNumber => Boolean(item))
+    if (params?.page != null) {
+      const page = params.page
+      const limit = params.limit ?? 50
+      const { data } = await apiClient.get<unknown>(endpoint, { params: { page, limit } })
+      return extractArrayPayload(data)
+        .map(normalizeServiceNumber)
+        .filter((item): item is ServiceNumber => Boolean(item))
+    }
+
+    const limit = Math.min(params?.limit ?? 50, 100)
+    const maxPages = 50
+    const serviceNumbersById = new Map<string, ServiceNumber>()
+
+    for (let page = 1; page <= maxPages; page += 1) {
+      const { data } = await apiClient.get<unknown>(endpoint, { params: { page, limit } })
+      const pageItems = extractArrayPayload(data)
+        .map(normalizeServiceNumber)
+        .filter((item): item is ServiceNumber => Boolean(item))
+
+      for (const item of pageItems) {
+        serviceNumbersById.set(item.id, item)
+      }
+
+      if (pageItems.length === 0 || pageItems.length < limit) {
+        break
+      }
+
+      const meta = extractPaginationMeta(data, { page, limit })
+      if (meta.hasExplicitTotalPages && page >= meta.totalPages) {
+        break
+      }
+    }
+
+    return Array.from(serviceNumbersById.values())
   },
 
   async create(input: CreateServiceNumberInput): Promise<ServiceNumber> {

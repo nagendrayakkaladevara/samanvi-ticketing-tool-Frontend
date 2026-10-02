@@ -22,6 +22,29 @@ export function extractArrayPayload(raw: unknown): unknown[] {
   return []
 }
 
+export function extractPaginationMeta(
+  raw: unknown,
+  fallback: { page: number; limit: number },
+): { page: number; limit: number; total: number; totalPages: number; hasExplicitTotalPages: boolean } {
+  const record = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
+  const metaCandidate =
+    (record.meta && typeof record.meta === 'object' ? (record.meta as Record<string, unknown>) : null) ??
+    (record.data && typeof record.data === 'object'
+      ? ((record.data as Record<string, unknown>).meta as Record<string, unknown> | undefined)
+      : undefined) ??
+    {}
+
+  const page = typeof metaCandidate.page === 'number' ? metaCandidate.page : fallback.page
+  const limit = typeof metaCandidate.limit === 'number' ? metaCandidate.limit : fallback.limit
+  const total = typeof metaCandidate.total === 'number' ? metaCandidate.total : extractArrayPayload(raw).length
+  const hasExplicitTotalPages = typeof metaCandidate.totalPages === 'number'
+  const totalPages = hasExplicitTotalPages
+    ? (metaCandidate.totalPages as number)
+    : Math.max(1, Math.ceil(total / Math.max(limit, 1)))
+
+  return { page, limit, total, totalPages, hasExplicitTotalPages }
+}
+
 export function extractEntityPayload(raw: unknown): unknown {
   if (!raw || typeof raw !== 'object') return raw
 
