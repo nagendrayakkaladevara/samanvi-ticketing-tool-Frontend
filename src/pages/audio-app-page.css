@@ -1,0 +1,76 @@
+@keyframes audio-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes audio-orbit-pulse {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(0.82);
+  }
+  50% {
+    opacity: 0.05;
+    transform: scale(1.28);
+  }
+}
+
+@keyframes audio-progress-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+.audio-app-page > * {
+  animation: audio-page-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.audio-app-page > :nth-child(2) { animation-delay: 60ms; }
+.audio-app-page > :nth-child(3) { animation-delay: 110ms; }
+.audio-app-page > :nth-child(4) { animation-delay: 160ms; }
+
+.audio-surface {
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.03), 0 14px 40px rgb(15 23 42 / 0.035);
+}
+
+.audio-upload-orbit {
+  animation: audio-orbit-pulse 2.8s ease-in-out infinite;
+}
+
+.audio-progress-processing {
+  background-image: linear-gradient(90deg, #7c3aed 0%, #a78bfa 45%, #7c3aed 100%);
+  background-size: 200% 100%;
+  animation: audio-progress-shimmer 1.5s linear infinite;
+}
+
+.audio-player {
+  color-scheme: light;
+}
+
+.dark .audio-player {
+  color-scheme: dark;
+}
+
+.audio-tabs {
+  scrollbar-width: none;
+}
+
+.audio-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .audio-app-page > *,
+  .audio-upload-orbit,
+  .audio-progress-processing {
+    animation: none !important;
+  }
+
+  .audio-card {
+    transition: none !important;
+  }
+}
