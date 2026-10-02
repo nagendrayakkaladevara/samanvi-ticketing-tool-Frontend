@@ -330,8 +330,8 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
               {playlist.length ? <div className="space-y-3">{playlist.map((item, index) => (
                  <div key={item.id} className="flex flex-col gap-4 rounded-2xl border bg-card p-4 transition-colors hover:border-violet-200 sm:flex-row sm:items-center dark:hover:border-violet-500/30">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">{index + 1}</div>
-                  <div className="min-w-0 flex-1"><p className="truncate font-medium">{item.audio.title}</p><Input className="mt-2 h-10" value={item.stopLabel ?? ''} disabled={!canAssign} placeholder="Optional stop label" onChange={(event) => { const value = event.target.value; setPlaylistDraft((current) => (current ?? playlist).map((row, rowIndex) => rowIndex === index ? { ...row, stopLabel: value } : row)) }} /></div>
-                  <audio className="h-10 w-full max-w-52" controls preload="none" src={item.audio.downloadUrl ?? item.audio.blobUrl ?? undefined} />
+                   <div className="min-w-0 flex-1"><p className="truncate font-medium">{item.audio.title}</p><Input className="mt-2 h-10" value={item.stopLabel ?? ''} disabled={!canAssign} placeholder="Optional stop label" onChange={(event) => { const value = event.target.value; setPlaylistDraft((current) => (current ?? playlist).map((row, rowIndex) => rowIndex === index ? { ...row, stopLabel: value } : row)) }} /></div>
+                   <audio className="h-10 w-full max-w-52" controls preload="none" src={item.audio.downloadUrl ?? item.audio.blobUrl ?? undefined} />
                   {canAssign ? <div className="flex gap-1">
                     <Button aria-label="Move up" className="size-11" variant="ghost" size="icon" disabled={index === 0} onClick={() => moveAudio(index, -1)}><ArrowUp /></Button>
                     <Button aria-label="Move down" className="size-11" variant="ghost" size="icon" disabled={index === playlist.length - 1} onClick={() => moveAudio(index, 1)}><ArrowDown /></Button>
