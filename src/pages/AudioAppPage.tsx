@@ -22,6 +22,7 @@ import {
   Settings2,
   ShieldCheck,
   Trash2,
+  UsersRound,
 } from 'lucide-react'
 
 import { PageGradientHeader } from '@/components/page-gradient-header'
@@ -67,6 +68,7 @@ import type {
   AudioCategory,
   RouteAudio,
 } from '@/features/audio-app/types'
+import { MobileUsersPanel } from '@/features/audio-app/mobile-users-panel'
 import { usePermissions } from '@/hooks/use-permissions'
 import { ApiError } from '@/lib/api/api-error'
 import { queryClient } from '@/lib/query/query-client'
@@ -75,7 +77,7 @@ import { cn } from '@/lib/utils'
 
 import './audio-app-page.css'
 
-type Tab = 'routes' | 'audios' | 'settings'
+type Tab = 'routes' | 'audios' | 'settings' | 'mobile-users'
 
 const categoryLabels: Record<AudioCategory, string> = {
   stop_announcement: 'Stop announcement',
@@ -570,11 +572,13 @@ export function AudioAppPage() {
   const canViewRoutes = can('announcements', 'routes', 'view')
   const canViewAudios = can('announcements', 'audios', 'view')
   const canEditSettings = can('announcements', 'settings', 'edit')
+  const canViewMobileUsers = can('announcements', 'mobile_users', 'view')
   const availableTabs = useMemo(() => [
     canViewRoutes ? { id: 'routes' as const, label: 'Routes', description: 'Build stop playlists', icon: MapPinned } : null,
     canViewAudios ? { id: 'audios' as const, label: 'Audio library', description: 'Upload and organize', icon: Headphones } : null,
     canEditSettings ? { id: 'settings' as const, label: 'Welcome note', description: 'Set the greeting', icon: Settings2 } : null,
-  ].filter((tab): tab is NonNullable<typeof tab> => Boolean(tab)), [canEditSettings, canViewAudios, canViewRoutes])
+    canViewMobileUsers ? { id: 'mobile-users' as const, label: 'Driver users', description: 'Control mobile access', icon: UsersRound } : null,
+  ].filter((tab): tab is NonNullable<typeof tab> => Boolean(tab)), [canEditSettings, canViewAudios, canViewMobileUsers, canViewRoutes])
   const [tab, setTab] = useState<Tab>(availableTabs[0]?.id ?? 'routes')
   const audiosQuery = useQuery({ queryKey: announcementKeys.audios, queryFn: listAudios, enabled: canViewAudios || canViewRoutes || canEditSettings })
   const audios = audiosQuery.data?.items ?? []
@@ -599,6 +603,7 @@ export function AudioAppPage() {
       {tab === 'routes' && canViewRoutes ? <RoutesWorkspace audios={audios} /> : null}
       {tab === 'audios' && canViewAudios ? <AudioLibrary audios={audios} loading={audiosQuery.isLoading} /> : null}
       {tab === 'settings' && canEditSettings ? <WelcomeSettings audios={audios} /> : null}
+      {tab === 'mobile-users' && canViewMobileUsers ? <MobileUsersPanel /> : null}
     </section>
   )
 }

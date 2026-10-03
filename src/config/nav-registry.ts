@@ -66,6 +66,7 @@ export const AUDIO_APP_VIEW_CHECKS: PermissionCheck[] = [
   { module: 'announcements', submodule: 'routes', action: 'view' },
   { module: 'announcements', submodule: 'audios', action: 'view' },
   { module: 'announcements', submodule: 'settings', action: 'edit' },
+  { module: 'announcements', submodule: 'mobile_users', action: 'view' },
 ]
 
 export const NAV_REGISTRY: NavRegistryEntry[] = [
