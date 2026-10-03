@@ -55,6 +55,29 @@ function extractArrayPayload(raw: unknown): unknown[] {
   return []
 }
 
+function extractPaginationMeta(
+  raw: unknown,
+  fallback: { page: number; limit: number },
+): { page: number; limit: number; total: number; totalPages: number; hasExplicitTotalPages: boolean } {
+  const record = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
+  const metaCandidate =
+    (record.meta && typeof record.meta === 'object' ? (record.meta as Record<string, unknown>) : null) ??
+    (record.data && typeof record.data === 'object'
+      ? ((record.data as Record<string, unknown>).meta as Record<string, unknown> | undefined)
+      : undefined) ??
+    {}
+
+  const page = typeof metaCandidate.page === 'number' ? metaCandidate.page : fallback.page
+  const limit = typeof metaCandidate.limit === 'number' ? metaCandidate.limit : fallback.limit
+  const total = typeof metaCandidate.total === 'number' ? metaCandidate.total : extractArrayPayload(raw).length
+  const hasExplicitTotalPages = typeof metaCandidate.totalPages === 'number'
+  const totalPages = hasExplicitTotalPages
+    ? (metaCandidate.totalPages as number)
+    : Math.max(1, Math.ceil(total / Math.max(limit, 1)))
+
+  return { page, limit, total, totalPages, hasExplicitTotalPages }
+}
+
 function normalizeRepairCategory(raw: unknown): RepairCategory | null {
   if (!raw || typeof raw !== 'object') return null
   const value = raw as Record<string, unknown>
@@ -555,13 +578,47 @@ export const garageService = {
     await apiClient.delete(`${partsEndpoint}/${partId}`)
   },
 
+  /**
+   * Loads repair jobs for Repair Tracking.
+   * When `page` is omitted, pages through the API (max limit 100) so jobs beyond
+   * the first response are not silently dropped from the board.
+   * Pass an explicit `page` to fetch a single page only.
+   */
   async listJobs(params?: { page?: number; limit?: number }): Promise<RepairJob[]> {
-    const page = params?.page ?? 1
-    const limit = params?.limit ?? 50
-    const { data } = await apiClient.get<unknown>(jobsEndpoint, { params: { page, limit } })
-    return extractArrayPayload(data)
-      .map(normalizeRepairJob)
-      .filter((item): item is RepairJob => Boolean(item))
+    if (params?.page != null) {
+      const page = params.page
+      const limit = params.limit ?? 50
+      const { data } = await apiClient.get<unknown>(jobsEndpoint, { params: { page, limit } })
+      return extractArrayPayload(data)
+        .map(normalizeRepairJob)
+        .filter((item): item is RepairJob => Boolean(item))
+    }
+
+    const limit = Math.min(params?.limit ?? 100, 100)
+    const maxPages = 50
+    const jobsById = new Map<string, RepairJob>()
+
+    for (let page = 1; page <= maxPages; page += 1) {
+      const { data } = await apiClient.get<unknown>(jobsEndpoint, { params: { page, limit } })
+      const pageJobs = extractArrayPayload(data)
+        .map(normalizeRepairJob)
+        .filter((item): item is RepairJob => Boolean(item))
+
+      for (const job of pageJobs) {
+        jobsById.set(job.id, job)
+      }
+
+      if (pageJobs.length === 0 || pageJobs.length < limit) {
+        break
+      }
+
+      const meta = extractPaginationMeta(data, { page, limit })
+      if (meta.hasExplicitTotalPages && page >= meta.totalPages) {
+        break
+      }
+    }
+
+    return Array.from(jobsById.values())
   },
 
   async getJob(jobId: string): Promise<RepairJob> {

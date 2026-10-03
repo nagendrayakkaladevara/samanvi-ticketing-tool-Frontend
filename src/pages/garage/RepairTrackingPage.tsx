@@ -40,7 +40,7 @@ export function RepairTrackingPage() {
   const animateMobile = isMobile && !shouldReduceMotion
   const { data: jobs = [], isLoading, isFetching, isError, error } = useQuery({
     queryKey: ['garage', 'jobs'],
-    queryFn: () => garageService.listJobs({ page: 1, limit: 50 }),
+    queryFn: () => garageService.listJobs(),
   })
 
   const hasJobs = jobs.length > 0
