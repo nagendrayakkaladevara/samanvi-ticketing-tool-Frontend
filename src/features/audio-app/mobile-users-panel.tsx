@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   KeyRound,
+  Eye,
+  EyeOff,
   LoaderCircle,
   LockKeyhole,
   Pencil,
@@ -51,6 +53,19 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 }
 
+function passwordStrength(password: string) {
+  if (!password) return { score: 0, label: 'Not entered', tone: 'bg-muted' }
+  let score = 0
+  if (password.length >= 10) score += 1
+  if (password.length >= 12) score += 1
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1
+  if (/\d/.test(password) && /[^A-Za-z0-9]/.test(password)) score += 1
+  if (score <= 1) return { score: 1, label: 'Weak', tone: 'bg-destructive' }
+  if (score === 2) return { score, label: 'Fair', tone: 'bg-amber-500' }
+  if (score === 3) return { score, label: 'Good', tone: 'bg-sky-500' }
+  return { score, label: 'Strong', tone: 'bg-emerald-500' }
+}
+
 function askReason(promptText: string): string | null {
   const reason = window.prompt(promptText)?.trim()
   if (reason === undefined) return null
@@ -73,6 +88,8 @@ function AccountDialog({
   const [displayName, setDisplayName] = useState(user?.displayName ?? '')
   const [username, setUsername] = useState(user?.username ?? '')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const strength = passwordStrength(password)
   const mutation = useMutation({
     mutationFn: () => user
       ? updateMobileUser(user.id, {
@@ -92,36 +109,53 @@ function AccountDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !mutation.isPending && onOpenChange(next)}>
-      <DialogContent className="overflow-hidden p-0 sm:max-w-lg">
-        <div className="border-b bg-slate-950 px-6 py-6 text-white">
-          <div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-amber-400 text-slate-950">
+      <DialogContent className="max-h-[92svh] overflow-hidden p-0 sm:max-w-lg">
+        <div className="border-b bg-gradient-to-br from-primary/10 via-background to-background px-5 py-5 sm:px-6 sm:py-6">
+          <div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <KeyRound className="size-5" />
           </div>
           <DialogHeader>
-            <DialogTitle className="text-xl text-white">{user ? 'Edit mobile account' : 'Create driver login'}</DialogTitle>
-            <DialogDescription className="text-slate-300">
+            <DialogTitle className="text-xl">{user ? 'Edit mobile account' : 'Create driver login'}</DialogTitle>
+            <DialogDescription>
               {user ? 'Changing the password signs the driver out immediately.' : 'The device is linked automatically on the first successful login.'}
             </DialogDescription>
           </DialogHeader>
         </div>
-        <div className="space-y-5 px-6 py-6">
+        <div className="space-y-5 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
           <label className="block space-y-2 text-sm font-medium">Driver name
             <Input autoFocus value={displayName} maxLength={100} onChange={(event) => setDisplayName(event.target.value)} placeholder="e.g. Ravi Kumar" />
           </label>
           <label className="block space-y-2 text-sm font-medium">Username
             <Input autoCapitalize="none" value={username} maxLength={50} onChange={(event) => setUsername(event.target.value)} placeholder="e.g. driver.ravi" />
           </label>
-          <label className="block space-y-2 text-sm font-medium">{user ? 'New password (optional)' : 'Temporary password'}
-            <Input type="password" value={password} maxLength={128} onChange={(event) => setPassword(event.target.value)} placeholder="At least 10 characters" />
-          </label>
-          <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium" htmlFor="mobile-user-password">{user ? 'New password (optional)' : 'Temporary password'}</label>
+            <div className="relative">
+              <Input id="mobile-user-password" className="pr-11" type={showPassword ? 'text' : 'password'} value={password} maxLength={128} onChange={(event) => setPassword(event.target.value)} placeholder="At least 10 characters" />
+              <button type="button" className="absolute right-1 top-1 flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((current) => !current)}>
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+            {(password || !user) ? (
+              <div className="space-y-2" aria-live="polite">
+                <div className="flex gap-1.5" aria-label={`Password strength: ${strength.label}`}>
+                  {[1, 2, 3, 4].map((step) => <span key={step} className={cn('h-1.5 flex-1 rounded-full transition-colors', step <= strength.score ? strength.tone : 'bg-muted')} />)}
+                </div>
+                <div className="flex items-start justify-between gap-3 text-xs">
+                  <span className="text-muted-foreground">Use 10+ characters; uppercase, number and symbol improve strength.</span>
+                  <span className="shrink-0 font-semibold text-foreground">{strength.label}</span>
+                </div>
+              </div>
+            ) : <p className="text-xs text-muted-foreground">Leave blank to keep the current password.</p>}
+          </div>
+          <div className="flex gap-3 rounded-xl border bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
             <ShieldCheck className="mt-0.5 size-4 shrink-0" />
             Passwords are hashed by the backend and are never shown again.
           </div>
         </div>
-        <DialogFooter className="border-t px-6 py-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button className="bg-slate-950 text-white hover:bg-slate-800" disabled={!valid || mutation.isPending} onClick={() => mutation.mutate()}>
+        <DialogFooter className="border-t bg-muted/20 px-5 py-4 sm:px-6">
+          <Button className="w-full sm:w-auto" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button className="w-full sm:w-auto" disabled={!valid || mutation.isPending} onClick={() => mutation.mutate()}>
             {mutation.isPending ? <LoaderCircle className="animate-spin" /> : <LockKeyhole />}
             {user ? 'Save changes' : 'Create login'}
           </Button>
@@ -166,20 +200,20 @@ export function MobileUsersPanel() {
 
   return (
     <Card className="audio-surface overflow-hidden rounded-2xl">
-      <CardHeader className="border-b bg-gradient-to-r from-slate-950 to-slate-900 px-5 py-6 text-white sm:px-7">
+      <CardHeader className="border-b bg-gradient-to-br from-primary/[0.07] via-background to-background px-5 py-6 sm:px-7">
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
           <div>
-            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-300"><Smartphone className="size-4" /> Controlled access</div>
-            <CardTitle className="text-xl text-white">Driver mobile accounts</CardTitle>
-            <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-300">One account, one authorized phone. Deactivation, password changes, and device resets revoke active sessions.</p>
+            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary"><Smartphone className="size-4" /> Controlled access</div>
+            <CardTitle className="text-xl">Driver mobile accounts</CardTitle>
+            <p className="mt-1.5 max-w-xl text-sm leading-6 text-muted-foreground">One account, one authorized phone. Deactivation, password changes, and device resets revoke active sessions.</p>
           </div>
-          {can('announcements', 'mobile_users', 'create') ? <Button className="h-11 bg-amber-400 text-slate-950 hover:bg-amber-300" onClick={() => setCreating(true)}><Plus /> Create login</Button> : null}
+          {can('announcements', 'mobile_users', 'create') ? <Button className="h-11 w-full shadow-sm sm:w-auto" onClick={() => setCreating(true)}><Plus /> Create login</Button> : null}
         </div>
       </CardHeader>
       <CardContent className="p-5 sm:p-7">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1"><Search className="absolute left-3.5 top-3.5 size-4 text-muted-foreground" /><Input className="h-11 pl-10" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search driver name or username" /></div>
-          <Button className="h-11" variant="outline" onClick={() => query.refetch()} disabled={query.isFetching}><RefreshCcw className={cn(query.isFetching && 'animate-spin')} /> Refresh</Button>
+          <Button className="h-11 w-full sm:w-auto" variant="outline" onClick={() => query.refetch()} disabled={query.isFetching}><RefreshCcw className={cn(query.isFetching && 'animate-spin')} /> Refresh</Button>
         </div>
 
         {query.isLoading ? <div className="flex min-h-64 items-center justify-center"><LoaderCircle className="size-6 animate-spin text-amber-500" /></div> : null}
@@ -199,11 +233,11 @@ export function MobileUsersPanel() {
               <div className="mt-5 rounded-xl bg-muted/40 p-4">
                 {user.device ? <div className="flex gap-3"><Smartphone className="mt-0.5 size-4 shrink-0 text-emerald-600" /><div><p className="text-sm font-medium">{user.device.deviceName || user.device.platform || 'Registered device'}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{[user.device.platform, user.device.osVersion, user.device.appVersion && `App ${user.device.appVersion}`].filter(Boolean).join(' · ')}<br />Last seen {formatDate(user.device.lastSeenAt)}</p></div></div> : <div className="flex gap-3 text-muted-foreground"><Smartphone className="size-4" /><p className="text-sm">No device registered yet</p></div>}
               </div>
-              <div className="mt-4 flex flex-wrap justify-end gap-1 border-t pt-3">
-                {can('announcements', 'mobile_users', 'edit') ? <Button variant="ghost" className="h-9" onClick={() => setEditing(user)}><Pencil /> Edit</Button> : null}
-                {user.device && can('announcements', 'mobile_users', 'reset_device') ? <Button variant="ghost" className="h-9" disabled={action.isPending} onClick={() => run('device', user)}><RefreshCcw /> Reset device</Button> : null}
-                {can('announcements', 'mobile_users', 'change_status') ? <Button variant="ghost" className="h-9" disabled={action.isPending} onClick={() => run('status', user)}><Power /> {user.isActive ? 'Deactivate' : 'Activate'}</Button> : null}
-                {can('announcements', 'mobile_users', 'delete') ? <Button variant="ghost" className="h-9 text-destructive" disabled={action.isPending} onClick={() => run('delete', user)}><Trash2 /> Delete</Button> : null}
+              <div className="mt-4 grid grid-cols-2 gap-1 border-t pt-3 sm:flex sm:flex-wrap sm:justify-end">
+                {can('announcements', 'mobile_users', 'edit') ? <Button variant="ghost" className="h-9 justify-start sm:justify-center" onClick={() => setEditing(user)}><Pencil /> Edit</Button> : null}
+                {user.device && can('announcements', 'mobile_users', 'reset_device') ? <Button variant="ghost" className="h-9 justify-start sm:justify-center" disabled={action.isPending} onClick={() => run('device', user)}><RefreshCcw /> Reset device</Button> : null}
+                {can('announcements', 'mobile_users', 'change_status') ? <Button variant="ghost" className="h-9 justify-start sm:justify-center" disabled={action.isPending} onClick={() => run('status', user)}><Power /> {user.isActive ? 'Deactivate' : 'Activate'}</Button> : null}
+                {can('announcements', 'mobile_users', 'delete') ? <Button variant="ghost" className="h-9 justify-start text-destructive sm:justify-center" disabled={action.isPending} onClick={() => run('delete', user)}><Trash2 /> Delete</Button> : null}
               </div>
             </article>
           ))}
