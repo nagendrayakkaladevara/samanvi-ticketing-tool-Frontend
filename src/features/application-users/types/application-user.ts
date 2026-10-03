@@ -6,7 +6,18 @@ export type ApplicationUserType =
   | 'collection_agent'
   | 'worker'
 
+export type EmployeeType = 'driver' | 'helper' | 'office_staff'
+
 export type CreatableApplicationUserType = Exclude<ApplicationUserType, 'admin'>
+
+export type LinkedEmployee = {
+  id: string
+  name: string
+  employeeId: string
+  employeeType: EmployeeType
+}
+
+export type LinkableEmployeeItem = LinkedEmployee
 
 export type UsernameExistsResult = {
   username: string
@@ -22,6 +33,7 @@ export type ApplicationUser = {
   userType: ApplicationUserType
   isActive: boolean
   permissionIds: string[]
+  linkedEmployee?: LinkedEmployee | null
 }
 
 export type CreateApplicationUserInput = {
@@ -30,6 +42,8 @@ export type CreateApplicationUserInput = {
   password: string
   mobileNumber: string
   userType: CreatableApplicationUserType
+  employeeId: string
+  employeeType: EmployeeType
   email?: string
   isActive?: boolean
   permissionIds?: string[]
@@ -42,9 +56,17 @@ export type UpdateApplicationUserInput = {
   password?: string
   mobileNumber?: string
   userType?: CreatableApplicationUserType
+  employeeId?: string
+  employeeType?: EmployeeType
   email?: string | null
   isActive?: boolean
   permissionIds?: string[]
+}
+
+export const employeeTypeLabels: Record<EmployeeType, string> = {
+  driver: 'Driver',
+  helper: 'Helper',
+  office_staff: 'Office Staff',
 }
 
 export const applicationUserTypeLabels: Record<ApplicationUserType, string> = {

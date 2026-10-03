@@ -3,6 +3,9 @@ import type {
   ApplicationUser,
   ApplicationUserType,
   CreateApplicationUserInput,
+  EmployeeType,
+  LinkableEmployeeItem,
+  LinkedEmployee,
   UpdateApplicationUserInput,
   UsernameExistsResult,
 } from '@/features/application-users/types/application-user'
@@ -17,6 +20,38 @@ const applicationUserTypes = new Set<ApplicationUserType>([
   'collection_agent',
   'worker',
 ])
+
+const employeeTypes = new Set<EmployeeType>(['driver', 'helper', 'office_staff'])
+
+function normalizeEmployeeType(value: unknown): EmployeeType | null {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, '_') as EmployeeType
+  return employeeTypes.has(normalized) ? normalized : null
+}
+
+function normalizeLinkedEmployee(raw: unknown): LinkedEmployee | null {
+  if (!raw || typeof raw !== 'object') {
+    return null
+  }
+
+  const value = raw as Record<string, unknown>
+  const idCandidate = value.id
+  const id =
+    typeof idCandidate === 'string' ? idCandidate : typeof idCandidate === 'number' ? String(idCandidate) : undefined
+
+  const employeeType = normalizeEmployeeType(value.employeeType)
+  const name = normalizeString(value.name)
+  const employeeId = normalizeString(value.employeeId)
+
+  if (!id || !employeeType || !name || !employeeId) {
+    return null
+  }
+
+  return { id, name, employeeId, employeeType }
+}
 
 function normalizeString(value: unknown): string | undefined {
   if (typeof value !== 'string') {
@@ -99,6 +134,12 @@ function normalizeUser(raw: unknown): ApplicationUser | null {
     normalizeString(value.name) ??
     (username || mobileNumber || id)
 
+  const linkedEmployeeRaw = value.linkedEmployee
+  const linkedEmployee =
+    linkedEmployeeRaw === null || linkedEmployeeRaw === undefined
+      ? null
+      : normalizeLinkedEmployee(linkedEmployeeRaw)
+
   return {
     id,
     displayName,
@@ -111,6 +152,7 @@ function normalizeUser(raw: unknown): ApplicationUser | null {
       normalizePermissionIds(value.permissionIds).length > 0
         ? normalizePermissionIds(value.permissionIds)
         : normalizePermissionIds(value.permissions),
+    ...(linkedEmployeeRaw !== undefined ? { linkedEmployee } : {}),
   }
 }
 
@@ -178,7 +220,21 @@ function normalizeUsernameExists(raw: unknown): UsernameExistsResult | null {
   return { username, exists: record.exists }
 }
 
+function extractLinkableEmployees(raw: unknown): LinkableEmployeeItem[] {
+  const items = extractArrayPayload(raw)
+  return items
+    .map(normalizeLinkedEmployee)
+    .filter((employee): employee is LinkableEmployeeItem => Boolean(employee))
+}
+
 export const applicationUsersService = {
+  async listLinkableEmployees(excludeUserId?: string): Promise<LinkableEmployeeItem[]> {
+    const { data } = await apiClient.get<unknown>(`${endpoint}/linkable-employees`, {
+      params: excludeUserId ? { excludeUserId } : undefined,
+    })
+    return extractLinkableEmployees(data)
+  },
+
   async list(): Promise<ApplicationUser[]> {
     const { data } = await apiClient.get<unknown>(endpoint)
     return extractArrayPayload(data).map(normalizeUser).filter((user): user is ApplicationUser => Boolean(user))
