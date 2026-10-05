@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   Archive,
   ArrowDown,
+  ArrowLeft,
   ArrowRight,
   ArrowUp,
   AudioLines,
@@ -215,12 +216,10 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
       [route.routeCode, route.name, route.origin, route.destination].some((value) => value.toLowerCase().includes(term)))
   }, [routesQuery.data, search])
 
-  const activeRouteId = selectedId ?? visibleRoutes[0]?.id ?? null
-
   const routeQuery = useQuery({
-    queryKey: announcementKeys.route(activeRouteId ?? ''),
-    queryFn: () => getRoute(activeRouteId!),
-    enabled: Boolean(activeRouteId),
+    queryKey: announcementKeys.route(selectedId ?? ''),
+    queryFn: () => getRoute(selectedId!),
+    enabled: Boolean(selectedId),
   })
   const playlist = playlistDraft ?? routeQuery.data?.audios ?? []
   const dirty = playlistDraft !== null
@@ -283,67 +282,109 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
     })
   }
 
+  function returnToRoutes() {
+    if (dirty && !window.confirm('Leave without saving your announcement changes?')) return
+    setSelectedId(null)
+    setPlaylistDraft(null)
+    setSelectedAudioId('')
+  }
+
   if (routesQuery.isLoading) return <LoadingState />
 
-  return (
-    <div className="grid items-start gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-      <Card className="audio-surface h-fit overflow-hidden rounded-2xl xl:sticky xl:top-20">
-        <CardHeader className="space-y-5 border-b p-5 sm:p-6">
-          <div className="flex items-center justify-between gap-3">
-            <div><CardTitle className="text-lg">Routes</CardTitle><p className="mt-1 text-xs text-muted-foreground">{routesQuery.data?.pagination.total ?? 0} configured</p></div>
-            {canCreate ? <Button className="h-10 rounded-xl bg-violet-600 hover:bg-violet-700" onClick={() => { setEditingRoute(undefined); setFormOpen(true) }}><Plus /> New route</Button> : null}
+  if (!selectedId) {
+    return (
+      <Card className="audio-surface overflow-hidden rounded-2xl">
+        <CardHeader className="space-y-5 border-b p-5 sm:p-7">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <div>
+              <CardTitle className="text-xl tracking-tight">Choose a route</CardTitle>
+              <p className="mt-1.5 text-sm leading-6 text-muted-foreground">Select a route to see or change the announcements passengers hear.</p>
+            </div>
+            {canCreate ? <Button className="h-11 w-full rounded-xl bg-violet-600 shadow-md shadow-violet-600/15 hover:bg-violet-700 sm:w-auto" onClick={() => { setEditingRoute(undefined); setFormOpen(true) }}><Plus /> Add new route</Button> : null}
           </div>
-          <div className="relative"><Search className="absolute left-3.5 top-3.5 size-4 text-muted-foreground" /><Input className="h-11 rounded-xl pl-10" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search routes" /></div>
+          <div className="relative max-w-2xl">
+            <Search className="absolute left-4 top-3.5 size-4 text-muted-foreground" />
+            <Input className="h-11 rounded-xl bg-background pl-11" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by route name, code, start, or destination" aria-label="Search routes" />
+          </div>
+          <p className="text-xs text-muted-foreground">Showing {visibleRoutes.length} of {routesQuery.data?.pagination.total ?? 0} routes</p>
         </CardHeader>
-        <CardContent className="max-h-[62vh] space-y-2.5 overflow-y-auto p-3 sm:p-4">
-          {visibleRoutes.length ? visibleRoutes.map((item) => (
-            <Button key={item.id} type="button" variant="outline" onClick={() => { setSelectedId(item.id); setPlaylistDraft(null) }} className={cn('h-auto min-h-24 w-full flex-col items-stretch gap-0 rounded-xl p-4 text-left font-normal shadow-none transition-all hover:border-violet-200 hover:bg-violet-50/40 dark:hover:border-violet-500/30 dark:hover:bg-violet-500/5', activeRouteId === item.id && 'border-violet-400 bg-violet-50/70 ring-1 ring-violet-300 dark:bg-violet-500/10')}>
-              <div className="flex items-start justify-between gap-2"><div><p className="font-semibold">{item.name}</p><p className="mt-0.5 text-xs text-muted-foreground">{item.routeCode}</p></div><span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase', statusStyles[item.status])}>{item.status}</span></div>
-              <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><span>{item.origin}</span><ArrowRight className="size-3" /><span>{item.destination}</span><span className="ml-auto">{item._count?.audios ?? 0} stops</span></div>
-            </Button>
-          )) : <EmptyState icon={MapPinned} title="No routes found" description="Create a route or change your search." />}
+        <CardContent className="p-5 sm:p-7">
+          {visibleRoutes.length ? (
+            <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+              {visibleRoutes.map((item) => (
+                <button key={item.id} type="button" onClick={() => { setSelectedId(item.id); setPlaylistDraft(null) }} className="group flex min-h-40 w-full flex-col rounded-2xl border bg-card p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50/30 hover:shadow-lg hover:shadow-violet-900/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:hover:border-violet-500/40 dark:hover:bg-violet-500/5">
+                  <div className="flex w-full items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-semibold tracking-tight">{item.name}</p>
+                      <p className="mt-1 text-xs font-medium text-muted-foreground">Route {item.routeCode}</p>
+                    </div>
+                    <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase', statusStyles[item.status])}>{item.status}</span>
+                  </div>
+                  <div className="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><span className="truncate">{item.origin}</span><ArrowRight className="size-4 shrink-0 text-violet-500" /><span className="truncate">{item.destination}</span></div>
+                  <div className="mt-auto flex w-full items-center justify-between border-t pt-4 text-sm">
+                    <span className="font-medium">{item._count?.audios ?? 0} {(item._count?.audios ?? 0) === 1 ? 'announcement' : 'announcements'}</span>
+                    <span className="flex items-center gap-1.5 font-semibold text-violet-700 dark:text-violet-300">Open route <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : <EmptyState icon={MapPinned} title="No routes found" description={search ? 'Try a different route name, code, start, or destination.' : 'Add your first route to start organizing announcements.'} />}
         </CardContent>
+        {formOpen ? <RouteFormDialog key="new" open onOpenChange={setFormOpen} /> : null}
       </Card>
+    )
+  }
 
+  return (
+    <div className="space-y-4">
+      <Button variant="ghost" className="h-10 -ml-2 text-muted-foreground hover:text-foreground" onClick={returnToRoutes}><ArrowLeft /> Back to all routes</Button>
       <Card className="audio-surface min-w-0 overflow-hidden rounded-2xl">
         {routeQuery.isLoading ? <LoadingState /> : route ? (
           <>
-             <CardHeader className="border-b p-5 sm:p-7">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div><div className="flex items-center gap-2"><CardTitle>{route.name}</CardTitle><span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase', statusStyles[route.status])}>{route.status}</span></div><p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"><MapPinned className="size-4" />{route.origin}<ArrowRight className="size-3" />{route.destination}<span>·</span>{route.routeCode}</p></div>
-                <div className="flex flex-wrap gap-2">
-                  {canEdit ? <Button className="h-10" variant="outline" onClick={() => { setEditingRoute(route); setFormOpen(true) }}><Pencil /> Edit</Button> : null}
-                  {canEdit ? <Button className="h-10" variant="outline" disabled={routeStatusMutation.isPending} onClick={() => routeStatusMutation.mutate(route.status === 'published' ? 'draft' : 'published')}><CheckCircle2 />{route.status === 'published' ? 'Unpublish' : 'Publish'}</Button> : null}
-                  {canDelete ? <Button className="h-10 text-destructive" variant="outline" disabled={archiveMutation.isPending} onClick={() => window.confirm('Archive this route?') && archiveMutation.mutate()}><Archive /> Archive</Button> : null}
+             <CardHeader className="border-b bg-gradient-to-br from-violet-50/70 via-background to-sky-50/40 p-5 sm:p-7 dark:from-violet-500/[0.07] dark:to-sky-500/[0.03]">
+               <div className="flex flex-wrap items-start justify-between gap-4">
+                 <div><p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-violet-700 dark:text-violet-300">Route announcements</p><div className="flex flex-wrap items-center gap-2"><CardTitle className="text-xl sm:text-2xl">{route.name}</CardTitle><span className={cn('rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase', statusStyles[route.status])}>{route.status}</span></div><p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground"><MapPinned className="size-4" />{route.origin}<ArrowRight className="size-3" />{route.destination}<span>·</span>Route {route.routeCode}</p></div>
+                 <div className="flex flex-wrap gap-2">
+                   {canEdit ? <Button className="h-10" variant="outline" onClick={() => { setEditingRoute(route); setFormOpen(true) }}><Pencil /> Edit route details</Button> : null}
+                   {canEdit ? <Button className="h-10" variant="outline" disabled={routeStatusMutation.isPending} onClick={() => routeStatusMutation.mutate(route.status === 'published' ? 'draft' : 'published')}><CheckCircle2 />{route.status === 'published' ? 'Stop sharing' : 'Make available to drivers'}</Button> : null}
+                   {canDelete ? <Button className="h-10 text-destructive" variant="outline" disabled={archiveMutation.isPending} onClick={() => window.confirm('Archive this route?') && archiveMutation.mutate()}><Archive /> Archive route</Button> : null}
+                 </div>
+               </div>
+             </CardHeader>
+              <CardContent className="space-y-6 p-5 sm:p-7">
+                <div>
+                  <h3 className="text-lg font-semibold tracking-tight">Announcements passengers will hear</h3>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">They play from top to bottom. Use the buttons to change the order.</p>
                 </div>
-              </div>
-            </CardHeader>
-             <CardContent className="space-y-6 p-5 sm:p-7">
-               <div className="flex flex-col gap-3 rounded-2xl border bg-muted/20 p-4 sm:flex-row sm:items-end sm:p-5">
-                <label className="min-w-56 flex-1 space-y-1.5 text-sm font-medium">Add stop announcement
-                  <Select value={selectedAudioId || undefined} onValueChange={setSelectedAudioId} disabled={!canAssign || readyStops.length === 0}>
-                    <SelectTrigger><SelectValue placeholder={readyStops.length ? 'Select an available audio' : 'No available stop audio'} /></SelectTrigger>
-                    <SelectContent>{readyStops.map((audio) => <SelectItem key={audio.id} value={audio.id}>{audio.title}</SelectItem>)}</SelectContent>
-                  </Select>
-                </label>
-                 <Button className="h-10" variant="outline" disabled={!selectedAudioId || !canAssign} onClick={addAudio}><CirclePlus /> Add to route</Button>
-              </div>
+                {canAssign ? <div className="rounded-2xl border border-violet-200 bg-violet-50/40 p-4 sm:p-5 dark:border-violet-500/20 dark:bg-violet-500/[0.05]">
+                  <div className="mb-4 flex items-start gap-3"><div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-600 font-bold text-white">+</div><div><p className="font-semibold">Add an announcement</p><p className="mt-0.5 text-sm text-muted-foreground">Choose a ready audio file, then add it to the end of this route.</p></div></div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                 <label className="min-w-56 flex-1 space-y-1.5 text-sm font-medium">1. Choose an announcement
+                   <Select value={selectedAudioId || undefined} onValueChange={setSelectedAudioId} disabled={!canAssign || readyStops.length === 0}>
+                     <SelectTrigger className="h-11 bg-background"><SelectValue placeholder={readyStops.length ? 'Select an announcement' : 'No unused announcements available'} /></SelectTrigger>
+                     <SelectContent>{readyStops.map((audio) => <SelectItem key={audio.id} value={audio.id}>{audio.title}</SelectItem>)}</SelectContent>
+                   </Select>
+                 </label>
+                  <Button className="h-11 bg-violet-600 hover:bg-violet-700" disabled={!selectedAudioId || !canAssign} onClick={addAudio}><CirclePlus /> 2. Add to route</Button>
+                  </div>
+                  {!readyStops.length ? <p className="mt-3 text-xs text-muted-foreground">All ready stop announcements are already on this route. Upload more from the Audio library if needed.</p> : null}
+               </div> : null}
 
-              {playlist.length ? <div className="space-y-3">{playlist.map((item, index) => (
-                 <div key={item.id} className="flex flex-col gap-4 rounded-2xl border bg-card p-4 transition-colors hover:border-violet-200 sm:flex-row sm:items-center dark:hover:border-violet-500/30">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">{index + 1}</div>
-                   <div className="min-w-0 flex-1"><p className="truncate font-medium">{item.audio.title}</p><Input className="mt-2 h-10" value={item.stopLabel ?? ''} disabled={!canAssign} placeholder="Optional stop label" onChange={(event) => { const value = event.target.value; setPlaylistDraft((current) => (current ?? playlist).map((row, rowIndex) => rowIndex === index ? { ...row, stopLabel: value } : row)) }} /></div>
-                   <audio className="h-10 w-full max-w-52" controls preload="none" src={item.audio.downloadUrl ?? item.audio.blobUrl ?? undefined} />
-                  {canAssign ? <div className="flex gap-1">
-                    <Button aria-label="Move up" className="size-11" variant="ghost" size="icon" disabled={index === 0} onClick={() => moveAudio(index, -1)}><ArrowUp /></Button>
-                    <Button aria-label="Move down" className="size-11" variant="ghost" size="icon" disabled={index === playlist.length - 1} onClick={() => moveAudio(index, 1)}><ArrowDown /></Button>
-                    <Button aria-label="Remove audio" variant="ghost" size="icon" className="size-11 text-destructive" onClick={() => setPlaylistDraft((current) => (current ?? playlist).filter((_, rowIndex) => rowIndex !== index))}><Trash2 /></Button>
-                  </div> : null}
-                </div>
-              ))}</div> : <EmptyState icon={AudioLines} title="No stop announcements" description="Add ready stop audio above to build this route's playback order." />}
+               {playlist.length ? <div className="space-y-3">{playlist.map((item, index) => (
+                  <div key={item.id} className="flex flex-col gap-4 rounded-2xl border bg-card p-4 transition-colors hover:border-violet-200 sm:flex-row sm:items-center dark:hover:border-violet-500/30">
+                   <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">{index + 1}</div>
+                    <div className="min-w-0 flex-1"><p className="truncate font-medium">{item.audio.title}</p><label className="mt-2 block text-xs text-muted-foreground">Stop name <span className="font-normal">(optional)</span><Input className="mt-1 h-10 bg-background" value={item.stopLabel ?? ''} disabled={!canAssign} placeholder="For example: Central Bus Stand" onChange={(event) => { const value = event.target.value; setPlaylistDraft((current) => (current ?? playlist).map((row, rowIndex) => rowIndex === index ? { ...row, stopLabel: value } : row)) }} /></label></div>
+                    <audio className="h-10 w-full max-w-52" controls preload="none" src={item.audio.downloadUrl ?? item.audio.blobUrl ?? undefined} />
+                   {canAssign ? <div className="flex flex-wrap gap-1 sm:w-36 sm:flex-col">
+                     <Button aria-label={`Move ${item.audio.title} earlier`} className="h-9 justify-start px-2.5 text-xs" variant="ghost" disabled={index === 0} onClick={() => moveAudio(index, -1)}><ArrowUp /> Move earlier</Button>
+                     <Button aria-label={`Move ${item.audio.title} later`} className="h-9 justify-start px-2.5 text-xs" variant="ghost" disabled={index === playlist.length - 1} onClick={() => moveAudio(index, 1)}><ArrowDown /> Move later</Button>
+                     <Button aria-label={`Remove ${item.audio.title}`} variant="ghost" className="h-9 justify-start px-2.5 text-xs text-destructive" onClick={() => setPlaylistDraft((current) => (current ?? playlist).filter((_, rowIndex) => rowIndex !== index))}><Trash2 /> Remove</Button>
+                   </div> : null}
+                 </div>
+               ))}</div> : <EmptyState icon={AudioLines} title="No announcements on this route yet" description="Use the simple add box above to choose the first announcement passengers should hear." />}
 
-              {canAssign ? <div className="flex items-center justify-between border-t pt-4"><p className="text-xs text-muted-foreground">{dirty ? 'You have unsaved playlist changes.' : 'Playlist is up to date.'}</p><Button disabled={!dirty || savePlaylistMutation.isPending} onClick={() => savePlaylistMutation.mutate()}>{savePlaylistMutation.isPending ? <LoaderCircle className="animate-spin" /> : <Save />} Save order</Button></div> : null}
-            </CardContent>
+               {canAssign ? <div className={cn('flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between', dirty ? 'border-amber-300 bg-amber-50/70 dark:border-amber-500/30 dark:bg-amber-500/[0.06]' : 'bg-muted/20')}><div><p className="text-sm font-semibold">{dirty ? 'Your changes are not saved yet' : 'Everything is saved'}</p><p className="mt-0.5 text-xs text-muted-foreground">{dirty ? 'Save now so drivers receive the new announcement order.' : 'Drivers have the latest announcement order.'}</p></div><Button className="h-11 sm:min-w-40" disabled={!dirty || savePlaylistMutation.isPending} onClick={() => savePlaylistMutation.mutate()}>{savePlaylistMutation.isPending ? <LoaderCircle className="animate-spin" /> : <Save />} Save changes</Button></div> : null}
+             </CardContent>
           </>
         ) : <CardContent className="pt-6"><EmptyState icon={MapPinned} title="Select a route" description="Choose a route to manage its announcements." /></CardContent>}
       </Card>
