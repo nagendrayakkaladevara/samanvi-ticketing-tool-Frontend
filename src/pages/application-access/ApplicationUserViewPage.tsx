@@ -150,6 +150,7 @@ export function ApplicationUserViewPage() {
                 label="User Type"
                 value={applicationUserTypeLabels[user.userType] ?? user.userType}
               />
+              <DetailItem label="Linked Employee" value={user.linkedEmployee?.name ?? '—'} />
               <DetailItem label="Status" value={user.isActive ? 'Active' : 'Inactive'} />
             </MasterDetailGrid>
           </Card>
