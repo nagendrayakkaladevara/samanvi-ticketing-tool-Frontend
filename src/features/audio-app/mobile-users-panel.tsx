@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { motion } from 'motion/react'
 import {
   CalendarDays,
   CircleCheck,
@@ -60,6 +61,7 @@ import {
   updateMobileUser,
   type MobileDriverUser,
 } from './mobile-users.service'
+import { useAudioMotion } from './use-audio-motion'
 
 function message(error: unknown) {
   return error instanceof ApiError || error instanceof Error ? error.message : 'Something went wrong'
@@ -161,7 +163,7 @@ function AccountDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !mutation.isPending && onOpenChange(next)}>
-      <DialogContent className="grid max-h-[calc(100svh-1rem)] w-[calc(100%-1rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-h-[90svh] sm:max-w-lg">
+      <DialogContent className="audio-dialog grid max-h-[calc(100svh-2rem)] w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-h-[90svh] sm:max-w-lg">
         <div className="border-b bg-gradient-to-br from-primary/10 via-background to-background px-5 py-5 sm:px-6 sm:py-6">
           <div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <KeyRound className="size-5" />
@@ -174,17 +176,17 @@ function AccountDialog({
           </DialogHeader>
         </div>
         <div className="min-h-0 space-y-5 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6 sm:py-6">
-          <label className="block space-y-2 text-sm font-medium">Driver name
+          <label className="grid gap-2 text-sm font-medium">Driver name
             <Input autoFocus value={displayName} maxLength={100} onChange={(event) => setDisplayName(event.target.value)} placeholder="e.g. Ravi Kumar" />
           </label>
-          <label className="block space-y-2 text-sm font-medium">Username
+          <label className="grid gap-2 text-sm font-medium">Username
             <Input autoCapitalize="none" value={username} maxLength={50} onChange={(event) => setUsername(event.target.value)} placeholder="e.g. driver.ravi" />
           </label>
           <div className="space-y-2">
             <label className="block text-sm font-medium" htmlFor="mobile-user-password">{user ? 'New password (optional)' : 'Temporary password'}</label>
             <div className="relative">
-              <Input id="mobile-user-password" className="pr-11" type={showPassword ? 'text' : 'password'} value={password} maxLength={128} onChange={(event) => setPassword(event.target.value)} placeholder="At least 10 characters" />
-              <button type="button" className="absolute right-1 top-1 flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((current) => !current)}>
+              <Input id="mobile-user-password" className="h-11 pr-11" type={showPassword ? 'text' : 'password'} value={password} maxLength={128} onChange={(event) => setPassword(event.target.value)} placeholder="At least 10 characters" />
+              <button type="button" className="absolute right-1 top-1 flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((current) => !current)}>
                 {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
@@ -206,8 +208,8 @@ function AccountDialog({
           </div>
         </div>
         <DialogFooter className="border-t bg-background px-5 py-4 sm:px-6">
-          <Button className="w-full sm:w-auto" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button className="w-full sm:w-auto" disabled={!valid || mutation.isPending} onClick={() => mutation.mutate()}>
+          <Button className="h-11 w-full sm:w-auto" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button className="h-11 w-full sm:w-auto" disabled={!valid || mutation.isPending} onClick={() => mutation.mutate()}>
             {mutation.isPending ? <LoaderCircle className="animate-spin" /> : <LockKeyhole />}
             {user ? 'Save changes' : 'Create login'}
           </Button>
@@ -235,7 +237,7 @@ function ReasonDialog({
 
   return (
     <AlertDialog open onOpenChange={(open) => !pending && onOpenChange(open)}>
-      <AlertDialogContent className="w-[calc(100%-1.5rem)] max-w-md overflow-hidden p-0">
+      <AlertDialogContent className="audio-dialog max-h-[90svh] w-[calc(100%-2rem)] max-w-md overflow-y-auto p-0">
         <div className={cn('h-1.5 w-full', copy.destructive ? 'bg-destructive' : 'bg-primary')} />
         <div className="px-5 pt-5 sm:px-6 sm:pt-6">
           <div className={cn('mb-4 flex size-11 items-center justify-center rounded-xl', copy.destructive ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary')}>
@@ -284,6 +286,7 @@ function ReasonDialog({
 
 export function MobileUsersPanel() {
   const { can } = usePermissions()
+  const { reducedMotion, reveal } = useAudioMotion()
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<MobileDriverUser | null>(null)
@@ -310,7 +313,7 @@ export function MobileUsersPanel() {
 
   return (
     <Card className="audio-surface overflow-hidden rounded-2xl">
-      <CardHeader className="border-b bg-gradient-to-br from-primary/[0.07] via-background to-background px-5 py-6 sm:px-7">
+      <CardHeader className="border-b bg-muted/20 p-4 sm:p-6">
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
           <div>
             <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary"><Smartphone className="size-4" /> Controlled access</div>
@@ -320,19 +323,19 @@ export function MobileUsersPanel() {
           {can('announcements', 'mobile_users', 'create') ? <Button className="h-11 w-full shadow-sm sm:w-auto" onClick={() => setCreating(true)}><Plus /> Create login</Button> : null}
         </div>
       </CardHeader>
-      <CardContent className="p-5 sm:p-7">
+      <CardContent className="p-4 sm:p-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row">
-          <div className="relative flex-1"><Search className="absolute left-3.5 top-3.5 size-4 text-muted-foreground" /><Input className="h-11 pl-10" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search driver name or username" /></div>
+          <div className="relative min-w-0 flex-1"><Search className="absolute left-3.5 top-3.5 size-4 text-muted-foreground" /><Input aria-label="Search driver users" className="h-11 rounded-xl pl-10" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search driver name or username" /></div>
           <Button className="h-11 w-full sm:w-auto" variant="outline" onClick={() => query.refetch()} disabled={query.isFetching}><RefreshCcw className={cn(query.isFetching && 'animate-spin')} /> Refresh</Button>
         </div>
 
-        {query.isLoading ? <div className="flex min-h-64 items-center justify-center"><LoaderCircle className="size-6 animate-spin text-amber-500" /></div> : null}
-        {query.isError ? <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">{message(query.error)}</div> : null}
-        {!query.isLoading && !items.length ? <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed text-center"><UserRound className="mb-4 size-8 text-muted-foreground" /><p className="font-semibold">No mobile accounts found</p><p className="mt-1 text-sm text-muted-foreground">Create the first driver login or change your search.</p></div> : null}
+        {query.isLoading ? <div role="status" className="flex min-h-64 items-center justify-center gap-3 text-sm text-muted-foreground"><LoaderCircle className="size-5 animate-spin text-violet-600" />Loading driver accounts…</div> : null}
+        {query.isError ? <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">{message(query.error)}</div> : null}
+        {!query.isLoading && !query.isError && !items.length ? <motion.div {...reveal()} className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed bg-muted/20 px-6 py-12 text-center"><UserRound className="mb-4 size-8 text-muted-foreground" /><p className="font-semibold">No mobile accounts found</p><p className="mt-1.5 text-sm leading-6 text-muted-foreground">Create the first driver login or change your search.</p></motion.div> : null}
 
-        <div className="grid gap-5 xl:grid-cols-2">
-          {items.map((user) => (
-            <article key={user.id} className={cn('group relative overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg', user.isActive ? 'border-emerald-500/20' : 'border-border')}>
+        <div className="audio-user-grid">
+          {items.map((user, index) => (
+            <motion.article key={user.id} {...reveal(search ? 0 : index)} layout={reducedMotion ? false : 'position'} className={cn('audio-interactive-card relative flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-card shadow-sm hover:shadow-md', user.isActive ? 'border-emerald-500/20' : 'border-border')}>
               <div className={cn('absolute inset-y-0 left-0 w-1', user.isActive ? 'bg-emerald-500' : 'bg-muted-foreground/35')} />
               <div className="p-4 pl-5 sm:p-5 sm:pl-6">
                 <div className="flex min-w-0 items-start gap-3 sm:gap-4">
@@ -370,9 +373,9 @@ export function MobileUsersPanel() {
                     <div className="flex min-w-0 items-start gap-3">
                       <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-700 dark:text-sky-300"><Smartphone className="size-4" /></div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                           <p className="truncate text-sm font-semibold">{user.device.deviceName || user.device.platform || 'Registered device'}</p>
-                          <p className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground"><Clock3 className="size-3" /> {formatDate(user.device.lastSeenAt)}</p>
+                          <p className="flex items-center gap-1 text-[11px] text-muted-foreground"><Clock3 className="size-3 shrink-0" /> {formatDate(user.device.lastSeenAt)}</p>
                         </div>
                         <p className="mt-1 truncate text-xs text-muted-foreground">{[user.device.platform, user.device.osVersion, user.device.appVersion && `App ${user.device.appVersion}`].filter(Boolean).join(' · ') || 'Device details unavailable'}</p>
                       </div>
@@ -383,13 +386,13 @@ export function MobileUsersPanel() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-1 border-t bg-muted/20 p-2 sm:flex sm:flex-wrap sm:justify-end">
+              <div className="mt-auto grid grid-cols-2 gap-1 border-t bg-muted/20 p-2 sm:flex sm:flex-wrap sm:justify-end">
                 {can('announcements', 'mobile_users', 'edit') ? <Button variant="ghost" className="h-10 justify-start px-3 sm:justify-center" onClick={() => setEditing(user)}><Pencil /> Edit</Button> : null}
                 {user.device && can('announcements', 'mobile_users', 'reset_device') ? <Button variant="ghost" className="h-10 justify-start px-3 sm:justify-center" disabled={action.isPending} onClick={() => setActionRequest({ kind: 'device', user })}><RefreshCcw /> Reset device</Button> : null}
                 {can('announcements', 'mobile_users', 'change_status') ? <Button variant="ghost" className={cn('h-10 justify-start px-3 sm:justify-center', !user.isActive && 'text-emerald-700 hover:text-emerald-700 dark:text-emerald-300')} disabled={action.isPending} onClick={() => setActionRequest({ kind: 'status', user })}><Power /> {user.isActive ? 'Deactivate' : 'Activate'}</Button> : null}
                 {can('announcements', 'mobile_users', 'delete') ? <Button variant="ghost" className="h-10 justify-start px-3 text-destructive hover:text-destructive sm:justify-center" disabled={action.isPending} onClick={() => setActionRequest({ kind: 'delete', user })}><Trash2 /> Delete</Button> : null}
               </div>
-            </article>
+            </motion.article>
           ))}
         </div>
       </CardContent>
