@@ -31,6 +31,8 @@ export type AnnouncementRoute = {
   name: string
   origin: string
   destination: string
+  via: string
+  busType: 'AC' | 'Non-AC'
   status: AnnouncementRouteStatus
   version: number
   createdAt: string
@@ -41,12 +43,12 @@ export type AnnouncementRoute = {
 
 export type AnnouncementSettings = {
   id: string
-  activeWelcomeAudioId?: string | null
-  activeWelcomeAudio?: AnnouncementAudio | null
+  dinnerBreakAudioId: string | null
+  toiletBreakAudioId: string | null
+  recordsDriveUrl: string | null
 }
 
 export type Paginated<T> = {
   items: T[]
   pagination: { page: number; pageSize: number; total: number; totalPages: number }
 }
-

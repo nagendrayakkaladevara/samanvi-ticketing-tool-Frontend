@@ -33,14 +33,14 @@ export async function getRoute(routeId: string) {
   return response.data.data
 }
 
-export async function createRoute(input: Pick<AnnouncementRoute, 'routeCode' | 'name' | 'origin' | 'destination'>) {
+export async function createRoute(input: Pick<AnnouncementRoute, 'routeCode' | 'name' | 'origin' | 'destination' | 'via' | 'busType'>) {
   const response = await apiClient.post<ApiEnvelope<AnnouncementRoute>>(`${BASE}/routes`, input)
   return response.data.data
 }
 
 export async function updateRoute(
   routeId: string,
-  input: Partial<Pick<AnnouncementRoute, 'routeCode' | 'name' | 'origin' | 'destination' | 'status'>> & {
+  input: Partial<Pick<AnnouncementRoute, 'routeCode' | 'name' | 'origin' | 'destination' | 'via' | 'busType' | 'status'>> & {
     expectedVersion: number
   },
 ) {
@@ -84,10 +84,8 @@ export async function getSettings() {
   return response.data.data
 }
 
-export async function updateSettings(activeWelcomeAudioId: string | null) {
-  const response = await apiClient.put<ApiEnvelope<AnnouncementSettings>>(`${BASE}/settings`, {
-    activeWelcomeAudioId,
-  })
+export async function updateSettings(input: Omit<AnnouncementSettings, 'id'>) {
+  const response = await apiClient.put<ApiEnvelope<AnnouncementSettings>>(`${BASE}/settings`, input)
   return response.data.data
 }
 
