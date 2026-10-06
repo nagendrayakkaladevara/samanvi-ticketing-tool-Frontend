@@ -66,6 +66,7 @@ import type {
   AnnouncementAudio,
   AnnouncementRoute,
   AnnouncementRouteStatus,
+  AnnouncementSettings,
   AudioCategory,
   RouteAudio,
 } from '@/features/audio-app/types'
@@ -141,12 +142,14 @@ function RouteFormDialog({
   onOpenChange: (open: boolean) => void
   route?: AnnouncementRoute
 }) {
-  const [form, setForm] = useState(() => route ? {
+  const [form, setForm] = useState<Pick<AnnouncementRoute, 'routeCode' | 'name' | 'origin' | 'destination' | 'via' | 'busType'>>(() => route ? {
     routeCode: route.routeCode,
     name: route.name,
     origin: route.origin,
     destination: route.destination,
-  } : { routeCode: '', name: '', origin: '', destination: '' })
+    via: route.via,
+    busType: route.busType,
+  } : { routeCode: '', name: '', origin: '', destination: '', via: '', busType: 'Non-AC' })
 
   const mutation = useMutation({
     mutationFn: () => route
@@ -161,7 +164,7 @@ function RouteFormDialog({
     onError: (error) => toast.error(errorMessage(error)),
   })
 
-  const valid = Object.values(form).every((value) => value.trim())
+  const valid = [form.routeCode, form.name, form.origin, form.destination].every((value) => value.trim())
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -182,6 +185,15 @@ function RouteFormDialog({
           </label>
           <label className="space-y-1.5 text-sm font-medium">Destination
             <Input value={form.destination} onChange={(event) => setForm({ ...form, destination: event.target.value })} placeholder="Hyderabad" />
+          </label>
+          <label className="space-y-1.5 text-sm font-medium">Via <span className="font-normal text-muted-foreground">(optional)</span>
+            <Input maxLength={120} value={form.via} onChange={(event) => setForm({ ...form, via: event.target.value })} placeholder="Vijayawada" />
+          </label>
+          <label className="space-y-1.5 text-sm font-medium">Bus type
+            <Select value={form.busType} onValueChange={(value) => setForm({ ...form, busType: value as AnnouncementRoute['busType'] })}>
+              <SelectTrigger aria-label="Bus type"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="AC">AC</SelectItem><SelectItem value="Non-AC">Non-AC</SelectItem></SelectContent>
+            </Select>
           </label>
         </div>
         <DialogFooter>
@@ -213,7 +225,7 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
   const visibleRoutes = useMemo(() => {
     const term = search.trim().toLowerCase()
     return (routesQuery.data?.items ?? []).filter((route) => !term ||
-      [route.routeCode, route.name, route.origin, route.destination].some((value) => value.toLowerCase().includes(term)))
+      [route.routeCode, route.name, route.origin, route.destination, route.via, route.busType].some((value) => value.toLowerCase().includes(term)))
   }, [routesQuery.data, search])
 
   const routeQuery = useQuery({
@@ -321,6 +333,7 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
                     <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase', statusStyles[item.status])}>{item.status}</span>
                   </div>
                   <div className="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><span className="truncate">{item.origin}</span><ArrowRight className="size-4 shrink-0 text-violet-500" /><span className="truncate">{item.destination}</span></div>
+                  <p className="mb-4 mt-2 text-xs text-muted-foreground">{item.via ? `Via ${item.via}` : 'Direct route'} · {item.busType}</p>
                   <div className="mt-auto flex w-full items-center justify-between border-t pt-4 text-sm">
                     <span className="font-medium">{item._count?.audios ?? 0} {(item._count?.audios ?? 0) === 1 ? 'announcement' : 'announcements'}</span>
                     <span className="flex items-center gap-1.5 font-semibold text-violet-700 dark:text-violet-300">Open route <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></span>
@@ -343,7 +356,7 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
           <>
              <CardHeader className="border-b bg-gradient-to-br from-violet-50/70 via-background to-sky-50/40 p-5 sm:p-7 dark:from-violet-500/[0.07] dark:to-sky-500/[0.03]">
                <div className="flex flex-wrap items-start justify-between gap-4">
-                 <div><p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-violet-700 dark:text-violet-300">Route announcements</p><div className="flex flex-wrap items-center gap-2"><CardTitle className="text-xl sm:text-2xl">{route.name}</CardTitle><span className={cn('rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase', statusStyles[route.status])}>{route.status}</span></div><p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground"><MapPinned className="size-4" />{route.origin}<ArrowRight className="size-3" />{route.destination}<span>·</span>Route {route.routeCode}</p></div>
+                  <div><p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-violet-700 dark:text-violet-300">Route announcements</p><div className="flex flex-wrap items-center gap-2"><CardTitle className="text-xl sm:text-2xl">{route.name}</CardTitle><span className={cn('rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase', statusStyles[route.status])}>{route.status}</span></div><p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground"><MapPinned className="size-4" />{route.origin}<ArrowRight className="size-3" />{route.destination}<span>·</span>Route {route.routeCode}</p><p className="mt-2 text-sm text-muted-foreground">{route.via ? `Via ${route.via}` : 'Direct route'} · {route.busType}</p></div>
                  <div className="flex flex-wrap gap-2">
                    {canEdit ? <Button className="h-10" variant="outline" onClick={() => { setEditingRoute(route); setFormOpen(true) }}><Pencil /> Edit route details</Button> : null}
                    {canEdit ? <Button className="h-10" variant="outline" disabled={routeStatusMutation.isPending} onClick={() => routeStatusMutation.mutate(route.status === 'published' ? 'draft' : 'published')}><CheckCircle2 />{route.status === 'published' ? 'Stop sharing' : 'Make available to drivers'}</Button> : null}
@@ -354,7 +367,7 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
               <CardContent className="space-y-6 p-5 sm:p-7">
                 <div>
                   <h3 className="text-lg font-semibold tracking-tight">Announcements passengers will hear</h3>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">They play from top to bottom. Use the buttons to change the order.</p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">Drivers see this sequence and can tap any announcement to play. Use the buttons to change the order.</p>
                 </div>
                 {canAssign ? <div className="rounded-2xl border border-violet-200 bg-violet-50/40 p-4 sm:p-5 dark:border-violet-500/20 dark:bg-violet-500/[0.05]">
                   <div className="mb-4 flex items-start gap-3"><div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-600 font-bold text-white">+</div><div><p className="font-semibold">Add an announcement</p><p className="mt-0.5 text-sm text-muted-foreground">Choose a ready audio file, then add it to the end of this route.</p></div></div>
@@ -580,29 +593,54 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
   )
 }
 
-function WelcomeSettings({ audios }: { audios: AnnouncementAudio[] }) {
+function MobileSettings({ audios }: { audios: AnnouncementAudio[] }) {
   const settingsQuery = useQuery({ queryKey: announcementKeys.settings, queryFn: getSettings })
-  const [selectedOverride, setSelectedOverride] = useState<string | null>(null)
-  const selectedId = selectedOverride ?? settingsQuery.data?.activeWelcomeAudioId ?? 'none'
+  const [draft, setDraft] = useState<Partial<Omit<AnnouncementSettings, 'id'>>>({})
+  const values = { dinnerBreakAudioId: null, toiletBreakAudioId: null, recordsDriveUrl: null, ...settingsQuery.data, ...draft }
   const mutation = useMutation({
-    mutationFn: () => updateSettings(selectedId === 'none' ? null : selectedId),
-    onSuccess: async () => { setSelectedOverride(null); await queryClient.invalidateQueries({ queryKey: announcementKeys.settings }); toast.success('Welcome note setting saved') },
+    mutationFn: () => updateSettings({ dinnerBreakAudioId: values.dinnerBreakAudioId, toiletBreakAudioId: values.toiletBreakAudioId, recordsDriveUrl: values.recordsDriveUrl?.trim() || null }),
+    onSuccess: (saved) => { queryClient.setQueryData(announcementKeys.settings, saved); setDraft({}); toast.success('Mobile app settings saved') },
     onError: (error) => toast.error(errorMessage(error)),
   })
   const welcomeNotes = audios.filter((audio) => audio.category === 'welcome_note' && audio.status === 'ready')
-  const selected = welcomeNotes.find((audio) => audio.id === selectedId)
+  const common = audios.filter((audio) => audio.category === 'common_audio' && audio.status === 'ready')
+  let validUrl = true
+  if (values.recordsDriveUrl?.trim()) {
+    try { const url = new URL(values.recordsDriveUrl.trim()); validUrl = url.protocol === 'https:' && url.hostname === 'drive.google.com' && !url.username && !url.password }
+    catch { validUrl = false }
+  }
 
   if (settingsQuery.isLoading) return <LoadingState />
+  if (settingsQuery.isError) return <div role="alert" className="space-y-3 rounded-xl border p-5 text-destructive"><p>{errorMessage(settingsQuery.error)}</p><Button variant="outline" onClick={() => void settingsQuery.refetch()}>Retry settings</Button></div>
   return (
     <Card className="audio-surface overflow-hidden rounded-2xl">
-      <CardHeader className="border-b p-5 sm:p-7"><CardTitle className="text-xl tracking-tight">Passenger welcome note</CardTitle><p className="mt-1 text-sm leading-6 text-muted-foreground">Choose the greeting passengers hear independently from each route's stop announcements.</p></CardHeader>
-      <CardContent className="grid gap-8 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-12">
-        <div className="space-y-6">
-          <label className="space-y-2 text-sm font-medium">Active welcome note<Select value={selectedId} onValueChange={setSelectedOverride}><SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No welcome note</SelectItem>{welcomeNotes.map((audio) => <SelectItem key={audio.id} value={audio.id}>{audio.title}</SelectItem>)}</SelectContent></Select></label>
-          <div className="flex gap-3 rounded-2xl border bg-muted/30 p-4"><ShieldCheck className="mt-0.5 size-5 shrink-0 text-violet-600" /><p className="text-sm leading-6 text-muted-foreground">Welcome notes stay separate from route playlists, so they cannot be assigned to a stop by mistake.</p></div>
-          <Button className="h-11 w-full sm:w-auto" disabled={mutation.isPending || selectedId === (settingsQuery.data?.activeWelcomeAudioId ?? 'none')} onClick={() => mutation.mutate()}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <Save />} Save setting</Button>
+      <CardHeader className="border-b p-5 sm:p-7"><CardTitle className="text-xl tracking-tight">Mobile app settings</CardTitle><p className="mt-1 text-sm leading-6 text-muted-foreground">Configure quick announcements and the driver's records folder.</p></CardHeader>
+      <CardContent className="space-y-8 p-5 sm:p-7">
+        <section className="rounded-2xl border bg-muted/20 p-5">
+          <h3 className="font-semibold">Welcome Note · {welcomeNotes.length} available</h3>
+          <p className="mt-2 text-sm text-muted-foreground">Every ready Welcome note in the Audio library appears in the driver's selection list. Upload more welcome notes there.</p>
+          <ul className="mt-3 space-y-2 text-sm">{welcomeNotes.map((audio) => <li key={audio.id} className="flex items-center gap-2"><Music2 className="size-4 text-muted-foreground" />{audio.title}</li>)}</ul>
+        </section>
+        <div className="grid gap-6 md:grid-cols-2">
+          {([{ key: 'dinnerBreakAudioId', title: 'Dinner Break' }, { key: 'toiletBreakAudioId', title: 'Toilet Break' }] as const).map(({ key, title }) => {
+            const selected = common.find((audio) => audio.id === values[key])
+            return <section key={key} className="space-y-3 rounded-2xl border p-5">
+              <label className="block space-y-2 text-sm font-medium">{title}
+                <Select disabled={mutation.isPending} value={values[key] ?? 'none'} onValueChange={(value) => setDraft((current) => ({ ...current, [key]: value === 'none' ? null : value }))}>
+                  <SelectTrigger className="h-11" aria-label={`${title} audio`}><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="none">Not configured</SelectItem>{values[key] && !selected ? <SelectItem value={values[key]!}>Unavailable audio — choose a replacement</SelectItem> : null}{common.map((audio) => <SelectItem key={audio.id} value={audio.id}>{audio.title}</SelectItem>)}</SelectContent>
+                </Select>
+              </label>
+              <p className="text-xs text-muted-foreground">One common audio, played directly on tap.</p>
+              {selected ? <audio className="h-10 w-full" controls preload="none" src={selected.downloadUrl ?? selected.blobUrl ?? undefined} /> : null}
+            </section>
+          })}
         </div>
-        <div className="rounded-2xl border bg-gradient-to-br from-violet-50/70 to-sky-50/50 p-5 dark:from-violet-500/[0.08] dark:to-sky-500/[0.04]"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-700 dark:text-violet-300">Now playing preview</p>{selected ? <div className="mt-5"><div className="flex items-center gap-3"><div className="flex size-12 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-md shadow-violet-600/20"><Music2 className="size-5" /></div><div className="min-w-0"><p className="truncate font-semibold">{selected.title}</p><p className="mt-0.5 text-xs text-muted-foreground">{formatBytes(selected.sizeBytes)}</p></div></div><audio className="audio-player mt-6 h-10 w-full" controls preload="none" src={selected.downloadUrl ?? selected.blobUrl ?? undefined} /></div> : <p className="mt-6 text-sm leading-6 text-muted-foreground">No welcome note selected. Choose one to preview it here.</p>}</div>
+        <label className="block space-y-2 text-sm font-medium">Records · Google Drive URL
+          <Input type="url" maxLength={1000} disabled={mutation.isPending} value={values.recordsDriveUrl ?? ''} aria-invalid={!validUrl} onChange={(event) => setDraft((current) => ({ ...current, recordsDriveUrl: event.target.value }))} placeholder="https://drive.google.com/drive/folders/..." />
+          <span className={cn('block text-xs font-normal', validUrl ? 'text-muted-foreground' : 'text-destructive')}>{validUrl ? 'The Records button opens this folder. Leave blank to clear the configuration.' : 'Enter an HTTPS drive.google.com URL.'}</span>
+        </label>
+        <Button className="h-11 w-full sm:w-auto" disabled={mutation.isPending || !Object.keys(draft).length || !validUrl} onClick={() => mutation.mutate()}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <Save />} Save settings</Button>
       </CardContent>
     </Card>
   )
@@ -617,7 +655,7 @@ export function AudioAppPage() {
   const availableTabs = useMemo(() => [
     canViewRoutes ? { id: 'routes' as const, label: 'Routes', description: 'Build stop playlists', icon: MapPinned } : null,
     canViewAudios ? { id: 'audios' as const, label: 'Audio library', description: 'Upload and organize', icon: Headphones } : null,
-    canEditSettings ? { id: 'settings' as const, label: 'Welcome note', description: 'Set the greeting', icon: Settings2 } : null,
+    canEditSettings ? { id: 'settings' as const, label: 'Mobile settings', description: 'Quick audio & records', icon: Settings2 } : null,
     canViewMobileUsers ? { id: 'mobile-users' as const, label: 'Driver users', description: 'Control mobile access', icon: UsersRound } : null,
   ].filter((tab): tab is NonNullable<typeof tab> => Boolean(tab)), [canEditSettings, canViewAudios, canViewMobileUsers, canViewRoutes])
   const [tab, setTab] = useState<Tab>(availableTabs[0]?.id ?? 'routes')
@@ -643,7 +681,7 @@ export function AudioAppPage() {
       {audiosQuery.isError ? <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">Unable to load audio: {errorMessage(audiosQuery.error)}</div> : null}
       {tab === 'routes' && canViewRoutes ? <RoutesWorkspace audios={audios} /> : null}
       {tab === 'audios' && canViewAudios ? <AudioLibrary audios={audios} loading={audiosQuery.isLoading} /> : null}
-      {tab === 'settings' && canEditSettings ? <WelcomeSettings audios={audios} /> : null}
+      {tab === 'settings' && canEditSettings ? <MobileSettings audios={audios} /> : null}
       {tab === 'mobile-users' && canViewMobileUsers ? <MobileUsersPanel /> : null}
     </section>
   )
