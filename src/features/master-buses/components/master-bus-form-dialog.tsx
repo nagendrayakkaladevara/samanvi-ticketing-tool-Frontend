@@ -19,10 +19,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { masterBusesService } from '@/features/master-buses/api/master-buses.service'
 import type { CreateMasterBusInput, MasterBus, MasterBusFormValues } from '@/features/master-buses/types/master-bus'
 import {
+  buildMasterBusPayload,
   defaultMasterBusFormValues,
   masterBusToFormValues,
 } from '@/features/master-buses/utils/master-bus-model'
-import { inputValueToMasterDate } from '@/lib/utils/master-dates'
 import { queryClient } from '@/lib/query/query-client'
 
 type FormMode = 'create' | 'edit'
@@ -32,78 +32,6 @@ type MasterBusFormDialogProps = {
   mode: FormMode
   editingBus: MasterBus | null
   onOpenChange: (open: boolean) => void
-}
-
-function buildPayload(values: MasterBusFormValues, mode: FormMode): CreateMasterBusInput | null {
-  const busNumber = values.busNumber.trim()
-  const engineNumber = values.engineNumber.trim()
-  const chassisNumber = values.chassisNumber.trim()
-  const odometerRaw = values.odometer.trim()
-  const insuranceValidity = inputValueToMasterDate(values.insuranceValidity)
-
-  if (mode === 'create') {
-    if (!busNumber) {
-      toast.error('Bus number is required.')
-      return null
-    }
-    if (!engineNumber) {
-      toast.error('Engine number is required.')
-      return null
-    }
-    if (!chassisNumber) {
-      toast.error('Chassis number is required.')
-      return null
-    }
-    if (!odometerRaw) {
-      toast.error('Odometer reading is required.')
-      return null
-    }
-    const odometer = Number(odometerRaw)
-    if (!Number.isInteger(odometer) || odometer < 0) {
-      toast.error('Odometer must be a whole number greater than or equal to 0.')
-      return null
-    }
-    if (!insuranceValidity) {
-      toast.error('Insurance validity date is required.')
-      return null
-    }
-  }
-
-  const payload: CreateMasterBusInput = {
-    busNumber,
-    engineNumber,
-    chassisNumber,
-    odometer: Number(odometerRaw),
-    insuranceValidity: insuranceValidity ?? '',
-  }
-
-  const purchaseDate = inputValueToMasterDate(values.purchaseDate)
-  const pollutionValidity = inputValueToMasterDate(values.pollutionValidity)
-  const fcValidity = inputValueToMasterDate(values.fcValidity)
-  const basePermitValidity = inputValueToMasterDate(values.basePermitValidity)
-  const homeTaxValidity = inputValueToMasterDate(values.homeTaxValidity)
-  const aitpValidity = inputValueToMasterDate(values.aitpValidity)
-  const aitpAuthorizationValidity = inputValueToMasterDate(values.aitpAuthorizationValidity)
-  const serviceOutDate = inputValueToMasterDate(values.serviceOutDate)
-  const lastMaintenanceDate = inputValueToMasterDate(values.lastMaintenanceDate)
-  const remarks = values.remarks.trim()
-
-  if (purchaseDate) payload.purchaseDate = purchaseDate
-  if (pollutionValidity) payload.pollutionValidity = pollutionValidity
-  if (fcValidity) payload.fcValidity = fcValidity
-  if (basePermitValidity) payload.basePermitValidity = basePermitValidity
-  if (homeTaxValidity) payload.homeTaxValidity = homeTaxValidity
-  if (aitpValidity) payload.aitpValidity = aitpValidity
-  if (aitpAuthorizationValidity) payload.aitpAuthorizationValidity = aitpAuthorizationValidity
-  if (serviceOutDate) payload.serviceOutDate = serviceOutDate
-  if (lastMaintenanceDate) payload.lastMaintenanceDate = lastMaintenanceDate
-  if (remarks) payload.remarks = remarks
-
-  if (mode === 'edit' && !insuranceValidity) {
-    delete (payload as Partial<CreateMasterBusInput>).insuranceValidity
-  }
-
-  return payload
 }
 
 export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: MasterBusFormDialogProps) {
@@ -151,15 +79,18 @@ export function MasterBusFormDialog({ open, mode, editingBus, onOpenChange }: Ma
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const payload = buildPayload(formValues, mode)
-    if (!payload) return
-
-    if (mode === 'create') {
-      createMutation.mutate(payload)
+    const result = buildMasterBusPayload(formValues, mode)
+    if (!result.ok) {
+      toast.error(result.error)
       return
     }
 
-    updateMutation.mutate(payload)
+    if (mode === 'create') {
+      createMutation.mutate(result.payload)
+      return
+    }
+
+    updateMutation.mutate(result.payload)
   }
 
   const updateField = <K extends keyof MasterBusFormValues>(key: K, value: MasterBusFormValues[K]) => {
