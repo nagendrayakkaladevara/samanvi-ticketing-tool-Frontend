@@ -66,8 +66,10 @@ import {
   completeAudioUpload,
   getRoute,
   getSettings,
+  getUploadBreakTarget,
   listAudios,
   listRoutes,
+  mapAudioToBreak,
   restoreAudio,
   saveRoutePlaylist,
   updateAudio,
@@ -81,6 +83,8 @@ import type {
   AnnouncementRouteStatus,
   AnnouncementSettings,
   AudioCategory,
+  AudioUploadPurpose,
+  BreakMappingTarget,
   RouteAudio,
 } from '@/features/audio-app/types'
 import { MobileUsersPanel } from '@/features/audio-app/mobile-users-panel'
@@ -99,6 +103,21 @@ const categoryLabels: Record<AudioCategory, string> = {
   stop_announcement: 'Stop announcement',
   common_audio: 'Common audio',
   welcome_note: 'Welcome note',
+}
+
+const uploadPurposeLabels: Record<AudioUploadPurpose, string> = {
+  ...categoryLabels,
+  dinner_break: 'Dinner Break',
+  toilet_break: 'Toilet Break',
+}
+const breakMappingLabels: Record<BreakMappingTarget, string> = {
+  none: 'Not mapped', dinner_break: 'Dinner Break', toilet_break: 'Toilet Break', both: 'Dinner Break and Toilet Break',
+}
+
+function breakMappingForAudio(settings: AnnouncementSettings | undefined, audioId: string): BreakMappingTarget {
+  const dinner = settings?.dinnerBreakAudioId === audioId
+  const toilet = settings?.toiletBreakAudioId === audioId
+  return dinner && toilet ? 'both' : dinner ? 'dinner_break' : toilet ? 'toilet_break' : 'none'
 }
 
 const statusStyles: Record<AnnouncementRouteStatus, string> = {
@@ -473,6 +492,7 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
 }
 
 function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { can } = usePermissions()
   const { reducedMotion, transition, reveal } = useAudioMotion()
   const inputRef = useRef<HTMLInputElement>(null)
   const progressRef = useRef<HTMLDivElement>(null)
@@ -480,23 +500,33 @@ function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const [dragging, setDragging] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [category, setCategory] = useState<AudioCategory>('stop_announcement')
+  const [category, setCategory] = useState<AudioUploadPurpose>('stop_announcement')
   const [progress, setProgress] = useState(0)
   const [uploadedAudioId, setUploadedAudioId] = useState<string | null>(null)
+  const [verified, setVerified] = useState(false)
+  const breakTarget = getUploadBreakTarget(category)
+  const canMapBreaks = can('announcements', 'settings', 'edit')
+
+  function handleVerified() {
+    setVerified(true)
+    // The file is usable in the library even if the subsequent mapping fails.
+    void queryClient.invalidateQueries({ queryKey: announcementKeys.audios })
+  }
 
   const mutation = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error('Choose an audio file')
       if (uploadedAudioId) {
-        await completeAudioUpload(uploadedAudioId)
+        await completeAudioUpload(uploadedAudioId, { breakTarget, onVerified: handleVerified })
         setProgress(100)
       } else {
-        await uploadAudio({ file, title, description, category, onProgress: setProgress, onUploaded: setUploadedAudioId })
+        await uploadAudio({ file, title, description, category, onProgress: setProgress, onUploaded: setUploadedAudioId, onVerified: handleVerified })
       }
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: announcementKeys.audios })
-      toast.success('Audio uploaded and ready to use')
+      if (breakTarget) await queryClient.invalidateQueries({ queryKey: announcementKeys.settings })
+      toast.success(breakTarget ? `Audio uploaded and mapped to ${uploadPurposeLabels[breakTarget]}` : 'Audio uploaded and ready to use')
       onOpenChange(false)
     },
     onError: (error) => toast.error(errorMessage(error)),
@@ -528,7 +558,7 @@ function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     if (!mutation.isPending && !uploadedAudioId) chooseFile(event.dataTransfer.files?.[0])
   }
 
-  const uploadStage = uploadedAudioId ? 'Processing and verifying' : progress > 0 ? 'Uploading securely' : 'Preparing upload'
+  const uploadStage = verified && breakTarget ? `Mapping to ${uploadPurposeLabels[breakTarget]}` : uploadedAudioId ? 'Processing and verifying' : progress > 0 ? 'Uploading securely' : 'Preparing upload'
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!mutation.isPending) onOpenChange(nextOpen) }}>
@@ -585,11 +615,11 @@ function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="grid gap-2 text-sm font-medium">Title<Input className="h-11" disabled={mutation.isPending || Boolean(uploadedAudioId)} maxLength={150} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Majestic bus stand" /></label>
             <label className="grid gap-2 text-sm font-medium">Category
-              <Select disabled={mutation.isPending || Boolean(uploadedAudioId)} value={category} onValueChange={(value) => setCategory(value as AudioCategory)}>
+              <Select disabled={mutation.isPending || Boolean(uploadedAudioId)} value={category} onValueChange={(value) => setCategory(value as AudioUploadPurpose)}>
                 <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                <SelectContent className="audio-select-content">{Object.entries(categoryLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
+                <SelectContent className="audio-select-content">{Object.entries(uploadPurposeLabels).map(([value, label]) => <SelectItem disabled={(value === 'dinner_break' || value === 'toilet_break') && !canMapBreaks} key={value} value={value}>{label}</SelectItem>)}</SelectContent>
               </Select>
-              <span className="text-xs font-normal leading-5 text-muted-foreground">For Dinner Break or Toilet Break, choose Common audio. After uploading, select the file in Mobile settings and save.</span>
+              <span className="text-xs font-normal leading-5 text-muted-foreground">{breakTarget ? `This uploads as Common audio and replaces the app's ${uploadPurposeLabels[breakTarget]} selection automatically after verification.` : canMapBreaks ? 'Choose Dinner Break or Toilet Break to upload and map the app button in one step.' : 'Dinner Break and Toilet Break mapping requires Mobile settings permission.'}</span>
             </label>
           </div>
           <label className="grid gap-2 text-sm font-medium"><span>Description <span className="font-normal text-muted-foreground">(optional)</span></span><Textarea className="min-h-24 resize-none" disabled={mutation.isPending || Boolean(uploadedAudioId)} maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Help operators understand where and when to use this audio" /></label>
@@ -604,12 +634,12 @@ function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange
               </motion.div>
             ) : null}
           </AnimatePresence>
-          {uploadedAudioId && mutation.isError ? <p role="alert" className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">Your file is uploaded. Retry verification to make it available in the audio library.</p> : null}
+           {uploadedAudioId && mutation.isError ? <p role="alert" className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">{verified && breakTarget ? `Your audio is ready in the library, but mapping to ${uploadPurposeLabels[breakTarget]} failed. Retry mapping without uploading again, or use Map to app in the library.` : 'Your file is uploaded. Retry verification to make it available in the audio library.'}</p> : null}
           <div className="flex items-center gap-2 rounded-xl bg-muted/50 px-3 py-2.5 text-xs text-muted-foreground"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /><span>Files are securely uploaded and validated before they become available.</span></div>
         </div>
         <DialogFooter className="sticky bottom-0 border-t bg-background/95 px-5 py-4 backdrop-blur sm:px-6">
           <Button className="h-11" variant="outline" disabled={mutation.isPending} onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button className="h-11 min-w-36 bg-violet-600 text-white hover:bg-violet-700" disabled={!file || !title.trim() || mutation.isPending} onClick={() => mutation.mutate()}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <CloudUpload />} {uploadedAudioId ? 'Retry verification' : 'Upload audio'}</Button>
+          <Button className="h-11 min-w-36 bg-violet-600 text-white hover:bg-violet-700" disabled={!file || !title.trim() || mutation.isPending || (Boolean(breakTarget) && !canMapBreaks)} onClick={() => mutation.mutate()}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <CloudUpload />} {uploadedAudioId ? verified && breakTarget ? 'Retry mapping' : 'Retry verification' : breakTarget ? 'Upload and map' : 'Upload audio'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -628,6 +658,20 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
   const [view, setView] = useState<'library' | 'deleted'>('library')
   const [deletedPage, setDeletedPage] = useState(1)
   const [deleting, setDeleting] = useState<AnnouncementAudio | null>(null)
+  const [mapping, setMapping] = useState<AnnouncementAudio | null>(null)
+  const [mappingTarget, setMappingTarget] = useState<BreakMappingTarget>('none')
+  const canMapBreaks = can('announcements', 'settings', 'edit')
+  const settingsQuery = useQuery({ queryKey: announcementKeys.settings, queryFn: getSettings, enabled: canMapBreaks })
+  const mappingMutation = useMutation({
+    mutationFn: () => mapAudioToBreak(mapping!.id, mappingTarget),
+    onSuccess: async (settings) => {
+      queryClient.setQueryData(announcementKeys.settings, settings)
+      await queryClient.invalidateQueries({ queryKey: announcementKeys.settings })
+      setMapping(null)
+      toast.success(mappingTarget === 'none' ? 'Audio mapping removed' : `Audio mapped to ${breakMappingLabels[mappingTarget]}`)
+    },
+    onError: (error) => toast.error(errorMessage(error)),
+  })
   const deletedQuery = useQuery({
     queryKey: [...announcementKeys.audios, 'deleted', { page: deletedPage, search, category }],
     queryFn: () => listAudios({ page: deletedPage, status: 'archived', search: search.trim() || undefined, category: category === 'all' ? undefined : category }),
@@ -688,9 +732,11 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
               <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide', audio.status === 'archived' ? 'bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300' : audio.status === 'ready' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' : audio.status === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300')}>{audio.status === 'archived' ? 'Deleted' : audio.status}</span>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-2 text-xs"><span className="rounded-lg bg-muted px-2.5 py-1.5 font-medium">{categoryLabels[audio.category]}</span><span className="text-muted-foreground">{formatBytes(audio.sizeBytes)}</span>{formatDuration(audio.durationMs) ? <><span className="text-border">•</span><span className="text-muted-foreground">{formatDuration(audio.durationMs)}</span></> : null}</div>
+            {view === 'library' && breakMappingForAudio(settingsQuery.data, audio.id) !== 'none' ? <p className="mt-3 text-xs font-medium text-violet-700 dark:text-violet-300">App button: {breakMappingLabels[breakMappingForAudio(settingsQuery.data, audio.id)]}</p> : null}
             <p className="mt-4 min-h-10 line-clamp-2 text-sm leading-5 text-muted-foreground">{audio.description || 'No description added.'}</p>
             <div className="mt-auto pt-5"><audio aria-label={`Preview ${audio.title}`} className="audio-player h-10 w-full min-w-0" controls preload="none" src={audio.downloadUrl ?? audio.blobUrl ?? undefined} /></div>
-            <div className="mt-4 flex items-center justify-end gap-1 border-t pt-3">
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-1 border-t pt-3">
+              {view === 'library' && audio.category === 'common_audio' && audio.status === 'ready' && canMapBreaks ? <Button aria-label={`Map ${audio.title} to app`} variant="ghost" className="h-10 px-3 text-muted-foreground hover:text-foreground" disabled={!settingsQuery.data || settingsQuery.isFetching} onClick={() => { setMapping(audio); setMappingTarget(breakMappingForAudio(settingsQuery.data, audio.id)) }}><Settings2 /><span>Map to app</span></Button> : null}
               {view === 'library' && can('announcements', 'audios', 'edit') ? <Button aria-label={`Edit ${audio.title}`} variant="ghost" className="h-10 px-3 text-muted-foreground hover:text-foreground" onClick={() => { setEditing(audio); setEditTitle(audio.title); setEditDescription(audio.description ?? '') }}><Pencil /><span>Edit</span></Button> : null}
               {can('announcements', 'audios', 'delete') ? view === 'deleted' ? <Button aria-label={`Restore ${audio.title}`} variant="outline" className="h-10 px-3" disabled={restoreMutation.isPending} onClick={() => restoreMutation.mutate(audio.id)}>{restoreMutation.isPending && restoreMutation.variables === audio.id ? <LoaderCircle className="animate-spin" /> : <RotateCcw />}<span>Restore</span></Button> : <Button aria-label={`Delete ${audio.title}`} variant="ghost" className="h-10 px-3 text-muted-foreground hover:text-destructive" disabled={deleteMutation.isPending} onClick={() => setDeleting(audio)}><Trash2 /><span>Delete</span></Button> : null}
             </div>
@@ -698,6 +744,14 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
         ))}</div> : <EmptyState icon={view === 'deleted' ? Trash2 : Music2} title={view === 'deleted' ? 'No deleted audio found' : 'No audio found'} description={view === 'deleted' ? 'Deleted audio will appear here. If you expected a file, try changing the filters.' : 'Upload your first announcement or change the filters.'} />}
         {view === 'deleted' && (totalPages > 1 || deletedPage > 1) ? <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-4"><p className="text-sm text-muted-foreground">Page {deletedPage} of {Math.max(deletedPage, totalPages)}</p><div className="flex gap-2"><Button variant="outline" disabled={deletedPage <= 1 || deletedQuery.isFetching} onClick={() => setDeletedPage((page) => page - 1)}><ArrowLeft /> Previous</Button><Button variant="outline" disabled={deletedPage >= totalPages || deletedQuery.isFetching} onClick={() => setDeletedPage((page) => page + 1)}>Next <ArrowRight /></Button></div></div> : null}
       </CardContent>
+      {canMapBreaks && settingsQuery.isError ? <div role="alert" className="px-6 pb-4 text-sm text-destructive">Unable to load app mappings. <Button variant="link" onClick={() => void settingsQuery.refetch()}>Retry</Button></div> : null}
+      <Dialog open={Boolean(mapping)} onOpenChange={(open) => { if (!open && !mappingMutation.isPending) setMapping(null) }}>
+        <DialogContent className="audio-dialog w-[calc(100%-2rem)]"><DialogHeader><DialogTitle>Map audio to an app button</DialogTitle><DialogDescription>Choose where “{mapping?.title}” should play. Saving replaces the selected button's current audio; other files stay in the library.</DialogDescription></DialogHeader>
+          <label className="grid gap-2 text-sm font-medium">App button<Select value={mappingTarget} disabled={mappingMutation.isPending} onValueChange={(value) => setMappingTarget(value as BreakMappingTarget)}><SelectTrigger aria-label="App button mapping" className="h-11"><SelectValue /></SelectTrigger><SelectContent className="audio-select-content">{Object.entries(breakMappingLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></label>
+          <p className="text-xs leading-5 text-muted-foreground">Not mapped removes only this file's Dinner/Toilet Break assignments. Drivers receive the updated audio after refreshing or reopening the app.</p>
+          <DialogFooter><Button variant="outline" disabled={mappingMutation.isPending} onClick={() => setMapping(null)}>Cancel</Button><Button disabled={mappingMutation.isPending} onClick={() => mappingMutation.mutate()}>{mappingMutation.isPending ? <LoaderCircle className="animate-spin" /> : <Save />} Save mapping</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
       <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => { if (!open && !deleteMutation.isPending) setDeleting(null) }}>
         <AlertDialogContent className="w-[calc(100%-2rem)]">
           <AlertDialogHeader><AlertDialogTitle>Delete audio?</AlertDialogTitle><AlertDialogDescription>“{deleting?.title}” will move to Recently deleted. You can restore it later. Audio used by a route or mobile settings must be removed from there first.</AlertDialogDescription></AlertDialogHeader>
@@ -749,7 +803,7 @@ function MobileSettings({ audios }: { audios: AnnouncementAudio[] }) {
                   <SelectContent className="audio-select-content"><SelectItem value="none">Not configured</SelectItem>{values[key] && !selected ? <SelectItem value={values[key]!}>Unavailable audio — choose a replacement</SelectItem> : null}{common.map((audio) => <SelectItem key={audio.id} value={audio.id}>{audio.title}</SelectItem>)}</SelectContent>
                 </Select>
               </label>
-              <p className="text-xs leading-5 text-muted-foreground">Upload this announcement as Common audio in the Audio library, select it here, then Save settings. It plays directly when the driver taps {title}.</p>
+              <p className="text-xs leading-5 text-muted-foreground">Upload with category {title} to map automatically, use Map to app on an existing Common audio file, or select a file here and Save settings.</p>
               <div className="min-h-10">
                 <AnimatePresence mode="wait" initial={false}>
                   {selected ? <motion.div key={selected.id} {...reveal()}><audio aria-label={`Preview ${title}`} className="audio-player h-10 w-full min-w-0" controls preload="none" src={selected.downloadUrl ?? selected.blobUrl ?? undefined} /></motion.div> : <motion.p key="unconfigured" {...reveal()} className="flex h-10 items-center gap-2 text-xs text-muted-foreground"><Headphones className="size-4" />Select an audio to preview it here.</motion.p>}
