@@ -8,6 +8,8 @@ import type {
   AnnouncementSettings,
   AudioCategory,
   AudioStatus,
+  AudioUploadPurpose,
+  BreakMappingTarget,
   Paginated,
 } from './types'
 
@@ -85,6 +87,15 @@ export async function restoreAudio(audioId: string) {
   return response.data.data
 }
 
+export async function mapAudioToBreak(audioId: string, target: BreakMappingTarget) {
+  const response = await apiClient.put<ApiEnvelope<AnnouncementSettings>>(`${BASE}/audios/${audioId}/break-mapping`, { target })
+  return response.data.data
+}
+
+export function getUploadBreakTarget(purpose: AudioUploadPurpose) {
+  return purpose === 'dinner_break' || purpose === 'toilet_break' ? purpose : undefined
+}
+
 export async function getSettings() {
   const response = await apiClient.get<ApiEnvelope<AnnouncementSettings>>(`${BASE}/settings`)
   return response.data.data
@@ -103,10 +114,12 @@ type AudioUploadTicket = {
   expiresInSeconds: number
 }
 
-export async function completeAudioUpload(audioId: string) {
+export async function completeAudioUpload(audioId: string, input: { breakTarget?: 'dinner_break' | 'toilet_break'; onVerified?: () => void } = {}) {
   const response = await apiClient.post<ApiEnvelope<AnnouncementAudio>>(
     `${BASE}/audios/${audioId}/upload-complete`,
   )
+  input.onVerified?.()
+  if (input.breakTarget) await mapAudioToBreak(audioId, input.breakTarget)
   return response.data.data
 }
 
@@ -118,16 +131,17 @@ export async function uploadAudio(input: {
   file: File
   title: string
   description?: string
-  category: AudioCategory
+  category: AudioUploadPurpose
   durationMs?: number
   onProgress?: (percentage: number) => void
   onUploaded?: (audioId: string) => void
+  onVerified?: () => void
 }) {
   input.onProgress?.(0)
   const response = await apiClient.post<ApiEnvelope<AudioUploadTicket>>(`${BASE}/audios/upload`, {
     title: input.title,
     description: input.description || undefined,
-    category: input.category,
+    category: getUploadBreakTarget(input.category) ? 'common_audio' : input.category,
     fileName: input.file.name,
     mimeType: input.file.type,
     sizeBytes: input.file.size,
@@ -148,7 +162,7 @@ export async function uploadAudio(input: {
     throw new Error('Audio upload failed. Check your connection and try again.')
   }
   input.onUploaded?.(ticket.audioId)
-  const audio = await completeAudioUpload(ticket.audioId)
+  const audio = await completeAudioUpload(ticket.audioId, { breakTarget: getUploadBreakTarget(input.category), onVerified: input.onVerified })
   input.onProgress?.(100)
   return audio
 }

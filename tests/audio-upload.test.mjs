@@ -7,11 +7,16 @@ import ts from 'typescript'
 const source = readFileSync(new URL('../src/features/audio-app/announcements.service.ts', import.meta.url), 'utf8')
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 
-function fixture({ ticketError, putError, completeError, listError, deleteError } = {}) {
+function fixture({ ticketError, putError, completeError, listError, deleteError, mappingError } = {}) {
   const calls = []
   const ticket = { audioId: 'audio-1', uploadUrl: 'https://r2.example.com/signed', method: 'PUT', headers: { 'Content-Type': 'audio/mpeg', 'If-None-Match': '*' }, expiresInSeconds: 300 }
   const ready = { id: 'audio-1', status: 'ready' }
   const apiClient = {
+    async put(path, payload) {
+      calls.push({ kind: 'mapping', path, payload })
+      if (mappingError) throw mappingError
+      return { data: { data: { id: 'default', dinnerBreakAudioId: payload.target === 'dinner_break' ? ready.id : null, toiletBreakAudioId: payload.target === 'toilet_break' ? ready.id : null } } }
+    },
     async get(path, config) {
       calls.push({ kind: 'api', path, config })
       if (listError) throw listError
@@ -139,6 +144,58 @@ test('delete and restore errors are preserved for the UI', async () => {
 test('recently deleted errors are preserved for the retry state', async () => {
   const { service } = fixture({ listError: new Error('Network unavailable') })
   await assert.rejects(service.listAudios({ status: 'archived' }), /Network unavailable/)
+})
+
+for (const target of ['dinner_break', 'toilet_break']) {
+  test(`uploading for ${target} verifies Common audio before mapping the button`, async () => {
+    const { service, input, calls, ready } = fixture()
+    let verified = false
+    const result = await service.uploadAudio({ ...input, category: target, onVerified: () => { verified = true; assert.equal(calls.length, 3) } })
+    assert.equal(result, ready)
+    assert.equal(verified, true)
+    assert.equal(calls[0].payload.category, 'common_audio')
+    assert.equal(calls[2].path, '/announcements/audios/audio-1/upload-complete')
+    assert.equal(calls[3].path, '/announcements/audios/audio-1/break-mapping')
+    assert.equal(calls[3].payload.target, target)
+  })
+}
+
+test('failed verification never changes a break mapping', async () => {
+  const { service, input, calls } = fixture({ completeError: new Error('Not verified') })
+  await assert.rejects(service.uploadAudio({ ...input, category: 'toilet_break' }), /Not verified/)
+  assert.equal(calls.some(call => call.kind === 'mapping'), false)
+})
+
+test('mapping failure retains the uploaded id and ready state for retry without re-upload', async () => {
+  const { service, input, calls } = fixture({ mappingError: new Error('Forbidden') })
+  let uploadedId
+  let verified = false
+  const progress = []
+  await assert.rejects(service.uploadAudio({ ...input, category: 'toilet_break', onUploaded: id => { uploadedId = id }, onVerified: () => { verified = true }, onProgress: value => progress.push(value) }), /Forbidden/)
+  assert.equal(uploadedId, 'audio-1')
+  assert.equal(verified, true)
+  assert.equal(progress.includes(100), false)
+  assert.equal(calls.filter(call => call.kind === 'put').length, 1)
+  const retry = fixture()
+  await retry.service.completeAudioUpload(uploadedId, { breakTarget: 'toilet_break' })
+  assert.equal(retry.calls.length, 2)
+  assert.equal(retry.calls[0].path, '/announcements/audios/audio-1/upload-complete')
+  assert.equal(retry.calls[1].payload.target, 'toilet_break')
+})
+
+test('existing Common audio can be mapped without a new upload', async () => {
+  const { service, calls } = fixture()
+  await service.mapAudioToBreak('audio-1', 'dinner_break')
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].path, '/announcements/audios/audio-1/break-mapping')
+  assert.equal(calls[0].payload.target, 'dinner_break')
+})
+
+test('ordinary Common audio does not get assigned automatically', async () => {
+  const { service, input, calls } = fixture()
+  await service.uploadAudio({ ...input, category: 'common_audio' })
+  assert.equal(calls[0].payload.category, 'common_audio')
+  assert.equal(calls.some(call => call.kind === 'mapping'), false)
 })
 
 // Exercise the upload dialog's actual effect without needing a browser DOM.

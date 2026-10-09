@@ -10,7 +10,11 @@ The upload dialog shows byte progress and only reports success after verificatio
 
 Starting an upload or retry automatically scrolls the popup to its progress panel after it mounts. The scroll is smooth unless reduced motion is enabled, and is not repeated for every percentage update.
 
-For Dinner Break and Toilet Break, upload each announcement with category **Common audio**, then select the corresponding files in **Mobile settings** and click **Save settings**. These are existing common-audio assignments, not separate upload categories. Configuring them requires the Mobile settings permission.
+For Dinner Break and Toilet Break, choose **Dinner Break** or **Toilet Break** in the upload Category dropdown and click **Upload and map**. The file is uploaded as Common audio, verified, then mapped to that app button using `PUT /announcements/audios/:audioId/break-mapping`. This replaces only that button's selection and keeps the old audio in the library. Configuring mappings requires the Mobile settings permission; users without it can still upload regular Common audio.
+
+For an already-uploaded Common audio file, click **Map to app**, choose the button and **Save mapping**. The dialog also supports both buttons or Not mapped. Moving one file from one break button to the other removes its previous mapping, without clearing mappings belonging to other files. Mobile settings remains an alternative way to configure the same assignments.
+
+If upload verification succeeds but mapping fails, the ready file remains in the library. **Retry mapping** retries completion (idempotently) and mapping without another storage upload; **Map to app** can also finish the mapping later. Deploy the backend mapping endpoint before this frontend. There is no new category enum or database migration for this feature.
 
 The backend must be deployed with R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME and R2_PUBLIC_BASE_URL. No R2 credentials or new storage environment variables belong in the frontend.
 

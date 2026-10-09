@@ -1,4 +1,6 @@
 export type AudioCategory = 'stop_announcement' | 'common_audio' | 'welcome_note'
+export type BreakMappingTarget = 'dinner_break' | 'toilet_break' | 'both' | 'none'
+export type AudioUploadPurpose = AudioCategory | 'dinner_break' | 'toilet_break'
 export type AudioStatus = 'uploading' | 'ready' | 'failed' | 'archived'
 export type AnnouncementRouteStatus = 'draft' | 'published' | 'archived'
 
