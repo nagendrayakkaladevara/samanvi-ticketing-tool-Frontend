@@ -19,6 +19,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  RotateCcw,
   Save,
   Search,
   Settings2,
@@ -29,6 +30,16 @@ import {
 
 import { PageGradientHeader } from '@/components/page-gradient-header'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
@@ -48,7 +59,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  archiveAudio,
+  deleteAudio,
   archiveRoute,
   announcementKeys,
   createRoute,
@@ -57,6 +68,7 @@ import {
   getSettings,
   listAudios,
   listRoutes,
+  restoreAudio,
   saveRoutePlaylist,
   updateAudio,
   updateRoute,
@@ -601,6 +613,14 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
   const [editing, setEditing] = useState<AnnouncementAudio | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
+  const [view, setView] = useState<'library' | 'deleted'>('library')
+  const [deletedPage, setDeletedPage] = useState(1)
+  const [deleting, setDeleting] = useState<AnnouncementAudio | null>(null)
+  const deletedQuery = useQuery({
+    queryKey: [...announcementKeys.audios, 'deleted', { page: deletedPage, search, category }],
+    queryFn: () => listAudios({ page: deletedPage, status: 'archived', search: search.trim() || undefined, category: category === 'all' ? undefined : category }),
+    enabled: view === 'deleted',
+  })
 
   const filtered = useMemo(() => audios.filter((audio) => {
     const matchesCategory = category === 'all' || audio.category === category
@@ -613,45 +633,65 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: announcementKeys.audios }); setEditing(null); toast.success('Audio details updated') },
     onError: (error) => toast.error(errorMessage(error)),
   })
-  const archiveMutation = useMutation({
-    mutationFn: archiveAudio,
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: announcementKeys.audios }); toast.success('Audio archived') },
+  const deleteMutation = useMutation({
+    mutationFn: deleteAudio,
+    onSuccess: async () => { setDeleting(null); await queryClient.invalidateQueries({ queryKey: announcementKeys.audios }); toast.success('Audio moved to Recently deleted') },
     onError: (error) => toast.error(errorMessage(error)),
   })
+  const restoreMutation = useMutation({
+    mutationFn: restoreAudio,
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: announcementKeys.audios }); toast.success('Audio restored to the library') },
+    onError: (error) => toast.error(errorMessage(error)),
+  })
+  const displayed = view === 'deleted' ? deletedQuery.data?.items ?? [] : filtered
+  const total = view === 'deleted' ? deletedQuery.data?.pagination.total ?? 0 : audios.length
+  const totalPages = deletedQuery.data?.pagination.totalPages ?? 0
 
-  if (loading) return <LoadingState />
+  if (loading && view === 'library') return <LoadingState />
 
   return (
     <Card className="audio-surface overflow-hidden rounded-2xl">
       <CardHeader className="space-y-5 border-b p-4 sm:p-6">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div><CardTitle className="text-xl tracking-tight">Audio library</CardTitle><p className="mt-1.5 text-sm leading-6 text-muted-foreground">One organized home for every reusable passenger announcement.</p></div>
-          {can('announcements', 'audios', 'upload') ? <Button className="h-11 w-full bg-violet-600 text-white shadow-md shadow-violet-600/15 hover:bg-violet-700 sm:w-auto" onClick={() => setUploadOpen(true)}><CloudUpload /> Upload audio</Button> : null}
+          {view === 'library' && can('announcements', 'audios', 'upload') ? <Button className="h-11 w-full bg-violet-600 text-white shadow-md shadow-violet-600/15 hover:bg-violet-700 sm:w-auto" onClick={() => setUploadOpen(true)}><CloudUpload /> Upload audio</Button> : null}
         </div>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Audio library views">
+          <Button variant={view === 'library' ? 'default' : 'outline'} aria-pressed={view === 'library'} onClick={() => { setView('library'); setSearch(''); setCategory('all'); setDeletedPage(1) }}><Headphones /> Audio library</Button>
+          <Button variant={view === 'deleted' ? 'default' : 'outline'} aria-pressed={view === 'deleted'} onClick={() => { setView('deleted'); setSearch(''); setCategory('all'); setDeletedPage(1) }}><Trash2 /> Recently deleted</Button>
+        </div>
+        {view === 'deleted' ? <p className="rounded-xl border bg-muted/30 px-4 py-3 text-sm leading-6 text-muted-foreground">Deleted audio is kept here until restored. Files are not permanently removed.{can('announcements', 'audios', 'delete') ? ' Restore an audio file to use it again.' : ' Ask an administrator with Delete / Restore permission to restore an audio file.'}</p> : null}
         <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="relative min-w-0 flex-1"><Search className="absolute left-3.5 top-3.5 size-4 text-muted-foreground" /><Input aria-label="Search audio library" className="h-11 rounded-xl bg-background pl-10" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by title, file name, or description" /></div>
-          <Select value={category} onValueChange={(value) => setCategory(value as 'all' | AudioCategory)}><SelectTrigger aria-label="Filter audio by category" className="h-11 rounded-xl sm:w-56"><SelectValue /></SelectTrigger><SelectContent className="audio-select-content"><SelectItem value="all">All categories</SelectItem>{Object.entries(categoryLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select>
+          <div className="relative min-w-0 flex-1"><Search className="absolute left-3.5 top-3.5 size-4 text-muted-foreground" /><Input aria-label={view === 'deleted' ? 'Search recently deleted audio' : 'Search audio library'} className="h-11 rounded-xl bg-background pl-10" value={search} onChange={(event) => { setSearch(event.target.value); setDeletedPage(1) }} placeholder="Search by title, file name, or description" /></div>
+          <Select value={category} onValueChange={(value) => { setCategory(value as 'all' | AudioCategory); setDeletedPage(1) }}><SelectTrigger aria-label="Filter audio by category" className="h-11 rounded-xl sm:w-56"><SelectValue /></SelectTrigger><SelectContent className="audio-select-content"><SelectItem value="all">All categories</SelectItem>{Object.entries(categoryLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select>
         </div>
-        <p className="text-xs text-muted-foreground">Showing {filtered.length} of {audios.length} audio files</p>
+        <p className="text-xs text-muted-foreground" aria-live="polite">Showing {displayed.length} of {total} {view === 'deleted' ? 'deleted ' : ''}audio files</p>
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
-        {filtered.length ? <div className="audio-card-grid">{filtered.map((audio, index) => (
+        {view === 'deleted' && deletedQuery.isLoading ? <LoadingState /> : view === 'deleted' && deletedQuery.isError ? <div role="alert" className="space-y-3 rounded-xl border p-5 text-destructive"><p>Unable to load recently deleted audio: {errorMessage(deletedQuery.error)}</p><Button variant="outline" onClick={() => void deletedQuery.refetch()}>Retry</Button></div> : displayed.length ? <div className="audio-card-grid">{displayed.map((audio, index) => (
           <motion.div key={audio.id} {...reveal(search || category !== 'all' ? 0 : index)} layout={reducedMotion ? false : 'position'} className="audio-interactive-card flex min-w-0 flex-col rounded-2xl border bg-card p-4 hover:border-violet-200 hover:shadow-md sm:p-5 dark:hover:border-violet-500/30">
             <div className="flex items-start gap-3.5">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"><Headphones className="size-5" /></div>
               <div className="min-w-0 flex-1"><p className="break-words font-semibold tracking-tight">{audio.title}</p><p title={audio.originalFileName} className="mt-1 truncate text-xs text-muted-foreground">{audio.originalFileName}</p></div>
-              <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide', audio.status === 'ready' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' : audio.status === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300')}>{audio.status}</span>
+              <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide', audio.status === 'archived' ? 'bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300' : audio.status === 'ready' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' : audio.status === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300')}>{audio.status === 'archived' ? 'Deleted' : audio.status}</span>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-2 text-xs"><span className="rounded-lg bg-muted px-2.5 py-1.5 font-medium">{categoryLabels[audio.category]}</span><span className="text-muted-foreground">{formatBytes(audio.sizeBytes)}</span>{formatDuration(audio.durationMs) ? <><span className="text-border">•</span><span className="text-muted-foreground">{formatDuration(audio.durationMs)}</span></> : null}</div>
             <p className="mt-4 min-h-10 line-clamp-2 text-sm leading-5 text-muted-foreground">{audio.description || 'No description added.'}</p>
             <div className="mt-auto pt-5"><audio aria-label={`Preview ${audio.title}`} className="audio-player h-10 w-full min-w-0" controls preload="none" src={audio.downloadUrl ?? audio.blobUrl ?? undefined} /></div>
             <div className="mt-4 flex items-center justify-end gap-1 border-t pt-3">
-              {can('announcements', 'audios', 'edit') ? <Button aria-label={`Edit ${audio.title}`} variant="ghost" className="h-10 px-3 text-muted-foreground hover:text-foreground" onClick={() => { setEditing(audio); setEditTitle(audio.title); setEditDescription(audio.description ?? '') }}><Pencil /><span>Edit</span></Button> : null}
-              {can('announcements', 'audios', 'delete') ? <Button aria-label={`Archive ${audio.title}`} variant="ghost" className="h-10 px-3 text-muted-foreground hover:text-destructive" disabled={archiveMutation.isPending} onClick={() => window.confirm('Archive this audio? Routes already using it will keep their reference.') && archiveMutation.mutate(audio.id)}><Archive /><span>Archive</span></Button> : null}
+              {view === 'library' && can('announcements', 'audios', 'edit') ? <Button aria-label={`Edit ${audio.title}`} variant="ghost" className="h-10 px-3 text-muted-foreground hover:text-foreground" onClick={() => { setEditing(audio); setEditTitle(audio.title); setEditDescription(audio.description ?? '') }}><Pencil /><span>Edit</span></Button> : null}
+              {can('announcements', 'audios', 'delete') ? view === 'deleted' ? <Button aria-label={`Restore ${audio.title}`} variant="outline" className="h-10 px-3" disabled={restoreMutation.isPending} onClick={() => restoreMutation.mutate(audio.id)}>{restoreMutation.isPending && restoreMutation.variables === audio.id ? <LoaderCircle className="animate-spin" /> : <RotateCcw />}<span>Restore</span></Button> : <Button aria-label={`Delete ${audio.title}`} variant="ghost" className="h-10 px-3 text-muted-foreground hover:text-destructive" disabled={deleteMutation.isPending} onClick={() => setDeleting(audio)}><Trash2 /><span>Delete</span></Button> : null}
             </div>
           </motion.div>
-        ))}</div> : <EmptyState icon={Music2} title="No audio found" description="Upload your first announcement or change the filters." />}
+        ))}</div> : <EmptyState icon={view === 'deleted' ? Trash2 : Music2} title={view === 'deleted' ? 'No deleted audio found' : 'No audio found'} description={view === 'deleted' ? 'Deleted audio will appear here. If you expected a file, try changing the filters.' : 'Upload your first announcement or change the filters.'} />}
+        {view === 'deleted' && (totalPages > 1 || deletedPage > 1) ? <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-4"><p className="text-sm text-muted-foreground">Page {deletedPage} of {Math.max(deletedPage, totalPages)}</p><div className="flex gap-2"><Button variant="outline" disabled={deletedPage <= 1 || deletedQuery.isFetching} onClick={() => setDeletedPage((page) => page - 1)}><ArrowLeft /> Previous</Button><Button variant="outline" disabled={deletedPage >= totalPages || deletedQuery.isFetching} onClick={() => setDeletedPage((page) => page + 1)}>Next <ArrowRight /></Button></div></div> : null}
       </CardContent>
+      <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => { if (!open && !deleteMutation.isPending) setDeleting(null) }}>
+        <AlertDialogContent className="w-[calc(100%-2rem)]">
+          <AlertDialogHeader><AlertDialogTitle>Delete audio?</AlertDialogTitle><AlertDialogDescription>“{deleting?.title}” will move to Recently deleted. You can restore it later. Audio used by a route or mobile settings must be removed from there first.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={deleteMutation.isPending} onClick={(event) => { event.preventDefault(); if (deleting) deleteMutation.mutate(deleting.id) }}>{deleteMutation.isPending ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}{deleteMutation.isPending ? 'Deleting…' : 'Delete audio'}</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {uploadOpen ? <AudioUploadDialog open onOpenChange={setUploadOpen} /> : null}
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}><DialogContent className="audio-dialog max-h-[90svh] w-[calc(100%-2rem)] overflow-y-auto"><DialogHeader><DialogTitle>Edit audio details</DialogTitle><DialogDescription>Update the operator-facing name and description.</DialogDescription></DialogHeader><label className="grid gap-2 text-sm font-medium">Title<Input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} /></label><label className="grid gap-2 text-sm font-medium">Description<Textarea value={editDescription} onChange={(event) => setEditDescription(event.target.value)} /></label><DialogFooter><Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button><Button disabled={!editTitle.trim() || editMutation.isPending} onClick={() => editMutation.mutate()}><Save /> Save changes</Button></DialogFooter></DialogContent></Dialog>
     </Card>
@@ -734,7 +774,7 @@ export function AudioAppPage() {
   ].filter((tab): tab is NonNullable<typeof tab> => Boolean(tab)), [canEditSettings, canViewAudios, canViewMobileUsers, canViewRoutes])
   const [tab, setTab] = useState<Tab>(availableTabs[0]?.id ?? 'routes')
   const activeTab = availableTabs.find((item) => item.id === tab)?.id ?? availableTabs[0]?.id
-  const audiosQuery = useQuery({ queryKey: announcementKeys.audios, queryFn: listAudios, enabled: canViewAudios || canViewRoutes || canEditSettings })
+  const audiosQuery = useQuery({ queryKey: [...announcementKeys.audios, 'active'], queryFn: () => listAudios(), enabled: canViewAudios || canViewRoutes || canEditSettings })
   const audios = audiosQuery.data?.items ?? []
   const routesQuery = useQuery({ queryKey: announcementKeys.routes, queryFn: listRoutes, enabled: canViewRoutes })
   const published = routesQuery.data?.items.filter((route) => route.status === 'published').length ?? 0

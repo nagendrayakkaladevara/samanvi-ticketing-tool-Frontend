@@ -7,11 +7,20 @@ import ts from 'typescript'
 const source = readFileSync(new URL('../src/features/audio-app/announcements.service.ts', import.meta.url), 'utf8')
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 
-function fixture({ ticketError, putError, completeError } = {}) {
+function fixture({ ticketError, putError, completeError, listError, deleteError } = {}) {
   const calls = []
   const ticket = { audioId: 'audio-1', uploadUrl: 'https://r2.example.com/signed', method: 'PUT', headers: { 'Content-Type': 'audio/mpeg', 'If-None-Match': '*' }, expiresInSeconds: 300 }
   const ready = { id: 'audio-1', status: 'ready' }
   const apiClient = {
+    async get(path, config) {
+      calls.push({ kind: 'api', path, config })
+      if (listError) throw listError
+      return { data: { data: { items: [ready], pagination: { page: 1, total: 1, totalPages: 1 } } } }
+    },
+    async delete(path) {
+      calls.push({ kind: 'api', path })
+      if (deleteError) throw deleteError
+    },
     async post(path, payload) {
       calls.push({ kind: 'api', path, payload })
       if (path.endsWith('/upload')) {
@@ -87,4 +96,47 @@ test('retrying verification makes only the completion request', async () => {
   assert.equal(await service.completeAudioUpload('audio-1'), ready)
   assert.equal(calls.length, 1)
   assert.equal(calls[0].path, '/announcements/audios/audio-1/upload-complete')
+})
+
+test('the library requests active audio using the backend default', async () => {
+  const { service, calls } = fixture()
+  await service.listAudios()
+  assert.equal(calls[0].path, '/announcements/audios')
+  assert.equal(calls[0].config.params.page, 1)
+  assert.equal(calls[0].config.params.status, undefined)
+})
+
+test('recently deleted requests archived audio with server-side search and pagination', async () => {
+  const { service, calls } = fixture()
+  await service.listAudios({ status: 'archived', page: 2, search: 'Stop', category: 'stop_announcement' })
+  assert.equal(calls[0].config.params.status, 'archived')
+  assert.equal(calls[0].config.params.page, 2)
+  assert.equal(calls[0].config.params.pageSize, 100)
+  assert.equal(calls[0].config.params.search, 'Stop')
+  assert.equal(calls[0].config.params.category, 'stop_announcement')
+})
+
+test('delete calls the soft-delete endpoint', async () => {
+  const { service, calls } = fixture()
+  await service.deleteAudio('audio-1')
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].path, '/announcements/audios/audio-1')
+})
+
+test('restore calls the explicit restore endpoint and returns the restored audio', async () => {
+  const { service, calls, ready } = fixture()
+  assert.equal(await service.restoreAudio('audio-1'), ready)
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].path, '/announcements/audios/audio-1/restore')
+})
+
+test('delete and restore errors are preserved for the UI', async () => {
+  const { service } = fixture({ deleteError: new Error('Audio is in use'), completeError: new Error('Forbidden') })
+  await assert.rejects(service.deleteAudio('audio-1'), /Audio is in use/)
+  await assert.rejects(service.restoreAudio('audio-1'), /Forbidden/)
+})
+
+test('recently deleted errors are preserved for the retry state', async () => {
+  const { service } = fixture({ listError: new Error('Network unavailable') })
+  await assert.rejects(service.listAudios({ status: 'archived' }), /Network unavailable/)
 })
