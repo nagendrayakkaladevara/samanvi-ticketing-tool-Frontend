@@ -8,6 +8,10 @@ The Audio App uploads files to Cloudflare R2 through the backend's signed upload
 
 The upload dialog shows byte progress and only reports success after verification. If verification fails after the PUT succeeds, Retry verification completes the same audio record without uploading a duplicate. Keep the dialog open to retry; closing it discards its local retry state.
 
+Starting an upload or retry automatically scrolls the popup to its progress panel after it mounts. The scroll is smooth unless reduced motion is enabled, and is not repeated for every percentage update.
+
+For Dinner Break and Toilet Break, upload each announcement with category **Common audio**, then select the corresponding files in **Mobile settings** and click **Save settings**. These are existing common-audio assignments, not separate upload categories. Configuring them requires the Mobile settings permission.
+
 The backend must be deployed with R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME and R2_PUBLIC_BASE_URL. No R2 credentials or new storage environment variables belong in the frontend.
 
 Configure the bucket CORS to permit the frontend origin, PUT/GET/HEAD and Content-Type/If-None-Match/Range headers. Use a public custom domain for production audio playback. Existing Vercel audio URLs continue to play while the old objects remain available; migration of those objects is separate.

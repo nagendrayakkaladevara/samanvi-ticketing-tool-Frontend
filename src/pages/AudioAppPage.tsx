@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState, type DragEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useIsFetching, useMutation, useQuery } from '@tanstack/react-query'
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from 'motion/react'
 import {
@@ -475,6 +475,7 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
 function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { reducedMotion, transition, reveal } = useAudioMotion()
   const inputRef = useRef<HTMLInputElement>(null)
+  const progressRef = useRef<HTMLDivElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [dragging, setDragging] = useState(false)
   const [title, setTitle] = useState('')
@@ -500,6 +501,16 @@ function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     },
     onError: (error) => toast.error(errorMessage(error)),
   })
+
+  useEffect(() => {
+    if (!mutation.isPending) return
+
+    // Wait for the progress panel to mount, then reveal it inside the dialog.
+    const frame = window.requestAnimationFrame(() => {
+      progressRef.current?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center', inline: 'nearest' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [mutation.isPending, reducedMotion])
 
   function chooseFile(next: File | undefined) {
     if (!next) return
@@ -578,12 +589,13 @@ function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                 <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                 <SelectContent className="audio-select-content">{Object.entries(categoryLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
               </Select>
+              <span className="text-xs font-normal leading-5 text-muted-foreground">For Dinner Break or Toilet Break, choose Common audio. After uploading, select the file in Mobile settings and save.</span>
             </label>
           </div>
           <label className="grid gap-2 text-sm font-medium"><span>Description <span className="font-normal text-muted-foreground">(optional)</span></span><Textarea className="min-h-24 resize-none" disabled={mutation.isPending || Boolean(uploadedAudioId)} maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Help operators understand where and when to use this audio" /></label>
           <AnimatePresence initial={false}>
             {mutation.isPending ? (
-              <motion.div {...reveal()} className="rounded-2xl border border-violet-200 bg-violet-50/60 p-4 dark:border-violet-500/20 dark:bg-violet-500/[0.06]" aria-live="polite">
+              <motion.div ref={progressRef} {...reveal()} className="scroll-m-24 rounded-2xl border border-violet-200 bg-violet-50/60 p-4 dark:border-violet-500/20 dark:bg-violet-500/[0.06]" aria-live="polite">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3 text-sm"><span className="flex items-center gap-2 font-semibold"><LoaderCircle className="size-4 animate-spin text-violet-600" />{uploadStage}</span><span className="tabular-nums text-muted-foreground">{uploadedAudioId ? 'Almost done' : `${progress}%`}</span></div>
                 <div className="h-2.5 overflow-hidden rounded-full bg-violet-100 dark:bg-violet-950" role="progressbar" aria-label="Upload progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={uploadedAudioId ? 100 : progress} aria-valuetext={uploadedAudioId ? 'Upload complete, verifying audio' : `${progress}% uploaded`}>
                   <motion.div className="h-full origin-left rounded-full bg-violet-600" initial={false} animate={{ scaleX: (uploadedAudioId ? 100 : progress) / 100 }} transition={transition} />
@@ -737,7 +749,7 @@ function MobileSettings({ audios }: { audios: AnnouncementAudio[] }) {
                   <SelectContent className="audio-select-content"><SelectItem value="none">Not configured</SelectItem>{values[key] && !selected ? <SelectItem value={values[key]!}>Unavailable audio — choose a replacement</SelectItem> : null}{common.map((audio) => <SelectItem key={audio.id} value={audio.id}>{audio.title}</SelectItem>)}</SelectContent>
                 </Select>
               </label>
-              <p className="text-xs text-muted-foreground">One common audio, played directly on tap.</p>
+              <p className="text-xs leading-5 text-muted-foreground">Upload this announcement as Common audio in the Audio library, select it here, then Save settings. It plays directly when the driver taps {title}.</p>
               <div className="min-h-10">
                 <AnimatePresence mode="wait" initial={false}>
                   {selected ? <motion.div key={selected.id} {...reveal()}><audio aria-label={`Preview ${title}`} className="audio-player h-10 w-full min-w-0" controls preload="none" src={selected.downloadUrl ?? selected.blobUrl ?? undefined} /></motion.div> : <motion.p key="unconfigured" {...reveal()} className="flex h-10 items-center gap-2 text-xs text-muted-foreground"><Headphones className="size-4" />Select an audio to preview it here.</motion.p>}

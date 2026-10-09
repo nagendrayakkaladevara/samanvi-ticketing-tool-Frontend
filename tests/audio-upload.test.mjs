@@ -140,3 +140,55 @@ test('recently deleted errors are preserved for the retry state', async () => {
   const { service } = fixture({ listError: new Error('Network unavailable') })
   await assert.rejects(service.listAudios({ status: 'archived' }), /Network unavailable/)
 })
+
+// Exercise the upload dialog's actual effect without needing a browser DOM.
+const pageSource = readFileSync(new URL('../src/pages/AudioAppPage.tsx', import.meta.url), 'utf8')
+const pageAst = ts.createSourceFile('AudioAppPage.tsx', pageSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+const uploadDialog = pageAst.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'AudioUploadDialog')
+const scrollEffect = uploadDialog.body.statements.find(node => ts.isExpressionStatement(node) && ts.isCallExpression(node.expression) && node.expression.expression.getText(pageAst) === 'useEffect')
+const scrollEffectCode = ts.transpileModule(scrollEffect.getText(pageAst), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+
+function scrollFixture({ pending = true, reducedMotion = false } = {}) {
+  let frame
+  let cleanup
+  let dependencies
+  const scrolled = []
+  const cancelled = []
+  const progressRef = { current: null }
+  vm.runInNewContext(scrollEffectCode, {
+    mutation: { isPending: pending }, reducedMotion, progressRef,
+    useEffect(effect, deps) { dependencies = Array.from(deps); cleanup = effect() },
+    window: {
+      requestAnimationFrame(callback) { frame = callback; return 42 },
+      cancelAnimationFrame(id) { cancelled.push(id); frame = undefined },
+    },
+  })
+  // The panel mounts before the scheduled animation frame runs.
+  progressRef.current = { scrollIntoView(options) { scrolled.push({ ...options }) } }
+  return { flush: () => frame?.(), cleanup: () => cleanup?.(), scrolled, cancelled, dependencies }
+}
+
+test('upload and verification retry reveal the mounted progress panel smoothly', () => {
+  const fixture = scrollFixture()
+  assert.equal(fixture.scrolled.length, 0)
+  fixture.flush()
+  assert.deepEqual(fixture.scrolled, [{ behavior: 'smooth', block: 'center', inline: 'nearest' }])
+  assert.deepEqual(fixture.dependencies, [true, false])
+})
+
+test('upload progress scrolling respects reduced motion', () => {
+  const fixture = scrollFixture({ reducedMotion: true })
+  fixture.flush()
+  assert.equal(fixture.scrolled[0].behavior, 'auto')
+})
+
+test('idle upload dialogs do not scroll, and pending frames are cancelled on cleanup', () => {
+  const idle = scrollFixture({ pending: false })
+  idle.flush()
+  assert.equal(idle.scrolled.length, 0)
+  const pending = scrollFixture()
+  pending.cleanup()
+  pending.flush()
+  assert.deepEqual(pending.cancelled, [42])
+  assert.equal(pending.scrolled.length, 0)
+})
