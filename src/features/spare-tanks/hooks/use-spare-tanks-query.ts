@@ -5,6 +5,6 @@ import { spareTanksService } from '@/features/spare-tanks/api/spare-tanks.servic
 export function useSpareTanksQuery() {
   return useQuery({
     queryKey: ['spare-tanks'],
-    queryFn: () => spareTanksService.list({ page: 1, limit: 100 }),
+    queryFn: () => spareTanksService.list(),
   })
 }

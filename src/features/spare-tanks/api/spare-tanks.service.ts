@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api/client'
+import { extractPaginationMeta } from '@/lib/utils/master-api'
 import type {
   CreateSpareTankInput,
   SpareTank,
@@ -65,11 +66,44 @@ function extractEntityPayload(raw: unknown): unknown {
 }
 
 export const spareTanksService = {
+  /**
+   * Loads spare tanks for Bus No (Spare) masters + Excel/PDF exports.
+   * When `page` is omitted, pages through the API so tanks beyond the first
+   * response are not silently missing from the grid or downloads.
+   */
   async list(params?: { page?: number; limit?: number }): Promise<SpareTank[]> {
-    const page = params?.page ?? 1
-    const limit = params?.limit ?? 50
-    const { data } = await apiClient.get<unknown>(endpoint, { params: { page, limit } })
-    return extractArrayPayload(data).map(normalizeSpareTank).filter((item): item is SpareTank => Boolean(item))
+    if (params?.page != null) {
+      const page = params.page
+      const limit = params.limit ?? 100
+      const { data } = await apiClient.get<unknown>(endpoint, { params: { page, limit } })
+      return extractArrayPayload(data).map(normalizeSpareTank).filter((item): item is SpareTank => Boolean(item))
+    }
+
+    const limit = Math.min(params?.limit ?? 100, 100)
+    const maxPages = 50
+    const tanksById = new Map<string, SpareTank>()
+
+    for (let page = 1; page <= maxPages; page += 1) {
+      const { data } = await apiClient.get<unknown>(endpoint, { params: { page, limit } })
+      const pageTanks = extractArrayPayload(data)
+        .map(normalizeSpareTank)
+        .filter((item): item is SpareTank => Boolean(item))
+
+      for (const tank of pageTanks) {
+        tanksById.set(tank.id, tank)
+      }
+
+      if (pageTanks.length === 0 || pageTanks.length < limit) {
+        break
+      }
+
+      const meta = extractPaginationMeta(data, { page, limit })
+      if (meta.hasExplicitTotalPages && page >= meta.totalPages) {
+        break
+      }
+    }
+
+    return Array.from(tanksById.values())
   },
 
   async create(input: CreateSpareTankInput): Promise<SpareTank> {

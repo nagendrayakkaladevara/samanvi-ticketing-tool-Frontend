@@ -5,6 +5,6 @@ import { serviceNumbersService } from '@/features/service-numbers/api/service-nu
 export function useServiceNumbersQuery() {
   return useQuery({
     queryKey: ['service-numbers'],
-    queryFn: () => serviceNumbersService.list({ page: 1, limit: 50 }),
+    queryFn: () => serviceNumbersService.list(),
   })
 }
