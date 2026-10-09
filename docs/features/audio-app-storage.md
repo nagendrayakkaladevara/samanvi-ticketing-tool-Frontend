@@ -13,3 +13,11 @@ The backend must be deployed with R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCES
 Configure the bucket CORS to permit the frontend origin, PUT/GET/HEAD and Content-Type/If-None-Match/Range headers. Use a public custom domain for production audio playback. Existing Vercel audio URLs continue to play while the old objects remain available; migration of those objects is separate.
 
 Coordinate this frontend release with the backend R2 upload endpoints. Existing audio library, route playlists and welcome settings keep their playback URL fields.
+
+## Delete and restore
+
+The Audio library now has **Audio library** and **Recently deleted** views. Delete asks for confirmation, then moves an unused audio file to Recently deleted. The file stays in storage and can be previewed and restored; there is no permanent-delete action or automatic expiry.
+
+Recently deleted uses `GET /announcements/audios?status=archived`, with server-side search, category filtering and pagination. Restore calls `POST /announcements/audios/:audioId/restore`; both actions require the existing `announcements:audios:delete` permission. View-only users can browse deleted audio but cannot restore it. Successful actions refresh both lists and the ready-audio choices used by routes and mobile settings.
+
+Deploy the backend restore endpoint and apply its `20261009120000_audio_delete_restore` migration before releasing this frontend. Existing archives also appear in Recently deleted. Restoring an unfinished or failed upload preserves its previous status rather than making it ready.

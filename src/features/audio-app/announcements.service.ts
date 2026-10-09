@@ -7,6 +7,7 @@ import type {
   AnnouncementRoute,
   AnnouncementSettings,
   AudioCategory,
+  AudioStatus,
   Paginated,
 } from './types'
 
@@ -60,9 +61,9 @@ export async function archiveRoute(routeId: string, expectedVersion: number) {
   await apiClient.delete(`${BASE}/routes/${routeId}`, { data: { expectedVersion } })
 }
 
-export async function listAudios() {
+export async function listAudios(input: { page?: number; status?: AudioStatus; search?: string; category?: AudioCategory } = {}) {
   const response = await apiClient.get<ApiEnvelope<Paginated<AnnouncementAudio>>>(`${BASE}/audios`, {
-    params: { page: 1, pageSize: 100 },
+    params: { page: 1, pageSize: 100, ...input },
   })
   return response.data.data
 }
@@ -75,8 +76,13 @@ export async function updateAudio(
   return response.data.data
 }
 
-export async function archiveAudio(audioId: string) {
+export async function deleteAudio(audioId: string) {
   await apiClient.delete(`${BASE}/audios/${audioId}`)
+}
+
+export async function restoreAudio(audioId: string) {
+  const response = await apiClient.post<ApiEnvelope<AnnouncementAudio>>(`${BASE}/audios/${audioId}/restore`)
+  return response.data.data
 }
 
 export async function getSettings() {
