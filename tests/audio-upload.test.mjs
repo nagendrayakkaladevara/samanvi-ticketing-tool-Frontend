@@ -57,6 +57,17 @@ function fixture({ ticketError, putError, completeError, listError, deleteError,
   return { service: exports, calls, ticket, ready, input: { file, title: 'Stop', category: 'stop_announcement' } }
 }
 
+test('permanent deletion uses its dedicated endpoint', async () => {
+  const { service, calls } = fixture()
+  await service.permanentlyDeleteAudio('audio-1')
+  assert.equal(calls[0].path, '/announcements/audios/audio-1/permanent')
+})
+
+test('permanent deletion propagates errors', async () => {
+  const { service } = fixture({ deleteError: new Error('Storage unavailable') })
+  await assert.rejects(service.permanentlyDeleteAudio('audio-1'), /Storage unavailable/)
+})
+
 test('uploads the raw file with signed headers, then verifies it before success', async () => {
   const { service, calls, ticket, ready, input } = fixture()
   const progress = []

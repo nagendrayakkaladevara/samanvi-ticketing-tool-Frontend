@@ -24,7 +24,7 @@ Coordinate this frontend release with the backend R2 upload endpoints. Existing 
 
 ## Delete and restore
 
-The Audio library now has **Audio library** and **Recently deleted** views. Delete asks for confirmation, then moves an unused audio file to Recently deleted. The file stays in storage and can be previewed and restored; there is no permanent-delete action or automatic expiry.
+The Audio library now has **Audio library** and **Recently deleted** views. Delete asks for confirmation, then moves an unused audio file to Recently deleted. The file stays in storage and can be previewed and restored. **Delete permanently** asks for a separate confirmation and removes both the stored file and database record via `DELETE /announcements/audios/:audioId/permanent`, using the existing delete permission. This cannot be undone. There is no automatic expiry.
 
 Recently deleted uses `GET /announcements/audios?status=archived`, with server-side search, category filtering and pagination. Restore calls `POST /announcements/audios/:audioId/restore`; both actions require the existing `announcements:audios:delete` permission. View-only users can browse deleted audio but cannot restore it. Successful actions refresh both lists and the ready-audio choices used by routes and mobile settings.
 
