@@ -82,6 +82,10 @@ export async function deleteAudio(audioId: string) {
   await apiClient.delete(`${BASE}/audios/${audioId}`)
 }
 
+export async function permanentlyDeleteAudio(audioId: string) {
+  await apiClient.delete(`${BASE}/audios/${audioId}/permanent`)
+}
+
 export async function restoreAudio(audioId: string) {
   const response = await apiClient.post<ApiEnvelope<AnnouncementAudio>>(`${BASE}/audios/${audioId}/restore`)
   return response.data.data

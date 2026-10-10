@@ -70,6 +70,7 @@ import {
   listAudios,
   listRoutes,
   mapAudioToBreak,
+  permanentlyDeleteAudio,
   restoreAudio,
   saveRoutePlaylist,
   updateAudio,
@@ -612,9 +613,9 @@ function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             </AnimatePresence>
           </motion.div>
           <input ref={inputRef} className="hidden" type="file" disabled={mutation.isPending || Boolean(uploadedAudioId)} accept="audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/x-wav,audio/ogg" onChange={(event) => chooseFile(event.target.files?.[0])} />
-          <div className="grid gap-5 sm:grid-cols-2">
-            <label className="grid gap-2 text-sm font-medium">Title<Input className="h-11" disabled={mutation.isPending || Boolean(uploadedAudioId)} maxLength={150} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Majestic bus stand" /></label>
-            <label className="grid gap-2 text-sm font-medium">Category
+          <div className="grid items-start gap-5 sm:grid-cols-2">
+            <label className="grid min-w-0 gap-2 text-sm font-medium"><span>Title</span><Input className="h-11" disabled={mutation.isPending || Boolean(uploadedAudioId)} maxLength={150} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Majestic bus stand" /></label>
+            <label className="grid min-w-0 gap-2 text-sm font-medium"><span>Category</span>
               <Select disabled={mutation.isPending || Boolean(uploadedAudioId)} value={category} onValueChange={(value) => setCategory(value as AudioUploadPurpose)}>
                 <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                 <SelectContent className="audio-select-content">{Object.entries(uploadPurposeLabels).map(([value, label]) => <SelectItem disabled={(value === 'dinner_break' || value === 'toilet_break') && !canMapBreaks} key={value} value={value}>{label}</SelectItem>)}</SelectContent>
@@ -658,6 +659,7 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
   const [view, setView] = useState<'library' | 'deleted'>('library')
   const [deletedPage, setDeletedPage] = useState(1)
   const [deleting, setDeleting] = useState<AnnouncementAudio | null>(null)
+  const [permanentlyDeleting, setPermanentlyDeleting] = useState<AnnouncementAudio | null>(null)
   const [mapping, setMapping] = useState<AnnouncementAudio | null>(null)
   const [mappingTarget, setMappingTarget] = useState<BreakMappingTarget>('none')
   const canMapBreaks = can('announcements', 'settings', 'edit')
@@ -699,6 +701,16 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: announcementKeys.audios }); toast.success('Audio restored to the library') },
     onError: (error) => toast.error(errorMessage(error)),
   })
+  const permanentDeleteMutation = useMutation({
+    mutationFn: permanentlyDeleteAudio,
+    onSuccess: async () => {
+      setPermanentlyDeleting(null)
+      if (displayed.length === 1 && deletedPage > 1) setDeletedPage((page) => page - 1)
+      await queryClient.invalidateQueries({ queryKey: announcementKeys.audios })
+      toast.success('Audio permanently deleted')
+    },
+    onError: (error) => toast.error(errorMessage(error)),
+  })
   const displayed = view === 'deleted' ? deletedQuery.data?.items ?? [] : filtered
   const total = view === 'deleted' ? deletedQuery.data?.pagination.total ?? 0 : audios.length
   const totalPages = deletedQuery.data?.pagination.totalPages ?? 0
@@ -716,7 +728,7 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
           <Button variant={view === 'library' ? 'default' : 'outline'} aria-pressed={view === 'library'} onClick={() => { setView('library'); setSearch(''); setCategory('all'); setDeletedPage(1) }}><Headphones /> Audio library</Button>
           <Button variant={view === 'deleted' ? 'default' : 'outline'} aria-pressed={view === 'deleted'} onClick={() => { setView('deleted'); setSearch(''); setCategory('all'); setDeletedPage(1) }}><Trash2 /> Recently deleted</Button>
         </div>
-        {view === 'deleted' ? <p className="rounded-xl border bg-muted/30 px-4 py-3 text-sm leading-6 text-muted-foreground">Deleted audio is kept here until restored. Files are not permanently removed.{can('announcements', 'audios', 'delete') ? ' Restore an audio file to use it again.' : ' Ask an administrator with Delete / Restore permission to restore an audio file.'}</p> : null}
+        {view === 'deleted' ? <p className="rounded-xl border bg-muted/30 px-4 py-3 text-sm leading-6 text-muted-foreground">Deleted audio is kept here until restored or permanently deleted.{can('announcements', 'audios', 'delete') ? ' Restore a file to use it again, or permanently delete it. Permanent deletion cannot be undone.' : ' Ask an administrator with Delete / Restore permission to restore or permanently delete an audio file.'}</p> : null}
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="relative min-w-0 flex-1"><Search className="absolute left-3.5 top-3.5 size-4 text-muted-foreground" /><Input aria-label={view === 'deleted' ? 'Search recently deleted audio' : 'Search audio library'} className="h-11 rounded-xl bg-background pl-10" value={search} onChange={(event) => { setSearch(event.target.value); setDeletedPage(1) }} placeholder="Search by title, file name, or description" /></div>
           <Select value={category} onValueChange={(value) => { setCategory(value as 'all' | AudioCategory); setDeletedPage(1) }}><SelectTrigger aria-label="Filter audio by category" className="h-11 rounded-xl sm:w-56"><SelectValue /></SelectTrigger><SelectContent className="audio-select-content"><SelectItem value="all">All categories</SelectItem>{Object.entries(categoryLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select>
@@ -738,7 +750,7 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
             <div className="mt-4 flex flex-wrap items-center justify-end gap-1 border-t pt-3">
               {view === 'library' && audio.category === 'common_audio' && audio.status === 'ready' && canMapBreaks ? <Button aria-label={`Map ${audio.title} to app`} variant="ghost" className="h-10 px-3 text-muted-foreground hover:text-foreground" disabled={!settingsQuery.data || settingsQuery.isFetching} onClick={() => { setMapping(audio); setMappingTarget(breakMappingForAudio(settingsQuery.data, audio.id)) }}><Settings2 /><span>Map to app</span></Button> : null}
               {view === 'library' && can('announcements', 'audios', 'edit') ? <Button aria-label={`Edit ${audio.title}`} variant="ghost" className="h-10 px-3 text-muted-foreground hover:text-foreground" onClick={() => { setEditing(audio); setEditTitle(audio.title); setEditDescription(audio.description ?? '') }}><Pencil /><span>Edit</span></Button> : null}
-              {can('announcements', 'audios', 'delete') ? view === 'deleted' ? <Button aria-label={`Restore ${audio.title}`} variant="outline" className="h-10 px-3" disabled={restoreMutation.isPending} onClick={() => restoreMutation.mutate(audio.id)}>{restoreMutation.isPending && restoreMutation.variables === audio.id ? <LoaderCircle className="animate-spin" /> : <RotateCcw />}<span>Restore</span></Button> : <Button aria-label={`Delete ${audio.title}`} variant="ghost" className="h-10 px-3 text-muted-foreground hover:text-destructive" disabled={deleteMutation.isPending} onClick={() => setDeleting(audio)}><Trash2 /><span>Delete</span></Button> : null}
+              {can('announcements', 'audios', 'delete') ? view === 'deleted' ? <><Button aria-label={`Restore ${audio.title}`} variant="outline" className="h-10 px-3" disabled={restoreMutation.isPending || permanentDeleteMutation.isPending} onClick={() => restoreMutation.mutate(audio.id)}>{restoreMutation.isPending && restoreMutation.variables === audio.id ? <LoaderCircle className="animate-spin" /> : <RotateCcw />}<span>Restore</span></Button><Button aria-label={`Permanently delete ${audio.title}`} variant="ghost" className="h-10 px-3 text-destructive hover:bg-destructive/10 hover:text-destructive" disabled={restoreMutation.isPending || permanentDeleteMutation.isPending} onClick={() => setPermanentlyDeleting(audio)}><Trash2 /><span>Delete permanently</span></Button></> : <Button aria-label={`Delete ${audio.title}`} variant="ghost" className="h-10 px-3 text-muted-foreground hover:text-destructive" disabled={deleteMutation.isPending} onClick={() => setDeleting(audio)}><Trash2 /><span>Delete</span></Button> : null}
             </div>
           </motion.div>
         ))}</div> : <EmptyState icon={view === 'deleted' ? Trash2 : Music2} title={view === 'deleted' ? 'No deleted audio found' : 'No audio found'} description={view === 'deleted' ? 'Deleted audio will appear here. If you expected a file, try changing the filters.' : 'Upload your first announcement or change the filters.'} />}
@@ -759,6 +771,12 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
         </AlertDialogContent>
       </AlertDialog>
       {uploadOpen ? <AudioUploadDialog open onOpenChange={setUploadOpen} /> : null}
+      <AlertDialog open={Boolean(permanentlyDeleting)} onOpenChange={(open) => { if (!open && !permanentDeleteMutation.isPending) setPermanentlyDeleting(null) }}>
+        <AlertDialogContent className="w-[calc(100%-2rem)]">
+          <AlertDialogHeader><AlertDialogTitle>Permanently delete audio?</AlertDialogTitle><AlertDialogDescription>“{permanentlyDeleting?.title}” and its stored file will be permanently removed. This cannot be undone, and the audio cannot be restored.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel disabled={permanentDeleteMutation.isPending}>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={permanentDeleteMutation.isPending} onClick={(event) => { event.preventDefault(); if (permanentlyDeleting) permanentDeleteMutation.mutate(permanentlyDeleting.id) }}>{permanentDeleteMutation.isPending ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}{permanentDeleteMutation.isPending ? 'Deleting…' : 'Delete permanently'}</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}><DialogContent className="audio-dialog max-h-[90svh] w-[calc(100%-2rem)] overflow-y-auto"><DialogHeader><DialogTitle>Edit audio details</DialogTitle><DialogDescription>Update the operator-facing name and description.</DialogDescription></DialogHeader><label className="grid gap-2 text-sm font-medium">Title<Input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} /></label><label className="grid gap-2 text-sm font-medium">Description<Textarea value={editDescription} onChange={(event) => setEditDescription(event.target.value)} /></label><DialogFooter><Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button><Button disabled={!editTitle.trim() || editMutation.isPending} onClick={() => editMutation.mutate()}><Save /> Save changes</Button></DialogFooter></DialogContent></Dialog>
     </Card>
   )
