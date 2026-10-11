@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 
 import { PageGradientHeader } from '@/components/page-gradient-header'
+import { PlaybackAlerts } from '@/features/audio-app/playback-alerts'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -874,10 +875,13 @@ export function AudioAppPage() {
       <section className="audio-app-page mx-auto min-w-0 max-w-[1600px] space-y-5 pb-8 sm:space-y-6">
         <motion.div {...reveal()} className="audio-page-header">
           <PageGradientHeader eyebrow="Announcement management" title="Audio App" description="Create calm, consistent passenger journeys with organized audio and thoughtfully ordered route playlists." accent="violet" actions={
+            <div className="flex flex-wrap items-center gap-2">
+            {canViewMobileUsers && <PlaybackAlerts />}
             <Button className="h-11 min-w-32" variant="outline" disabled={refreshing} onClick={() => { void queryClient.invalidateQueries({ queryKey: ['announcements'] }); toast.info('Refreshing announcement data') }}>
               <motion.span className="flex" animate={{ rotate: refreshing && !reducedMotion ? 360 : 0 }} transition={{ duration: refreshing && !reducedMotion ? 1 : 0, repeat: refreshing && !reducedMotion ? Infinity : 0, ease: 'linear' }}><RefreshCw className="size-4" /></motion.span>
               {refreshing ? 'Refreshing…' : 'Refresh'}
             </Button>
+            </div>
           } />
         </motion.div>
         <motion.div {...reveal(1)}>
