@@ -27,11 +27,11 @@ export function PlaylistSaveStatus({ editor }: { editor: RoutePlaylistEditor }) 
         <Button className="h-11 shrink-0" disabled={isSaving || editor.routeQuery.isFetching} onClick={() => {
           if (window.confirm('Reload the latest route? This discards your unsaved playlist edits.')) void reloadRoute()
         }}><RotateCcw /> Reload route</Button>
-      ) : (
+      ) : dirty || isSaving || error ? (
         <Button className="h-11 shrink-0" disabled={!dirty || isSaving} onClick={() => { void saveNow() }}>
           {isSaving ? <LoaderCircle className="animate-spin" /> : <Save />}{error ? 'Retry save' : 'Save now'}
         </Button>
-      )}
+      ) : null}
     </div>
   )
 }
