@@ -72,6 +72,7 @@ describe('AudioAppPage route autosave', () => {
     await openRoute()
     const status = screen.getByRole('status')
     expect(status.textContent).toContain('All changes saved')
+    expect(screen.queryByRole('button', { name: 'Save now' })).toBeNull()
     expect(status.parentElement?.className).toContain('sticky top-16')
     expect(screen.getByRole('button', { name: '2. Add to route' }).className).toContain('bg-primary')
     expect(screen.getByRole('button', { name: '2. Add to route' }).className).not.toContain('bg-violet')
@@ -86,12 +87,14 @@ describe('AudioAppPage route autosave', () => {
     await tick(1_999)
     expect(apiClient.put).not.toHaveBeenCalled()
     expect(screen.getByRole('status').textContent).toContain('Changes waiting to save')
+    expect(screen.getByRole('button', { name: 'Save now' }).hasAttribute('disabled')).toBe(false)
     expect(screen.getByRole('button', { name: 'Edit route details' }).hasAttribute('disabled')).toBe(true)
     await tick(1)
     expect(apiClient.put).toHaveBeenCalledExactlyOnceWith('/announcements/routes/route-1/audios', {
       expectedVersion: 3, items: [{ audioId: 'audio-2', stopLabel: 'Central stand' }, { audioId: 'audio-1', stopLabel: undefined }],
     })
     expect(screen.getByRole('status').textContent).toContain('All changes saved')
+    expect(screen.queryByRole('button', { name: 'Save now' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Remove First stop' }))
     await tick(2_000)
     expect(apiClient.put).toHaveBeenLastCalledWith('/announcements/routes/route-1/audios', {
