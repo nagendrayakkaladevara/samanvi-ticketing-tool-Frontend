@@ -440,6 +440,10 @@ Do not start with shallow UI snapshot tests.
 
 Use this as a work queue. Each bullet is a required test module (or modules) targeting ≥ 95% for those files.
 
+### Audio App
+
+- [x] Route playlist autosave hook (`src/features/audio-app/hooks/use-route-playlist-autosave.ts`): ≥ 95% on all metrics; scoped Vitest coverage with page interaction regressions.
+
 ### Core / shared
 
 - [ ] `src/lib/api/api-error.ts`
