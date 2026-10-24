@@ -65,7 +65,6 @@ import {
   announcementKeys,
   createRoute,
   completeAudioUpload,
-  getRoute,
   getSettings,
   getUploadBreakTarget,
   listAudios,
@@ -73,7 +72,6 @@ import {
   mapAudioToBreak,
   permanentlyDeleteAudio,
   restoreAudio,
-  saveRoutePlaylist,
   updateAudio,
   updateRoute,
   updateSettings,
@@ -87,10 +85,11 @@ import type {
   AudioCategory,
   AudioUploadPurpose,
   BreakMappingTarget,
-  RouteAudio,
 } from '@/features/audio-app/types'
 import { MobileUsersPanel } from '@/features/audio-app/mobile-users-panel'
 import { useAudioMotion } from '@/features/audio-app/use-audio-motion'
+import { useRoutePlaylistAutosave, type RoutePlaylistEditor } from '@/features/audio-app/hooks/use-route-playlist-autosave'
+import { PlaylistSaveStatus } from '@/features/audio-app/components/playlist-save-status'
 import { usePermissions } from '@/hooks/use-permissions'
 import { ApiError } from '@/lib/api/api-error'
 import { queryClient } from '@/lib/query/query-client'
@@ -244,7 +243,7 @@ function RouteFormDialog({
   )
 }
 
-function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
+function RoutesWorkspace({ audios, editor }: { audios: AnnouncementAudio[]; editor: RoutePlaylistEditor }) {
   const { can } = usePermissions()
   const { reducedMotion, transition, reveal } = useAudioMotion()
   const canCreate = can('announcements', 'routes', 'create')
@@ -252,11 +251,10 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
   const canDelete = can('announcements', 'routes', 'delete')
   const canAssign = can('announcements', 'routes', 'assign_audio')
   const [search, setSearch] = useState('')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [editingRoute, setEditingRoute] = useState<AnnouncementRoute | undefined>()
   const [selectedAudioId, setSelectedAudioId] = useState('')
-  const [playlistDraft, setPlaylistDraft] = useState<RouteAudio[] | null>(null)
+  const { selectedId, routeQuery, playlist, dirty, updatePlaylist, isSaving } = editor
 
   const routesQuery = useQuery({ queryKey: announcementKeys.routes, queryFn: listRoutes })
   const visibleRoutes = useMemo(() => {
@@ -264,28 +262,6 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
     return (routesQuery.data?.items ?? []).filter((route) => !term ||
       [route.routeCode, route.name, route.origin, route.destination, route.via, route.busType].some((value) => value.toLowerCase().includes(term)))
   }, [routesQuery.data, search])
-
-  const routeQuery = useQuery({
-    queryKey: announcementKeys.route(selectedId ?? ''),
-    queryFn: () => getRoute(selectedId!),
-    enabled: Boolean(selectedId),
-  })
-  const playlist = playlistDraft ?? routeQuery.data?.audios ?? []
-  const dirty = playlistDraft !== null
-
-  const savePlaylistMutation = useMutation({
-    mutationFn: () => saveRoutePlaylist(routeQuery.data!.id, {
-      expectedVersion: routeQuery.data!.version,
-      items: playlist.map((item) => ({ audioId: item.audio.id, stopLabel: item.stopLabel || undefined })),
-    }),
-    onSuccess: async (saved) => {
-      setPlaylistDraft(null)
-      queryClient.setQueryData(announcementKeys.route(saved.id), saved)
-      await queryClient.invalidateQueries({ queryKey: announcementKeys.routes })
-      toast.success('Announcement order saved')
-    },
-    onError: (error) => toast.error(errorMessage(error)),
-  })
 
   const routeStatusMutation = useMutation({
     mutationFn: (status: AnnouncementRouteStatus) => updateRoute(routeQuery.data!.id, {
@@ -303,7 +279,7 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
   const archiveMutation = useMutation({
     mutationFn: () => archiveRoute(routeQuery.data!.id, routeQuery.data!.version),
     onSuccess: async () => {
-      setSelectedId(null)
+      await editor.closeRoute()
       await queryClient.invalidateQueries({ queryKey: announcementKeys.routes })
       toast.success('Route archived')
     },
@@ -313,28 +289,27 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
   const readyStops = audios.filter((audio) => audio.category === 'stop_announcement' && audio.status === 'ready' &&
     !playlist.some((item) => item.audio.id === audio.id))
   const route = routeQuery.data
+  const playlistBusy = routeStatusMutation.isPending || archiveMutation.isPending || (editor.conflict && routeQuery.isFetching)
 
   function addAudio() {
     const audio = readyStops.find((item) => item.id === selectedAudioId)
     if (!audio) return
-    setPlaylistDraft((current) => [...(current ?? playlist), { id: `new-${audio.id}`, position: playlist.length + 1, audio }])
+    updatePlaylist((current) => [...current, { id: `new-${audio.id}`, position: current.length + 1, audio }])
     setSelectedAudioId('')
   }
 
   function moveAudio(index: number, direction: -1 | 1) {
     const target = index + direction
     if (target < 0 || target >= playlist.length) return
-    setPlaylistDraft((current) => {
-      const next = [...(current ?? playlist)]
+    updatePlaylist((current) => {
+      const next = [...current]
       ;[next[index], next[target]] = [next[target], next[index]]
       return next
     })
   }
 
-  function returnToRoutes() {
-    if (dirty && !window.confirm('Leave without saving your announcement changes?')) return
-    setSelectedId(null)
-    setPlaylistDraft(null)
+  async function returnToRoutes() {
+    await editor.closeRoute()
     setSelectedAudioId('')
   }
 
@@ -352,7 +327,7 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
                     <CardTitle className="text-xl tracking-tight">Choose a route</CardTitle>
                     <p className="mt-1.5 text-sm leading-6 text-muted-foreground">Select a route to see or change the announcements passengers hear.</p>
                   </div>
-                  {canCreate ? <Button className="h-11 w-full rounded-xl bg-violet-600 text-white shadow-md shadow-violet-600/15 hover:bg-violet-700 sm:w-auto" onClick={() => { setEditingRoute(undefined); setFormOpen(true) }}><Plus /> Add new route</Button> : null}
+                  {canCreate ? <Button className="h-11 w-full rounded-xl shadow-md shadow-primary/15 sm:w-auto" onClick={() => { setEditingRoute(undefined); setFormOpen(true) }}><Plus /> Add new route</Button> : null}
                 </div>
                 <div className="relative max-w-2xl">
                   <Search className="absolute left-4 top-3.5 size-4 text-muted-foreground" />
@@ -371,8 +346,8 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
                         whileHover={reducedMotion ? undefined : { y: -2 }}
                         whileTap={reducedMotion ? undefined : { scale: 0.995 }}
                         type="button"
-                        onClick={() => { setSelectedId(item.id); setPlaylistDraft(null) }}
-                        className="audio-interactive-card group flex min-h-40 min-w-0 w-full flex-col rounded-2xl border bg-card p-4 text-left hover:border-violet-300 hover:bg-violet-50/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 sm:p-5 dark:hover:border-violet-500/40 dark:hover:bg-violet-500/5"
+                        onClick={() => editor.openRoute(item.id)}
+                        className="audio-interactive-card group flex min-h-40 min-w-0 w-full flex-col rounded-2xl border bg-card p-4 text-left hover:border-primary/40 hover:bg-primary/5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:p-5 dark:hover:border-primary/40 dark:hover:bg-primary/5"
                       >
                         <div className="flex w-full items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -385,7 +360,7 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
                         <p className="mb-4 mt-2 text-xs text-muted-foreground">{item.via ? `Via ${item.via}` : 'Direct route'} · {item.busType}</p>
                         <div className="mt-auto flex w-full items-center justify-between border-t pt-4 text-sm">
                           <span className="font-medium">{item._count?.audios ?? 0} {(item._count?.audios ?? 0) === 1 ? 'announcement' : 'announcements'}</span>
-                          <span className="flex items-center gap-1.5 font-semibold text-violet-700 dark:text-violet-300">Open route <ArrowRight className="size-4" /></span>
+                          <span className="flex items-center gap-1.5 font-semibold text-primary">Open route <ArrowRight className="size-4" /></span>
                         </div>
                       </motion.button>
                     ))}
@@ -397,6 +372,7 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
         ) : (
           <motion.div key={`route-${selectedId}`} {...reveal()} className="min-w-0 space-y-4">
             <Button variant="ghost" className="-ml-2 h-10 text-muted-foreground hover:text-foreground" onClick={returnToRoutes}><ArrowLeft /> Back to all routes</Button>
+            {canAssign && route ? <PlaylistSaveStatus editor={editor} /> : null}
             <Card className="audio-surface min-w-0 overflow-hidden rounded-2xl">
               {routeQuery.isLoading ? <LoadingState /> : route ? (
                 <>
@@ -412,9 +388,9 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
                         <p className="mt-2 text-sm text-muted-foreground">{route.via ? `Via ${route.via}` : 'Direct route'} · {route.busType}</p>
                       </div>
                       <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-                        {canEdit ? <Button className="h-10" variant="outline" onClick={() => { setEditingRoute(route); setFormOpen(true) }}><Pencil /> Edit route details</Button> : null}
-                        {canEdit ? <Button className="h-10" variant="outline" disabled={routeStatusMutation.isPending} onClick={() => routeStatusMutation.mutate(route.status === 'published' ? 'draft' : 'published')}><CheckCircle2 />{route.status === 'published' ? 'Stop sharing' : 'Make available to drivers'}</Button> : null}
-                        {canDelete ? <Button className="h-10 text-destructive" variant="outline" disabled={archiveMutation.isPending} onClick={() => window.confirm('Archive this route?') && archiveMutation.mutate()}><Archive /> Archive route</Button> : null}
+                        {canEdit ? <Button className="h-10" variant="outline" disabled={dirty || isSaving || routeStatusMutation.isPending || archiveMutation.isPending} onClick={() => { setEditingRoute(route); setFormOpen(true) }}><Pencil /> Edit route details</Button> : null}
+                        {canEdit ? <Button className="h-10" variant="outline" disabled={dirty || isSaving || routeStatusMutation.isPending || archiveMutation.isPending} onClick={() => routeStatusMutation.mutate(route.status === 'published' ? 'draft' : 'published')}><CheckCircle2 />{route.status === 'published' ? 'Stop sharing' : 'Make available to drivers'}</Button> : null}
+                        {canDelete ? <Button className="h-10 text-destructive" variant="outline" disabled={dirty || isSaving || routeStatusMutation.isPending || archiveMutation.isPending} onClick={() => window.confirm('Archive this route?') && archiveMutation.mutate()}><Archive /> Archive route</Button> : null}
                       </div>
                     </div>
                   </CardHeader>
@@ -426,17 +402,17 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
                     {canAssign ? (
                       <div className="rounded-2xl border border-violet-200 bg-violet-50/40 p-4 sm:p-5 dark:border-violet-500/20 dark:bg-violet-500/[0.05]">
                         <div className="mb-4 flex items-start gap-3">
-                          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-600 font-bold text-white">+</div>
+                          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">+</div>
                           <div><p className="font-semibold">Add an announcement</p><p className="mt-0.5 text-sm text-muted-foreground">Choose a ready audio file, then add it to the end of this route.</p></div>
                         </div>
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                           <label className="grid min-w-0 flex-1 gap-2 text-sm font-medium">1. Choose an announcement
-                            <Select value={selectedAudioId || undefined} onValueChange={setSelectedAudioId} disabled={!canAssign || readyStops.length === 0}>
+                            <Select value={selectedAudioId || undefined} onValueChange={setSelectedAudioId} disabled={!canAssign || playlistBusy || readyStops.length === 0}>
                               <SelectTrigger aria-label="Choose route announcement" className="h-11 bg-background"><SelectValue placeholder={readyStops.length ? 'Select an announcement' : 'No unused announcements available'} /></SelectTrigger>
                               <SelectContent className="audio-select-content">{readyStops.map((audio) => <SelectItem key={audio.id} value={audio.id}>{audio.title}</SelectItem>)}</SelectContent>
                             </Select>
                           </label>
-                          <Button className="h-11 shrink-0 bg-violet-600 text-white hover:bg-violet-700" disabled={!selectedAudioId || !canAssign} onClick={addAudio}><CirclePlus /> 2. Add to route</Button>
+                          <Button className="h-11 shrink-0" disabled={!selectedAudioId || !canAssign || playlistBusy} onClick={addAudio}><CirclePlus /> 2. Add to route</Button>
                         </div>
                         {!readyStops.length ? <p className="mt-3 text-xs text-muted-foreground">All ready stop announcements are already on this route. Upload more from the Audio library if needed.</p> : null}
                       </div>
@@ -450,18 +426,18 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
                             <div className="audio-playlist-details min-w-0">
                               <p className="break-words font-medium">{item.audio.title}</p>
                               <label className="mt-2 block text-xs text-muted-foreground">Stop name <span className="font-normal">(optional)</span>
-                                <Input className="mt-1.5 h-10 bg-background" value={item.stopLabel ?? ''} disabled={!canAssign} placeholder="For example: Central Bus Stand" onChange={(event) => {
+                                <Input className="mt-1.5 h-10 bg-background" value={item.stopLabel ?? ''} maxLength={150} disabled={!canAssign || playlistBusy} placeholder="For example: Central Bus Stand" onChange={(event) => {
                                   const value = event.target.value
-                                  setPlaylistDraft((current) => (current ?? playlist).map((row, rowIndex) => rowIndex === index ? { ...row, stopLabel: value } : row))
+                                  updatePlaylist((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, stopLabel: value } : row))
                                 }} />
                               </label>
                             </div>
                             <audio aria-label={`Preview ${item.audio.title}`} className="audio-player audio-playlist-player h-10 w-full min-w-0" controls preload="none" src={item.audio.downloadUrl ?? item.audio.blobUrl ?? undefined} />
                             {canAssign ? (
                               <div className="audio-playlist-actions flex flex-wrap gap-1">
-                                <Button aria-label={`Move ${item.audio.title} earlier`} className="h-9 justify-start px-2.5 text-xs" variant="ghost" disabled={index === 0} onClick={() => moveAudio(index, -1)}><ArrowUp /> Move earlier</Button>
-                                <Button aria-label={`Move ${item.audio.title} later`} className="h-9 justify-start px-2.5 text-xs" variant="ghost" disabled={index === playlist.length - 1} onClick={() => moveAudio(index, 1)}><ArrowDown /> Move later</Button>
-                                <Button aria-label={`Remove ${item.audio.title}`} variant="ghost" className="h-9 justify-start px-2.5 text-xs text-destructive" onClick={() => setPlaylistDraft((current) => (current ?? playlist).filter((_, rowIndex) => rowIndex !== index))}><Trash2 /> Remove</Button>
+                                <Button aria-label={`Move ${item.audio.title} earlier`} className="h-9 justify-start px-2.5 text-xs" variant="ghost" disabled={index === 0 || playlistBusy} onClick={() => moveAudio(index, -1)}><ArrowUp /> Move earlier</Button>
+                                <Button aria-label={`Move ${item.audio.title} later`} className="h-9 justify-start px-2.5 text-xs" variant="ghost" disabled={index === playlist.length - 1 || playlistBusy} onClick={() => moveAudio(index, 1)}><ArrowDown /> Move later</Button>
+                                <Button aria-label={`Remove ${item.audio.title}`} variant="ghost" className="h-9 justify-start px-2.5 text-xs text-destructive" disabled={playlistBusy} onClick={() => updatePlaylist((current) => current.filter((_, rowIndex) => rowIndex !== index))}><Trash2 /> Remove</Button>
                               </div>
                             ) : null}
                           </motion.div>
@@ -469,18 +445,6 @@ function RoutesWorkspace({ audios }: { audios: AnnouncementAudio[] }) {
                       </AnimatePresence>
                     </div>
 
-                    {canAssign ? (
-                      <motion.div layout={reducedMotion ? false : 'position'} transition={transition} className={cn('flex flex-col gap-4 rounded-2xl border p-4 transition-colors duration-200 sm:flex-row sm:items-center sm:justify-between', dirty ? 'border-amber-300 bg-amber-50/70 dark:border-amber-500/30 dark:bg-amber-500/[0.06]' : 'bg-muted/20')}>
-                        <div className="flex items-center gap-3" role="status">
-                          <motion.span key={String(dirty)} {...reveal()} className={cn('flex size-9 shrink-0 items-center justify-center rounded-full', dirty ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300')}>{dirty ? <Save className="size-4" /> : <CheckCircle2 className="size-4" />}</motion.span>
-                          <div>
-                            <p className="text-sm font-semibold">{dirty ? 'Your changes are not saved yet' : 'Everything is saved'}</p>
-                            <p className="mt-1 text-xs leading-5 text-muted-foreground">{dirty ? 'Save now so drivers receive the new announcement order.' : 'Drivers have the latest announcement order.'}</p>
-                          </div>
-                        </div>
-                        <Button className="h-11 shrink-0 sm:min-w-40" disabled={!dirty || savePlaylistMutation.isPending} onClick={() => savePlaylistMutation.mutate()}>{savePlaylistMutation.isPending ? <LoaderCircle className="animate-spin" /> : <Save />} Save changes</Button>
-                      </motion.div>
-                    ) : null}
                   </CardContent>
                 </>
               ) : <CardContent className="pt-6"><EmptyState icon={MapPinned} title="Select a route" description="Choose a route to manage its announcements." /></CardContent>}
@@ -567,7 +531,7 @@ function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       <DialogContent className="audio-dialog max-h-[90svh] w-[calc(100%-2rem)] max-w-2xl gap-0 overflow-y-auto p-0">
         <div className="border-b bg-muted/20 p-5 sm:p-6">
           <DialogHeader className="pr-5 text-left">
-            <div className="mb-1 flex size-11 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-lg shadow-violet-600/20"><CloudUpload className="size-5" /></div>
+            <div className="mb-1 flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-violet-600/20"><CloudUpload className="size-5" /></div>
             <DialogTitle className="text-xl">Add audio to your library</DialogTitle>
             <DialogDescription>Upload a clear announcement, then add the details your team will see.</DialogDescription>
           </DialogHeader>
@@ -587,7 +551,7 @@ function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             animate={{ scale: dragging && !reducedMotion ? 1.01 : 1 }}
             transition={transition}
             className={cn(
-              'group relative flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-6 text-center outline-none transition-colors duration-200 sm:px-6 focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2',
+              'group relative flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-6 text-center outline-none transition-colors duration-200 sm:px-6 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
               dragging ? 'border-violet-500 bg-violet-50 dark:bg-violet-500/10' : 'border-border bg-muted/20 hover:border-violet-400 hover:bg-violet-50/50 dark:hover:bg-violet-500/5',
               (mutation.isPending || uploadedAudioId) && 'cursor-default',
             )}
@@ -641,7 +605,7 @@ function AudioUploadDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         </div>
         <DialogFooter className="sticky bottom-0 border-t bg-background/95 px-5 py-4 backdrop-blur sm:px-6">
           <Button className="h-11" variant="outline" disabled={mutation.isPending} onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button className="h-11 min-w-36 bg-violet-600 text-white hover:bg-violet-700" disabled={!file || !title.trim() || mutation.isPending || (Boolean(breakTarget) && !canMapBreaks)} onClick={() => mutation.mutate()}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <CloudUpload />} {uploadedAudioId ? verified && breakTarget ? 'Retry mapping' : 'Retry verification' : breakTarget ? 'Upload and map' : 'Upload audio'}</Button>
+          <Button className="h-11 min-w-36" disabled={!file || !title.trim() || mutation.isPending || (Boolean(breakTarget) && !canMapBreaks)} onClick={() => mutation.mutate()}>{mutation.isPending ? <LoaderCircle className="animate-spin" /> : <CloudUpload />} {uploadedAudioId ? verified && breakTarget ? 'Retry mapping' : 'Retry verification' : breakTarget ? 'Upload and map' : 'Upload audio'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -723,7 +687,7 @@ function AudioLibrary({ audios, loading }: { audios: AnnouncementAudio[]; loadin
       <CardHeader className="space-y-5 border-b p-4 sm:p-6">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div><CardTitle className="text-xl tracking-tight">Audio library</CardTitle><p className="mt-1.5 text-sm leading-6 text-muted-foreground">One organized home for every reusable passenger announcement.</p></div>
-          {view === 'library' && can('announcements', 'audios', 'upload') ? <Button className="h-11 w-full bg-violet-600 text-white shadow-md shadow-violet-600/15 hover:bg-violet-700 sm:w-auto" onClick={() => setUploadOpen(true)}><CloudUpload /> Upload audio</Button> : null}
+          {view === 'library' && can('announcements', 'audios', 'upload') ? <Button className="h-11 w-full shadow-md shadow-primary/15 sm:w-auto" onClick={() => setUploadOpen(true)}><CloudUpload /> Upload audio</Button> : null}
         </div>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Audio library views">
           <Button variant={view === 'library' ? 'default' : 'outline'} aria-pressed={view === 'library'} onClick={() => { setView('library'); setSearch(''); setCategory('all'); setDeletedPage(1) }}><Headphones /> Audio library</Button>
@@ -844,6 +808,8 @@ function MobileSettings({ audios }: { audios: AnnouncementAudio[] }) {
 export function AudioAppPage() {
   const { can } = usePermissions()
   const { reducedMotion, transition, reveal } = useAudioMotion()
+  // Keep the editor alive across workspace tabs so pending autosaves finish.
+  const playlistEditor = useRoutePlaylistAutosave(can('announcements', 'routes', 'assign_audio'))
   const tabsId = useId()
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const refreshing = useIsFetching({ queryKey: ['announcements'] }) > 0
@@ -925,10 +891,10 @@ export function AudioAppPage() {
                     setTab(nextTab)
                     tabRefs.current[nextTab]?.focus()
                   }}
-                  className="group relative isolate flex min-h-14 min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 sm:min-h-[72px] sm:gap-3 sm:px-4"
+                  className="group relative isolate flex min-h-14 min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-[72px] sm:gap-3 sm:px-4"
                 >
-                  {activeTab === id ? <motion.span layoutId="active-audio-tab" className="pointer-events-none absolute inset-0 rounded-xl border border-violet-200 bg-card shadow-sm dark:border-violet-500/30" transition={transition} /> : null}
-                  <span className={cn('relative flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 sm:size-9 sm:rounded-xl', activeTab === id ? 'bg-violet-600 text-white' : 'bg-muted text-muted-foreground group-hover:text-foreground')}><Icon className="size-4" /></span>
+                  {activeTab === id ? <motion.span layoutId="active-audio-tab" className="pointer-events-none absolute inset-0 rounded-xl border border-primary/30 bg-card shadow-sm dark:border-primary/30" transition={transition} /> : null}
+                  <span className={cn('relative flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 sm:size-9 sm:rounded-xl', activeTab === id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground group-hover:text-foreground')}><Icon className="size-4" /></span>
                   <span className="relative min-w-0"><span className={cn('block text-xs font-semibold transition-colors sm:text-sm', activeTab === id ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground')}>{label}</span><span className="mt-1 hidden text-xs leading-4 text-muted-foreground sm:block">{description}</span></span>
                 </button>
               ))}
@@ -936,16 +902,33 @@ export function AudioAppPage() {
           </LayoutGroup>
         </motion.div>
         {audiosQuery.isError ? <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">Unable to load audio: {errorMessage(audiosQuery.error)}</div> : null}
-        <div id={`${tabsId}-panel`} role="tabpanel" aria-labelledby={`${tabsId}-tab-${activeTab}`} tabIndex={0} className="min-h-72 min-w-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-4">
+        <div id={`${tabsId}-panel`} role="tabpanel" aria-labelledby={`${tabsId}-tab-${activeTab}`} tabIndex={0} className="min-h-72 min-w-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div key={activeTab} {...reveal()} className="min-w-0">
-              {activeTab === 'routes' ? <RoutesWorkspace audios={audios} /> : null}
+              {activeTab === 'routes' ? <RoutesWorkspace audios={audios} editor={playlistEditor} /> : null}
               {activeTab === 'audios' ? <AudioLibrary audios={audios} loading={audiosQuery.isLoading} /> : null}
               {activeTab === 'settings' ? <MobileSettings audios={audios} /> : null}
               {activeTab === 'mobile-users' ? <MobileUsersPanel /> : null}
             </motion.div>
           </AnimatePresence>
         </div>
+        <AlertDialog open={playlistEditor.blocker.state === 'blocked'}>
+          <AlertDialogContent className="w-[calc(100%-2rem)]">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Save your route changes before leaving?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {playlistEditor.isSaving ? 'Your playlist is being saved. Wait for it to finish before leaving.' : playlistEditor.error ? 'Autosave could not finish. Stay to retry or reload the route, or discard your unsaved edits.' : playlistEditor.dirty ? 'Your latest announcement changes have not been saved yet.' : 'All changes are saved. You can leave this page.'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2">
+              <AlertDialogCancel onClick={() => playlistEditor.blocker.reset?.()}>Keep editing</AlertDialogCancel>
+              <Button variant="outline" disabled={playlistEditor.isSaving} onClick={() => playlistEditor.blocker.proceed?.()}>{playlistEditor.dirty ? 'Discard and leave' : 'Leave page'}</Button>
+              <Button disabled={playlistEditor.isSaving || playlistEditor.conflict} onClick={async () => {
+                if (await playlistEditor.saveNow()) playlistEditor.blocker.proceed?.()
+              }}><Save /> Save and leave</Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </section>
     </MotionConfig>
   )
