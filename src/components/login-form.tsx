@@ -42,7 +42,7 @@ export function LoginForm({
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-2xl font-bold">Login to your account</h1>
         <p className="text-balance text-sm text-muted-foreground">
-          Enter your username and password to sign in
+          Enter your username below to login to your account
         </p>
       </div>
       <div className="grid gap-6">
@@ -56,7 +56,7 @@ export function LoginForm({
             autoCorrect="off"
             autoCapitalize="none"
             spellCheck={false}
-            placeholder="admin1"
+            placeholder="your-username"
             required
             value={username}
             onChange={(event) => onUsernameChange(event.target.value)}
@@ -79,7 +79,6 @@ export function LoginForm({
               name="password"
               type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
-              placeholder="admin123"
               required
               value={password}
               onChange={(event) => onPasswordChange(event.target.value)}

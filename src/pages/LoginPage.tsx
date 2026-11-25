@@ -67,8 +67,8 @@ function resolveLoginErrorMessage(error: unknown): string {
 export function LoginPage() {
   const setSession = useAuthStore((state) => state.setSession)
   const loginInFlightRef = useRef(false)
-  const [username, setUsername] = useState('admin1')
-  const [password, setPassword] = useState('admin123')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
